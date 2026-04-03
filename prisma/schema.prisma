@@ -16,13 +16,14 @@ model Anime {
   episodesWatched  Int      @default(0)
   status           String   // "completed", "incomplete", "dropped"
   imageUrl         String?
-  malId            Int?     // For Jikan API linking
+  malId            Int?     @unique // For Jikan API linking
   type             String   @default("TV") // "TV", "Movie", "OVA", "Special"
   originalOrder    Int?     // Preserves the number from 1-601
   watchOrder       Int?     // Custom drag-and-drop ordering for "Currently Watching"
   createdAt        DateTime @default(now())
 
   // Performance indexes for common query patterns
+  @@unique([normalizedName, season])
   @@index([status, createdAt])
   @@index([status, originalOrder])
   @@index([status, watchOrder])

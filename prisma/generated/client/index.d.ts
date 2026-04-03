@@ -2014,6 +2014,8 @@ export namespace Prisma {
 
   export type AnimeWhereUniqueInput = Prisma.AtLeast<{
     id?: number
+    malId?: number
+    normalizedName_season?: AnimeNormalizedNameSeasonCompoundUniqueInput
     AND?: AnimeWhereInput | AnimeWhereInput[]
     OR?: AnimeWhereInput[]
     NOT?: AnimeWhereInput | AnimeWhereInput[]
@@ -2023,12 +2025,11 @@ export namespace Prisma {
     episodesWatched?: IntFilter<"Anime"> | number
     status?: StringFilter<"Anime"> | string
     imageUrl?: StringNullableFilter<"Anime"> | string | null
-    malId?: IntNullableFilter<"Anime"> | number | null
     type?: StringFilter<"Anime"> | string
     originalOrder?: IntNullableFilter<"Anime"> | number | null
     watchOrder?: IntNullableFilter<"Anime"> | number | null
     createdAt?: DateTimeFilter<"Anime"> | Date | string
-  }, "id">
+  }, "id" | "malId" | "normalizedName_season">
 
   export type AnimeOrderByWithAggregationInput = {
     id?: SortOrder
@@ -2236,6 +2237,11 @@ export namespace Prisma {
   export type SortOrderInput = {
     sort: SortOrder
     nulls?: NullsOrder
+  }
+
+  export type AnimeNormalizedNameSeasonCompoundUniqueInput = {
+    normalizedName: string
+    season: number
   }
 
   export type AnimeCountOrderByAggregateInput = {

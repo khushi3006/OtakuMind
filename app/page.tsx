@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Search, Plus, Minus, Check, Trash2, XCircle, PlaySquare, RefreshCw, PlayCircle, ChevronLeft, ChevronRight, GripVertical } from 'lucide-react';
+import { Search, Plus, Minus, Check, Trash2, XCircle, PlaySquare, RefreshCw, PlayCircle, ChevronLeft, ChevronRight, GripVertical, AlertCircle } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
+import Modal from '@/components/Modal';
+import Toast, { type ToastMessage } from '@/components/Toast';
+
 
 type Anime = {
   id: number;
@@ -44,9 +47,22 @@ export default function Home() {
     dropped: 1,
   });
 
-  // Cache for fetched pages to avoid refetching on tab switch
-  const pageCache = useRef<Map<string, { data: Anime[]; pagination: Pagination; ts: number }>>(new Map());
-  const CACHE_TTL = 15_000; // 15 seconds client-side cache
+  // UI state for toast & modals
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [showMoveModal, setShowMoveModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDropModal, setShowDropModal] = useState(false);
+  const [pendingAnime, setPendingAnime] = useState<Anime | null>(null);
+  const [isAdding, setIsAdding] = useState<string | null>(null);
+
+  const addToast = useCallback((message: string, type: 'success' | 'info' | 'warning' = 'info') => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts(prev => [...prev, { id, message, type }]);
+  }, []);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
 
   const statusMap: Record<string, string> = {
     watching: 'incomplete',
@@ -56,22 +72,7 @@ export default function Home() {
 
   const currentPage = tabPages[activeTab] || 1;
 
-  const getCacheKey = useCallback(
-    (tab: string, page: number) => `${tab}:${page}:${pageSize}`,
-    [pageSize]
-  );
-
   const fetchAnimes = useCallback(async (tab: string, page: number, force = false) => {
-    const key = getCacheKey(tab, page);
-    const cached = pageCache.current.get(key);
-
-    if (!force && cached && Date.now() - cached.ts < CACHE_TTL) {
-      setAnimes(cached.data);
-      setPagination(cached.pagination);
-      setLoading(false);
-      return;
-    }
-
     setLoading(true);
     try {
       const status = statusMap[tab];
@@ -79,17 +80,23 @@ export default function Home() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
 
+      // If we are on a page that is now empty, but there are items in the list overall,
+      // and we are not on the first page, go to the last available page.
+      if (json.data.length === 0 && json.pagination.total > 0 && page > 1) {
+        const lastValidPage = Math.max(1, json.pagination.totalPages);
+        goToPage(lastValidPage);
+        // Recursive fetch to switch to the correct page without losing loading state
+        return await fetchAnimes(tab, lastValidPage, true);
+      }
+
       setAnimes(json.data);
       setPagination(json.pagination);
-
-      // Cache the result
-      pageCache.current.set(key, { data: json.data, pagination: json.pagination, ts: Date.now() });
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
     }
-  }, [pageSize, getCacheKey]);
+  }, [pageSize]);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -126,6 +133,9 @@ export default function Home() {
   }, [searchQuery]);
 
   const handleAddAnime = async (sugg: any) => {
+    if (isAdding) return;
+    setIsAdding(String(sugg.mal_id));
+    
     try {
       const newAnime = {
         name: sugg.title,
@@ -140,18 +150,44 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newAnime)
       });
+
+      
+      const data = await res.json();
+
+      if (res.status === 409) {
+        if (data.type === 'DUPLICATE_INCOMPLETE') {
+          addToast("This anime is already in your watching list", 'warning');
+        } else if (data.type === 'DUPLICATE_OTHER_STATUS') {
+          setPendingAnime(data.existingAnime);
+          setShowMoveModal(true);
+        }
+        setSearchQuery('');
+        setSuggestions([]);
+        return;
+      }
+
       if (res.ok) {
-        // Invalidate client cache and refetch current view
-        pageCache.current.clear();
-        fetchAnimes(activeTab, currentPage, true);
+        addToast(`Added ${newAnime.name} to Currently Watching`, 'success');
+        // Refetch current view
+        // Since we add to top, we should probably go to page 1 of 'watching' tab
+        if (activeTab !== 'watching') {
+          setActiveTab('watching');
+        }
+        setTabPages(prev => ({ ...prev, watching: 1 }));
+        fetchAnimes('watching', 1, true);
         fetchStats();
         setSearchQuery('');
         setSuggestions([]);
       }
+
     } catch (e) {
       console.error(e);
+      addToast("Failed to add anime", 'warning');
+    } finally {
+      setIsAdding(null);
     }
   };
+
 
   const updateAnime = async (id: number, updates: Partial<Anime>) => {
     const backup = [...animes];
@@ -173,11 +209,12 @@ export default function Home() {
       });
       if (!res.ok) throw new Error('Update failed');
 
-      // Invalidate client cache
-      pageCache.current.clear();
+
 
       if (updates.status) {
         fetchStats();
+        // Item moved between lists, refresh current view to fill gaps
+        fetchAnimes(activeTab, currentPage, true);
       }
     } catch (e) {
       // Rollback on failure
@@ -185,8 +222,43 @@ export default function Home() {
     }
   };
 
-  const deleteAnime = async (id: number) => {
-    if (!confirm('Drop this anime completely?')) return;
+  const handleMoveToWatching = async () => {
+    if (!pendingAnime) return;
+    
+    try {
+      // Determine top watchOrder
+      const res = await fetch('/api/anime?status=incomplete&page=1&limit=1');
+      const json = await res.json();
+      const minOrder = json.data?.[0]?.watchOrder !== undefined ? json.data[0].watchOrder : 1;
+      const newWatchOrder = (minOrder ?? 1) - 1;
+
+      await updateAnime(pendingAnime.id, { 
+        status: 'incomplete', 
+        watchOrder: newWatchOrder 
+      });
+      
+      addToast(`Moved ${pendingAnime.name} to Watching at the top`, 'success');
+      setShowMoveModal(false);
+      setPendingAnime(null);
+      
+
+      setActiveTab('watching');
+      setTabPages(prev => ({ ...prev, watching: 1 }));
+      fetchAnimes('watching', 1, true);
+    } catch (e) {
+      addToast("Failed to move anime", 'warning');
+    }
+  };
+
+
+  const handleDeleteInitiate = (anime: Anime) => {
+    setPendingAnime(anime);
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!pendingAnime) return;
+    const id = pendingAnime.id;
     
     // Optimistic removal
     setAnimes(prev => prev.filter(a => a.id !== id));
@@ -194,11 +266,37 @@ export default function Home() {
 
     try {
       await fetch(`/api/anime/${id}`, { method: 'DELETE' });
-      pageCache.current.clear();
+      addToast(`Permanently deleted ${pendingAnime.name}`, 'success');
+
       fetchStats();
+      // Ensure we re-fetch to fill gaps and handle page transitions
+      fetchAnimes(activeTab, currentPage, true);
     } catch (e) {
       // Refetch on error
       fetchAnimes(activeTab, currentPage, true);
+      addToast("Failed to delete anime", "warning");
+    } finally {
+      setShowDeleteModal(false);
+      setPendingAnime(null);
+    }
+  };
+
+  const handleDropInitiate = (anime: Anime) => {
+    setPendingAnime(anime);
+    setShowDropModal(true);
+  };
+
+  const handleConfirmDrop = async () => {
+    if (!pendingAnime) return;
+    
+    try {
+      await updateAnime(pendingAnime.id, { status: 'dropped' });
+      addToast(`Moved ${pendingAnime.name} to Dropped`, 'info');
+    } catch (e) {
+      addToast("Failed to drop anime", "warning");
+    } finally {
+      setShowDropModal(false);
+      setPendingAnime(null);
     }
   };
 
@@ -224,8 +322,7 @@ export default function Home() {
     }));
     setAnimes(optimisticAnimes);
 
-    // Invalidate cache for this page
-    pageCache.current.delete(getCacheKey(activeTab, currentPage));
+
 
     try {
       const res = await fetch('/api/anime/reorder', {
@@ -245,7 +342,7 @@ export default function Home() {
     setIsSeeding(true);
     try {
       await fetch('/api/seed');
-      pageCache.current.clear();
+
       await Promise.all([
         fetchAnimes(activeTab, 1, true),
         fetchStats()
@@ -268,7 +365,7 @@ export default function Home() {
 
   const handlePageSizeChange = (newSize: number) => {
     setPageSize(newSize);
-    pageCache.current.clear();
+
     setTabPages({ watching: 1, completed: 1, dropped: 1 });
   };
 
@@ -390,10 +487,10 @@ export default function Home() {
                           <button onClick={() => updateAnime(anime.id, { status: 'completed' })} className="btn-row success" title="Complete">
                             <Check size={16} />
                           </button>
-                          <button onClick={() => updateAnime(anime.id, { status: 'dropped' })} className="btn-row danger" title="Drop">
+                          <button onClick={() => handleDropInitiate(anime)} className="btn-row danger" title="Drop">
                             <XCircle size={16} />
                           </button>
-                          <button onClick={() => deleteAnime(anime.id)} className="btn-row ghost" title="Delete">
+                          <button onClick={() => handleDeleteInitiate(anime)} className="btn-row ghost" title="Delete">
                             <Trash2 size={16} />
                           </button>
                         </div>
@@ -442,11 +539,11 @@ export default function Home() {
                     </button>
                   )}
                   {activeTab !== 'dropped' && (
-                    <button onClick={() => updateAnime(anime.id, { status: 'dropped' })} className="btn-row danger" title="Drop">
+                    <button onClick={() => handleDropInitiate(anime)} className="btn-row danger" title="Drop">
                       <XCircle size={16} />
                     </button>
                   )}
-                  <button onClick={() => deleteAnime(anime.id)} className="btn-row ghost" title="Delete">
+                  <button onClick={() => handleDeleteInitiate(anime)} className="btn-row ghost" title="Delete">
                     <Trash2 size={16} />
                   </button>
                 </div>
@@ -505,15 +602,22 @@ export default function Home() {
         {suggestions.length > 0 && (
           <div className="search-suggestions animate-fade-in">
             {suggestions.map((sugg) => (
-              <div key={sugg.mal_id} className="suggestion-item" onClick={() => handleAddAnime(sugg)}>
+              <div 
+                key={sugg.mal_id} 
+                className={`suggestion-item ${isAdding === String(sugg.mal_id) ? 'is-adding' : ''}`} 
+                onClick={() => handleAddAnime(sugg)}
+              >
                 <img src={sugg.images?.jpg?.image_url} alt="" className="sugg-img" />
                 <div className="sugg-info">
                   <h4>{sugg.title}</h4>
                   <span>{sugg.year || 'N/A'} &middot; {sugg.type}</span>
                 </div>
-                <button className="btn-add"><Plus size={18} /></button>
+                <button className="btn-add" disabled={isAdding === String(sugg.mal_id)}>
+                  {isAdding === String(sugg.mal_id) ? <RefreshCw className="spin" size={18} /> : <Plus size={18} />}
+                </button>
               </div>
             ))}
+
           </div>
         )}
       </div>
@@ -535,13 +639,6 @@ export default function Home() {
           <label>per page</label>
         </div>
       </div>
-
-      {isWatchingTab && !loading && animes.length > 0 && (
-        <div className="drag-hint animate-fade-in">
-          <GripVertical size={14} />
-          <span>Drag the handle to reorder your anime list</span>
-        </div>
-      )}
 
       {loading ? (
         <div className="loader-wrapper"><RefreshCw className="spin" size={40} color="#a3b18a" /></div>
@@ -565,6 +662,82 @@ export default function Home() {
           </div>
         </DragDropContext>
       )}
+      <Toast messages={toasts} onRemove={removeToast} />
+
+      <Modal 
+        isOpen={showMoveModal} 
+        onClose={() => { setShowMoveModal(false); setPendingAnime(null); }} 
+        title="Anime Already Exists"
+      >
+        <div className="move-modal-inner">
+          <div className="move-modal-icon">
+            <AlertCircle size={40} color="#a3b18a" />
+          </div>
+          <p>
+            <strong>{pendingAnime?.name}</strong> is currently in your <strong>{pendingAnime?.status === 'incomplete' ? 'Watching' : pendingAnime?.status}</strong> list.
+          </p>
+          <p>Would you like to move it to Currently Watching at the <strong>very top</strong> of your list?</p>
+          <div className="modal-actions">
+            <button className="modal-btn secondary" onClick={() => { setShowMoveModal(false); setPendingAnime(null); }}>
+              No, Keep It
+            </button>
+            <button className="modal-btn primary" onClick={handleMoveToWatching}>
+              Yes, Move to Top
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => { setShowDeleteModal(false); setPendingAnime(null); }}
+        title="Delete Anime"
+      >
+        <div className="move-modal-inner">
+          <div className="move-modal-icon">
+            <Trash2 size={42} color="#d68c8c" />
+          </div>
+          <p>
+            Are you sure you want to delete <strong>{pendingAnime?.name}</strong>?
+          </p>
+          <p className="modal-description-sub">This action is permanent and will remove all tracking history for this anime.</p>
+          <div className="modal-actions">
+            <button className="modal-btn secondary" onClick={() => { setShowDeleteModal(false); setPendingAnime(null); }}>
+              No, Keep It
+            </button>
+            <button className="modal-btn danger" onClick={handleConfirmDelete}>
+              Delete Permanently
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Drop Confirmation Modal */}
+      <Modal
+        isOpen={showDropModal}
+        onClose={() => { setShowDropModal(false); setPendingAnime(null); }}
+        title="Drop Anime"
+      >
+        <div className="move-modal-inner">
+          <div className="move-modal-icon">
+            <XCircle size={42} color="#d68c8c" />
+          </div>
+          <p>
+            Move <strong>{pendingAnime?.name}</strong> to your Dropped list?
+          </p>
+          <p className="modal-description-sub">You can always find it in the Dropped tab later.</p>
+          <div className="modal-actions">
+            <button className="modal-btn secondary" onClick={() => { setShowDropModal(false); setPendingAnime(null); }}>
+              No, Keep It
+            </button>
+            <button className="modal-btn danger" onClick={handleConfirmDrop}>
+              Move to Dropped
+            </button>
+          </div>
+        </div>
+      </Modal>
     </main>
   );
 }
+

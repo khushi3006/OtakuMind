@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { apiCache } from '@/lib/cache';
 
 export async function PUT(
   request: Request,
@@ -20,12 +19,6 @@ export async function PUT(
       }
     });
 
-    // Invalidate caches — anime lists and stats
-    apiCache.invalidatePrefix('anime:');
-    if (status !== undefined) {
-      apiCache.invalidate('stats');
-    }
-
     return NextResponse.json(updatedAnime);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -43,10 +36,6 @@ export async function DELETE(
     const deletedAnime = await db.anime.delete({
       where: { id: animeId }
     });
-
-    // Invalidate all caches
-    apiCache.invalidatePrefix('anime:');
-    apiCache.invalidate('stats');
 
     return NextResponse.json(deletedAnime);
   } catch (error: any) {

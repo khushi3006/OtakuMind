@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { apiCache } from '@/lib/cache';
 import { normalizeAnimeName, extractSeasonNumber } from '@/lib/normalize';
 
 const ALLOWED_LIMITS = [20, 50, 100] as const;
@@ -14,46 +13,40 @@ export async function GET(request: Request) {
     const rawLimit = parseInt(searchParams.get('limit') || '20', 10);
     const limit = ALLOWED_LIMITS.includes(rawLimit as any) ? rawLimit : 20;
 
-    const cacheKey = `anime:${status || 'all'}:${page}:${limit}:${search || ''}`;
+    const where: any = {};
+    if (status) where.status = status;
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { normalizedName: { contains: search, mode: 'insensitive' } },
+      ];
+    }
 
-    const result = await apiCache.getOrSet(cacheKey, async () => {
-      const where: any = {};
-      if (status) where.status = status;
-      if (search) {
-        where.OR = [
-          { name: { contains: search, mode: 'insensitive' } },
-          { normalizedName: { contains: search, mode: 'insensitive' } },
-        ];
-      }
+    const [animes, total] = await Promise.all([
+      db.anime.findMany({
+        where,
+        orderBy: status === 'completed'
+          ? { originalOrder: 'asc' }
+          : status === 'incomplete'
+            ? [{ watchOrder: { sort: 'asc', nulls: 'last' } }, { createdAt: 'desc' }]
+            : { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      db.anime.count({ where }),
+    ]);
 
-      const [animes, total] = await Promise.all([
-        db.anime.findMany({
-          where,
-          orderBy: status === 'completed'
-            ? { originalOrder: 'asc' }
-            : status === 'incomplete'
-              ? [{ watchOrder: { sort: 'asc', nulls: 'last' } }, { createdAt: 'desc' }]
-              : { createdAt: 'desc' },
-          skip: (page - 1) * limit,
-          take: limit,
-        }),
-        db.anime.count({ where }),
-      ]);
+    const result = {
+      data: animes,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
 
-      return {
-        data: animes,
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages: Math.ceil(total / limit),
-        },
-      };
-    }, 30); // 30 second TTL
-
-    const response = NextResponse.json(result);
-    response.headers.set('Cache-Control', 'private, max-age=10, stale-while-revalidate=30');
-    return response;
+    return NextResponse.json(result);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -69,30 +62,80 @@ export async function POST(request: Request) {
     const normalizedName = normalizeAnimeName(name);
     const season = extractSeasonNumber(name);
 
+    // Check for duplicates in ANY status
+    const existingAnime = await db.anime.findFirst({
+      where: {
+        OR: [
+          malId ? { malId: Number(malId) } : { id: -1 },
+          { 
+            normalizedName,
+            season,
+          }
+        ]
+      }
+    });
+
+    if (existingAnime) {
+      if (existingAnime.status === 'incomplete') {
+        return NextResponse.json(
+          { error: "This anime is already in your watching list", type: "DUPLICATE_INCOMPLETE" },
+          { status: 409 }
+        );
+      } else {
+        return NextResponse.json(
+          { 
+            error: `This anime is in your ${existingAnime.status} list`,
+            type: "DUPLICATE_OTHER_STATUS",
+            existingAnime
+          },
+          { status: 409 }
+        );
+      }
+    }
+
+    // Determine top position (min watchOrder - 1)
+    const minWatchOrderAnime = await db.anime.findFirst({
+      where: { status: 'incomplete', watchOrder: { not: null } },
+      orderBy: { watchOrder: 'asc' },
+      select: { watchOrder: true }
+    });
+
+    const newWatchOrder = (minWatchOrderAnime?.watchOrder ?? 1) - 1;
+
     let finalType = type || "TV";
     if (!type) {
       const isMovie = name.match(/\b(movie|film)\b/i) || (!name.match(/season/i) && !name.match(/episode/i) && !name.match(/s\d+/i) && !name.match(/part/i) && name.length > 0);
       if (isMovie) finalType = "Movie";
     }
 
-    const newAnime = await db.anime.create({
-      data: {
-        name,
-        normalizedName,
-        season,
-        episodesWatched: episodesWatched || 0,
-        status: status || 'incomplete',
-        imageUrl: imageUrl || null,
-        malId: malId || null,
-        type: finalType,
+    try {
+      const newAnime = await db.anime.create({
+        data: {
+          name,
+          normalizedName,
+          season,
+          episodesWatched: episodesWatched || 0,
+          status: status || 'incomplete',
+          imageUrl: imageUrl || null,
+          malId: malId ? Number(malId) : null,
+          type: finalType,
+          watchOrder: newWatchOrder,
+        }
+      });
+
+
+
+      return NextResponse.json(newAnime);
+    } catch (error: any) {
+      if (error.code === 'P2002') {
+        return NextResponse.json(
+          { error: "This anime is already in your watching list", type: "DUPLICATE_INCOMPLETE" },
+          { status: 409 }
+        );
       }
-    });
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
 
-    // Invalidate all anime list caches and stats
-    apiCache.invalidatePrefix('anime:');
-    apiCache.invalidate('stats');
-
-    return NextResponse.json(newAnime);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

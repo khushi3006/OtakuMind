@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { apiCache } from '@/lib/cache';
 
 /**
  * PUT /api/anime/reorder
@@ -25,9 +24,6 @@ export async function PUT(request: Request) {
         })
       )
     );
-
-    // Invalidate anime list caches
-    apiCache.invalidatePrefix('anime:');
 
     return NextResponse.json({ success: true, updated: items.length });
   } catch (error: any) {

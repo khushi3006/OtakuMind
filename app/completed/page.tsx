@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Search, ExternalLink, CalendarDays, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 
 type Anime = {
@@ -38,27 +38,14 @@ export default function CompletedPage() {
   const [serverSearchResults, setServerSearchResults] = useState<Anime[] | null>(null);
   const [serverSearchPagination, setServerSearchPagination] = useState<Pagination | null>(null);
 
-  const pageCache = useRef<Map<string, { data: Anime[]; pagination: Pagination; ts: number }>>(new Map());
-  const CACHE_TTL = 15_000;
 
   const fetchAnimes = useCallback(async (pg: number, force = false) => {
-    const key = `completed:${pg}:${pageSize}`;
-    const cached = pageCache.current.get(key);
-
-    if (!force && cached && Date.now() - cached.ts < CACHE_TTL) {
-      setAnimes(cached.data);
-      setPagination(cached.pagination);
-      setLoading(false);
-      return;
-    }
-
     setLoading(true);
     try {
       const res = await fetch(`/api/anime?status=completed&page=${pg}&limit=${pageSize}`);
       const json = await res.json();
       setAnimes(json.data || []);
       setPagination(json.pagination || { page: pg, limit: pageSize, total: 0, totalPages: 0 });
-      pageCache.current.set(key, { data: json.data, pagination: json.pagination, ts: Date.now() });
     } catch (err) {
       console.error(err);
     } finally {
@@ -121,7 +108,6 @@ export default function CompletedPage() {
   const handlePageSizeChange = (newSize: number) => {
     setPageSize(newSize);
     setPage(1);
-    pageCache.current.clear();
   };
 
   const renderPagination = () => {

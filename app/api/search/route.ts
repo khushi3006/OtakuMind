@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { apiCache } from '@/lib/cache';
 
 export async function GET(request: Request) {
   try {
@@ -8,18 +7,12 @@ export async function GET(request: Request) {
     
     if (!q) return NextResponse.json({ data: [] });
 
-    const cacheKey = `jikan:${q.toLowerCase().trim()}`;
+    const res = await fetch(
+      `https://api.jikan.moe/v4/anime?q=${encodeURIComponent(q)}&limit=5&sfw=true`
+    );
+    const json = await res.json();
 
-    const json = await apiCache.getOrSet(cacheKey, async () => {
-      const res = await fetch(
-        `https://api.jikan.moe/v4/anime?q=${encodeURIComponent(q)}&limit=5&sfw=true`
-      );
-      return res.json();
-    }, 300); // 5 minute TTL — Jikan results don't change
-
-    const response = NextResponse.json(json);
-    response.headers.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=300');
-    return response;
+    return NextResponse.json(json);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
