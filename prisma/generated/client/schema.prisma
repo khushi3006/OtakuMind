@@ -1,0 +1,30 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Anime {
+  id              Int      @id @default(autoincrement())
+  name            String
+  normalizedName  String
+  season          Int
+  episodesWatched Int      @default(0)
+  status          String // "completed", "incomplete", "dropped"
+  imageUrl        String?
+  malId           Int? // For Jikan API linking
+  type            String   @default("TV") // "TV", "Movie", "OVA", "Special"
+  originalOrder   Int? // Preserves the number from 1-601
+  watchOrder      Int? // Custom drag-and-drop ordering for "Currently Watching"
+  createdAt       DateTime @default(now())
+
+  // Performance indexes for common query patterns
+  @@index([status, createdAt])
+  @@index([status, originalOrder])
+  @@index([status, watchOrder])
+  @@index([normalizedName])
+}
