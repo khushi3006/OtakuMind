@@ -29,6 +29,7 @@ export default function OriginalListPage() {
   const [animes, setAnimes] = useState<Anime[]>([]);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 20, total: 0, totalPages: 0 });
   const [loading, setLoading] = useState(true);
+  const [isWakingUp, setIsWakingUp] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [pageSize, setPageSize] = useState<number>(20);
   const [page, setPage] = useState(1);
@@ -39,17 +40,31 @@ export default function OriginalListPage() {
   const [serverSearchPagination, setServerSearchPagination] = useState<Pagination | null>(null);
 
 
-  const fetchAnimes = useCallback(async (pg: number, force = false) => {
-    setLoading(true);
+  const fetchAnimes = useCallback(async (pg: number, force = false, isRetry = false) => {
+    if (!isRetry) {
+      setLoading(true);
+      setIsWakingUp(false);
+    }
     try {
       const res = await fetch(`/api/anime?status=completed&page=${pg}&limit=${pageSize}`);
       const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to fetch');
       setAnimes(json.data || []);
       setPagination(json.pagination || { page: pg, limit: pageSize, total: 0, totalPages: 0 });
-    } catch (err) {
-      console.error(err);
-    } finally {
+      setIsWakingUp(false);
       setLoading(false);
+    } catch (err: any) {
+      console.error(err);
+      const msg = err.message || String(err);
+      if (msg.includes('SSL connection') || msg.includes('consuming input failed') || msg.includes('Database error')) {
+        setIsWakingUp(true);
+        setTimeout(() => {
+          fetchAnimes(pg, force, true);
+        }, 3000);
+      } else {
+        setIsWakingUp(false);
+        setLoading(false);
+      }
     }
   }, [pageSize]);
 
@@ -197,8 +212,11 @@ export default function OriginalListPage() {
         </div>
       </div>
 
-      {loading ? (
-        <div className="loader-wrapper"><RefreshCw className="spin" size={40} color="#a3b18a" /></div>
+      {loading || isWakingUp ? (
+        <div className="loader-wrapper">
+          <RefreshCw className="spin" size={40} color="#a3b18a" />
+          {isWakingUp && <p style={{ marginTop: '1rem', color: 'var(--text-color)', opacity: 0.8 }}>Database is waking up, please wait...</p>}
+        </div>
       ) : (
         <div className="list-container animate-fade-in">
           <div className="list-header">

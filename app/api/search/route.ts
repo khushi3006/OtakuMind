@@ -7,8 +7,10 @@ export async function GET(request: Request) {
     
     if (!q) return NextResponse.json({ data: [] });
 
+    const page = searchParams.get('page') || '1';
+
     const res = await fetch(
-      `https://api.jikan.moe/v4/anime?q=${encodeURIComponent(q)}&limit=5&sfw=true`
+      `https://api.jikan.moe/v4/anime?q=${encodeURIComponent(q)}&limit=25&page=${page}&sfw=true`
     );
     const json = await res.json();
 

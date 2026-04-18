@@ -34,8 +34,12 @@ export default function Home() {
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 20, total: 0, totalPages: 0 });
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [searchPage, setSearchPage] = useState(1);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const [stats, setStats] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [isWakingUp, setIsWakingUp] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
   const [activeTab, setActiveTab] = useState<'watching' | 'completed' | 'dropped'>('watching');
   const [pageSize, setPageSize] = useState<number>(20);
@@ -72,13 +76,16 @@ export default function Home() {
 
   const currentPage = tabPages[activeTab] || 1;
 
-  const fetchAnimes = useCallback(async (tab: string, page: number, force = false) => {
-    setLoading(true);
+  const fetchAnimes = useCallback(async (tab: string, page: number, force = false, isRetry = false) => {
+    if (!isRetry) {
+      setLoading(true);
+      setIsWakingUp(false);
+    }
     try {
       const status = statusMap[tab];
       const res = await fetch(`/api/anime?status=${status}&page=${page}&limit=${pageSize}`);
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error);
+      if (!res.ok) throw new Error(json.error || 'Failed to fetch');
 
       // If we are on a page that is now empty, but there are items in the list overall,
       // and we are not on the first page, go to the last available page.
@@ -91,20 +98,37 @@ export default function Home() {
 
       setAnimes(json.data);
       setPagination(json.pagination);
-    } catch (e) {
-      console.error(e);
-    } finally {
+      setIsWakingUp(false);
       setLoading(false);
+    } catch (e: any) {
+      console.error(e);
+      const msg = e.message || String(e);
+      if (msg.includes('SSL connection') || msg.includes('consuming input failed') || msg.includes('Database error')) {
+        setIsWakingUp(true);
+        setTimeout(() => {
+          fetchAnimes(tab, page, force, true);
+        }, 3000);
+      } else {
+        setIsWakingUp(false);
+        setLoading(false);
+      }
     }
   }, [pageSize]);
 
-  const fetchStats = useCallback(async () => {
+  const fetchStats = useCallback(async (isRetry = false) => {
     try {
       const res = await fetch('/api/stats');
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to fetch');
       setStats(data.uniqueTotal || 0);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      const msg = e.message || String(e);
+      if (msg.includes('SSL connection') || msg.includes('consuming input failed') || msg.includes('Database error')) {
+        setTimeout(() => {
+          fetchStats(true);
+        }, 3000);
+      }
     }
   }, []);
 
@@ -120,11 +144,21 @@ export default function Home() {
 
   // Debounced Jikan search
   useEffect(() => {
+    setSearchPage(1);
+    setHasNextPage(false);
+
     const delayDebounce = setTimeout(() => {
       if (searchQuery.length >= 3) {
-        fetch(`/api/search?q=${searchQuery}`)
+        setIsSearching(true);
+        fetch(`/api/search?q=${searchQuery}&page=1`)
           .then(res => res.json())
-          .then(data => setSuggestions(data.data || []));
+          .then(data => {
+            const items = data.data || [];
+            const uniqueItems = Array.from(new Map(items.map((item: any) => [item.mal_id, item])).values()) as any[];
+            setSuggestions(uniqueItems);
+            setHasNextPage(data.pagination?.has_next_page || false);
+          })
+          .finally(() => setIsSearching(false));
       } else {
         setSuggestions([]);
       }
@@ -132,13 +166,40 @@ export default function Home() {
     return () => clearTimeout(delayDebounce);
   }, [searchQuery]);
 
+  const loadMoreSuggestions = async () => {
+    const nextPage = searchPage + 1;
+    setIsSearching(true);
+    try {
+      const res = await fetch(`/api/search?q=${searchQuery}&page=${nextPage}`);
+      const data = await res.json();
+      setSuggestions(prev => {
+        const newItems = data.data || [];
+        const combined = [...prev, ...newItems];
+        return Array.from(new Map(combined.map((item: any) => [item.mal_id, item])).values()) as any[];
+      });
+      setHasNextPage(data.pagination?.has_next_page || false);
+      setSearchPage(nextPage);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const bottom = e.currentTarget.scrollHeight - e.currentTarget.scrollTop - e.currentTarget.clientHeight < 10;
+    if (bottom && hasNextPage && !isSearching) {
+      loadMoreSuggestions();
+    }
+  };
+
   const handleAddAnime = async (sugg: any) => {
     if (isAdding) return;
     setIsAdding(String(sugg.mal_id));
     
     try {
       const newAnime = {
-        name: sugg.title,
+        name: sugg.title_english || sugg.title,
         episodesWatched: 0,
         status: 'incomplete',
         imageUrl: sugg.images?.jpg?.image_url || null,
@@ -600,7 +661,7 @@ export default function Home() {
         </div>
         
         {suggestions.length > 0 && (
-          <div className="search-suggestions animate-fade-in">
+          <div className="search-suggestions animate-fade-in" onScroll={handleScroll}>
             {suggestions.map((sugg) => (
               <div 
                 key={sugg.mal_id} 
@@ -609,7 +670,12 @@ export default function Home() {
               >
                 <img src={sugg.images?.jpg?.image_url} alt="" className="sugg-img" />
                 <div className="sugg-info">
-                  <h4>{sugg.title}</h4>
+                  <h4>{sugg.title_english || sugg.title}</h4>
+                  {sugg.title_english && sugg.title_english !== sugg.title && (
+                    <span style={{ display: 'block', fontSize: '0.85em', opacity: 0.8, marginBottom: '2px' }}>
+                      {sugg.title}
+                    </span>
+                  )}
                   <span>{sugg.year || 'N/A'} &middot; {sugg.type}</span>
                 </div>
                 <button className="btn-add" disabled={isAdding === String(sugg.mal_id)}>
@@ -618,6 +684,22 @@ export default function Home() {
               </div>
             ))}
 
+            {isSearching && hasNextPage && (
+              <div 
+                style={{
+                  width: '100%',
+                  padding: '1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--accent-color)',
+                  borderTop: '1px solid var(--border-color)',
+                  background: 'var(--bg-color)'
+                }}
+              >
+                <RefreshCw className="spin" size={20} />
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -640,8 +722,11 @@ export default function Home() {
         </div>
       </div>
 
-      {loading ? (
-        <div className="loader-wrapper"><RefreshCw className="spin" size={40} color="#a3b18a" /></div>
+      {loading || isWakingUp ? (
+        <div className="loader-wrapper">
+          <RefreshCw className="spin" size={40} color="#a3b18a" />
+          {isWakingUp && <p style={{ marginTop: '1rem', color: 'var(--text-color)', opacity: 0.8 }}>Database is waking up, please wait...</p>}
+        </div>
       ) : (
         <DragDropContext onDragEnd={handleDragEnd}>
           <div className="lists-container">
