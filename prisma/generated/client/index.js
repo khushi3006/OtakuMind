@@ -149,7 +149,9 @@ const config = {
         "native": true
       }
     ],
-    "previewFeatures": [],
+    "previewFeatures": [
+      "driverAdapters"
+    ],
     "sourceFilePath": "C:\\Users\\HP\\Desktop\\OtakuMind\\prisma\\schema.prisma",
     "isCustomOutput": true
   },
@@ -173,8 +175,8 @@ const config = {
       }
     }
   },
-  "inlineSchema": "generator client {\n  provider = \"prisma-client-js\"\n  output   = \"./generated/client\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel Anime {\n  id              Int      @id @default(autoincrement())\n  name            String\n  normalizedName  String\n  season          Int\n  episodesWatched Int      @default(0)\n  status          String // \"completed\", \"incomplete\", \"dropped\"\n  imageUrl        String?\n  malId           Int?     @unique // For Jikan API linking\n  type            String   @default(\"TV\") // \"TV\", \"Movie\", \"OVA\", \"Special\"\n  originalOrder   Int? // Preserves the number from 1-601\n  watchOrder      Int? // Custom drag-and-drop ordering for \"Currently Watching\"\n  createdAt       DateTime @default(now())\n\n  // Performance indexes for common query patterns\n  @@unique([normalizedName, season])\n  @@index([status, createdAt])\n  @@index([status, originalOrder])\n  @@index([status, watchOrder])\n  @@index([normalizedName])\n}\n",
-  "inlineSchemaHash": "861906e5aa4dbaf322caecb308d7cdd220b1c206d94f16e462f32a8d7f9070f8",
+  "inlineSchema": "generator client {\n  provider        = \"prisma-client-js\"\n  previewFeatures = [\"driverAdapters\"]\n  output          = \"./generated/client\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel Anime {\n  id              Int      @id @default(autoincrement())\n  name            String\n  normalizedName  String\n  season          Int\n  episodesWatched Int      @default(0)\n  status          String // \"completed\", \"incomplete\", \"dropped\"\n  imageUrl        String?\n  malId           Int?     @unique // For Jikan API linking\n  type            String   @default(\"TV\") // \"TV\", \"Movie\", \"OVA\", \"Special\"\n  originalOrder   Int? // Preserves the number from 1-601\n  watchOrder      Int? // Custom drag-and-drop ordering for \"Currently Watching\"\n  createdAt       DateTime @default(now())\n\n  // Performance indexes for common query patterns\n  @@unique([normalizedName, season])\n  @@index([status, createdAt])\n  @@index([status, originalOrder])\n  @@index([status, watchOrder])\n  @@index([normalizedName])\n}\n",
+  "inlineSchemaHash": "4151d8e8e0b866b619361e74116b6c24e2a68d64d2d279389a5e7291e0f5aa2a",
   "copyEngine": true
 }
 
