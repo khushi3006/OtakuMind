@@ -135,7 +135,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "C:\\Users\\HP\\Desktop\\OtakuMind\\prisma\\generated\\client",
+      "value": "D:\\Projects\\OtakuMind\\prisma\\generated\\client",
       "fromEnvVar": null
     },
     "config": {
@@ -151,7 +151,7 @@ const config = {
     "previewFeatures": [
       "driverAdapters"
     ],
-    "sourceFilePath": "C:\\Users\\HP\\Desktop\\OtakuMind\\prisma\\schema.prisma",
+    "sourceFilePath": "D:\\Projects\\OtakuMind\\prisma\\schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
