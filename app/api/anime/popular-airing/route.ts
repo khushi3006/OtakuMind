@@ -28,22 +28,32 @@ export async function GET() {
 
     const json = await res.json();
     
-    // Minimal formatting to match client search suggestions
-    const formattedData = (json.data || []).map((anime: any) => ({
-      mal_id: anime.mal_id,
-      title: anime.title,
-      title_english: anime.title_english,
-      images: {
-        jpg: {
-          image_url: anime.images?.jpg?.image_url || null,
-        }
-      },
-      airing: anime.airing || false,
-      broadcast: anime.broadcast || {},
-      type: anime.type || 'TV',
-      score: anime.score || null,
-      synopsis: anime.synopsis || null,
-    }));
+    // Deduplicate and format data to ensure unique entries
+    const seenMalIds = new Set<number>();
+    const formattedData: any[] = [];
+
+    for (const anime of (json.data || [])) {
+      if (!anime.mal_id || seenMalIds.has(anime.mal_id)) {
+        continue;
+      }
+      seenMalIds.add(anime.mal_id);
+      
+      formattedData.push({
+        mal_id: anime.mal_id,
+        title: anime.title,
+        title_english: anime.title_english,
+        images: {
+          jpg: {
+            image_url: anime.images?.jpg?.image_url || null,
+          }
+        },
+        airing: anime.airing || false,
+        broadcast: anime.broadcast || {},
+        type: anime.type || 'TV',
+        score: anime.score || null,
+        synopsis: anime.synopsis || null,
+      });
+    }
 
     const responsePayload = { data: formattedData };
     popularCache = responsePayload;

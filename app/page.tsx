@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { Search, Plus, Minus, Check, Trash2, XCircle, PlaySquare, RefreshCw, PlayCircle, ChevronLeft, ChevronRight, GripVertical, AlertCircle, Download } from 'lucide-react';
+import { Search, Plus, Minus, Check, Trash2, XCircle, PlaySquare, RefreshCw, PlayCircle, ChevronLeft, ChevronRight, GripVertical, AlertCircle, Download, Film, Edit2 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import Modal from '@/components/Modal';
 import Toast, { type ToastMessage } from '@/components/Toast';
@@ -16,6 +16,7 @@ type Anime = {
   normalizedName: string;
   season: number;
   episodesWatched: number;
+  totalEpisodes?: number;
   status: string;
   imageUrl: string | null;
   malId: number | null;
@@ -25,6 +26,7 @@ type Anime = {
   broadcastTime: string | null;
   broadcastTimezone: string | null;
   broadcastString: string | null;
+  type: string;
 };
 
 type Pagination = {
@@ -55,7 +57,6 @@ export default function Home() {
   const [stats, setStats] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isWakingUp, setIsWakingUp] = useState(false);
-  const [isSeeding, setIsSeeding] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>('watching');
   const [pageSize, setPageSize] = useState<number>(20);
   const activeTabRef = useRef<TabKey>(activeTab);
@@ -75,7 +76,13 @@ export default function Home() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [pendingAnime, setPendingAnime] = useState<Anime | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editTotalEpisodes, setEditTotalEpisodes] = useState('');
+  const [editEpisodesWatched, setEditEpisodesWatched] = useState('');
+  const [editError, setEditError] = useState<string | null>(null);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [isAdding, setIsAdding] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -279,6 +286,10 @@ export default function Home() {
             setSuggestions(uniqueItems);
             setHasNextPage(data.pagination?.has_next_page || false);
           })
+          .catch(e => {
+            console.error(e);
+            addToast(e.message || "Failed to search anime", "warning");
+          })
           .finally(() => setIsSearching(false));
       } else {
         setSuggestions([]);
@@ -300,8 +311,9 @@ export default function Home() {
       });
       setHasNextPage(data.pagination?.has_next_page || false);
       setSearchPage(nextPage);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      addToast(e.message || "Failed to load more anime suggestions", "warning");
     } finally {
       setIsSearching(false);
     }
@@ -330,6 +342,7 @@ export default function Home() {
         broadcastTime: sugg.broadcast?.time || null,
         broadcastTimezone: sugg.broadcast?.timezone || null,
         broadcastString: sugg.broadcast?.string || null,
+        type: sugg.type,
       };
       
       const res = await fetch('/api/anime', {
@@ -483,6 +496,61 @@ export default function Home() {
     }
   };
 
+  const handleEditInitiate = (anime: Anime) => {
+    setPendingAnime(anime);
+    setEditName(anime.name);
+    setEditTotalEpisodes(anime.type === 'Movie' ? '0' : String(anime.totalEpisodes || 0));
+    setEditEpisodesWatched(anime.type === 'Movie' ? '0' : String(anime.episodesWatched || 0));
+    setEditError(null);
+    setShowEditModal(true);
+  };
+
+  const handleEditConfirm = async () => {
+    if (!pendingAnime) return;
+    
+    // Frontend validation (for non-movies)
+    if (pendingAnime.type !== 'Movie') {
+      const watched = parseInt(editEpisodesWatched, 10);
+      const total = parseInt(editTotalEpisodes, 10);
+
+      if (isNaN(watched) || watched < 0) {
+        setEditError("Watched episodes must be a non-negative number.");
+        return;
+      }
+      if (isNaN(total) || total < 0) {
+        setEditError("Total episodes must be a non-negative number.");
+        return;
+      }
+      if (total > 0 && watched > total) {
+        setEditError("Watched episodes cannot exceed total episodes.");
+        return;
+      }
+    }
+
+    setIsSavingEdit(true);
+    setEditError(null);
+
+    try {
+      const updates = {
+        name: editName.trim(),
+        totalEpisodes: pendingAnime.type === 'Movie' ? 0 : parseInt(editTotalEpisodes, 10),
+        episodesWatched: pendingAnime.type === 'Movie' ? 0 : parseInt(editEpisodesWatched, 10),
+      };
+
+      const updatedAnime = await updateAnime(pendingAnime.id, updates);
+
+      // Instantly update local state with exact data returned from API
+      setAnimes(prev => prev.map(a => a.id === pendingAnime.id ? { ...a, ...updatedAnime } : a));
+      addToast(`Updated "${editName.trim()}" successfully!`, 'success');
+      setShowEditModal(false);
+      setPendingAnime(null);
+    } catch (e: any) {
+      setEditError(e.message || "Failed to save changes. Please try again.");
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
   const handleDropInitiate = async (anime: Anime) => {
     try {
       addToast(`Moved ${anime.name} to Dropped`, 'info', 900);
@@ -527,23 +595,6 @@ export default function Home() {
       // Rollback on failure
       console.error('Reorder failed:', e);
       void fetchAnimes(activeTab, currentPage, { showLoader: false });
-    }
-  };
-
-  const handleSeed = async () => {
-    setIsSeeding(true);
-    try {
-      await fetch('/api/seed');
-
-      await Promise.all([
-        fetchAnimes(activeTab, 1),
-        fetchStats()
-      ]);
-      setTabPages(prev => ({ ...prev, [activeTab]: 1 }));
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsSeeding(false);
     }
   };
 
@@ -707,18 +758,32 @@ export default function Home() {
                         </div>
                         
                         <div className="col-ep-control">
-                          <div className="ep-display">
-                            <span className="count">{anime.episodesWatched}</span>
-                            <small>eps</small>
-                          </div>
-                          <div className="ep-btns">
-                            <button onClick={() => updateAnime(anime.id, { episodesWatched: Math.max(0, anime.episodesWatched - 1) })} className="btn-mini">
-                              <Minus size={14} />
-                            </button>
-                            <button onClick={() => updateAnime(anime.id, { episodesWatched: anime.episodesWatched + 1 })} className="btn-mini primary">
-                              <Plus size={14} />
-                            </button>
-                          </div>
+                          {anime.type === 'Movie' ? (
+                            <span className="movie-badge">
+                              <Film size={14} />
+                              Movie
+                            </span>
+                          ) : (
+                            <>
+                              <div className="ep-display">
+                                <span className="count">{anime.episodesWatched}</span>
+                                <small>eps</small>
+                              </div>
+                              <div className="ep-btns">
+                                <button onClick={() => updateAnime(anime.id, { episodesWatched: Math.max(0, anime.episodesWatched - 1) })} className="btn-mini">
+                                  <Minus size={14} />
+                                </button>
+                                <button 
+                                  onClick={() => updateAnime(anime.id, { episodesWatched: anime.episodesWatched + 1 })} 
+                                  className="btn-mini primary"
+                                  disabled={anime.totalEpisodes !== undefined && anime.totalEpisodes > 0 && anime.episodesWatched >= anime.totalEpisodes}
+                                  title={anime.totalEpisodes !== undefined && anime.totalEpisodes > 0 && anime.episodesWatched >= anime.totalEpisodes ? "Progress reached total episodes" : "Increment episodes"}
+                                >
+                                  <Plus size={14} />
+                                </button>
+                              </div>
+                            </>
+                          )}
                         </div>
                         
                         <div className="col-actions-group">
@@ -727,6 +792,9 @@ export default function Home() {
                           </button>
                           <button onClick={() => handleDropInitiate(anime)} className="btn-row danger" title="Drop">
                             <XCircle size={16} />
+                          </button>
+                          <button onClick={() => handleEditInitiate(anime)} className="btn-row ghost" title="Edit">
+                            <Edit2 size={16} />
                           </button>
                           <button onClick={() => handleDeleteInitiate(anime)} className="btn-row ghost" title="Delete">
                             <Trash2 size={16} />
@@ -751,18 +819,32 @@ export default function Home() {
                 </div>
                 
                 <div className="col-ep-control">
-                  <div className="ep-display">
-                    <span className="count">{anime.episodesWatched}</span>
-                    <small>eps</small>
-                  </div>
-                  <div className="ep-btns">
-                    <button onClick={() => updateAnime(anime.id, { episodesWatched: Math.max(0, anime.episodesWatched - 1) })} className="btn-mini">
-                      <Minus size={14} />
-                    </button>
-                    <button onClick={() => updateAnime(anime.id, { episodesWatched: anime.episodesWatched + 1 })} className="btn-mini primary">
-                      <Plus size={14} />
-                    </button>
-                  </div>
+                  {anime.type === 'Movie' ? (
+                    <span className="movie-badge">
+                      <Film size={14} />
+                      Movie
+                    </span>
+                  ) : (
+                    <>
+                      <div className="ep-display">
+                        <span className="count">{anime.episodesWatched}</span>
+                        <small>eps</small>
+                      </div>
+                      <div className="ep-btns">
+                        <button onClick={() => updateAnime(anime.id, { episodesWatched: Math.max(0, anime.episodesWatched - 1) })} className="btn-mini">
+                          <Minus size={14} />
+                        </button>
+                        <button 
+                          onClick={() => updateAnime(anime.id, { episodesWatched: anime.episodesWatched + 1 })} 
+                          className="btn-mini primary"
+                          disabled={anime.totalEpisodes !== undefined && anime.totalEpisodes > 0 && anime.episodesWatched >= anime.totalEpisodes}
+                          title={anime.totalEpisodes !== undefined && anime.totalEpisodes > 0 && anime.episodesWatched >= anime.totalEpisodes ? "Progress reached total episodes" : "Increment episodes"}
+                        >
+                          <Plus size={14} />
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
                 
                 <div className="col-actions-group">
@@ -781,6 +863,9 @@ export default function Home() {
                       <XCircle size={16} />
                     </button>
                   )}
+                  <button onClick={() => handleEditInitiate(anime)} className="btn-row ghost" title="Edit">
+                    <Edit2 size={16} />
+                  </button>
                   <button onClick={() => handleDeleteInitiate(anime)} className="btn-row ghost" title="Delete">
                     <Trash2 size={16} />
                   </button>
@@ -814,16 +899,6 @@ export default function Home() {
           </div>
         </div>
       </header>
-      
-      {stats === 0 && !loading && activeTab === 'watching' && (
-        <div className="seed-banner">
-          <p>You have 600+ anime waiting to be loaded into your database.</p>
-          <button className="btn-seed" onClick={handleSeed} disabled={isSeeding}>
-            {isSeeding ? <RefreshCw className="spin" size={20} /> : <PlaySquare size={20} />}
-            {isSeeding ? 'Seeding Database...' : 'Run Automated DB Seeding'}
-          </button>
-        </div>
-      )}
 
       {activeTab === 'watching' && (
         <div className="search-section animate-fade-in">
@@ -1020,6 +1095,91 @@ export default function Home() {
                 </>
               ) : (
                 'Delete Permanently'
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Edit Modal */}
+      <Modal
+        isOpen={showEditModal}
+        onClose={() => { if (!isSavingEdit) { setShowEditModal(false); setPendingAnime(null); } }}
+        title="Edit Anime"
+      >
+        <div className="edit-modal-inner animate-fade-in">
+          {editError && <div className="form-error">{editError}</div>}
+          
+          <div className="form-group">
+            <label className="form-label" htmlFor="edit-name">Anime Name</label>
+            <input
+              id="edit-name"
+              type="text"
+              className="form-input"
+              value={editName}
+              onChange={e => setEditName(e.target.value)}
+              disabled={isSavingEdit}
+              placeholder="Enter anime name..."
+            />
+          </div>
+
+          {pendingAnime?.type === 'Movie' ? (
+            <div className="movie-modal-note">
+              This entry is a Movie. Episode tracking is not applicable.
+            </div>
+          ) : (
+            <>
+              <div className="form-group">
+                <label className="form-label" htmlFor="edit-total-episodes">Total Episodes</label>
+                <input
+                  id="edit-total-episodes"
+                  type="number"
+                  min="0"
+                  className="form-input"
+                  value={editTotalEpisodes}
+                  onChange={e => setEditTotalEpisodes(e.target.value)}
+                  disabled={isSavingEdit}
+                  placeholder="e.g. 12, 24, 100 (0 for ongoing)"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" htmlFor="edit-progress">Episodes Watched</label>
+                <input
+                  id="edit-progress"
+                  type="number"
+                  min="0"
+                  className="form-input"
+                  value={editEpisodesWatched}
+                  onChange={e => setEditEpisodesWatched(e.target.value)}
+                  disabled={isSavingEdit}
+                  placeholder="Current progress..."
+                />
+              </div>
+            </>
+          )}
+
+          <div className="modal-actions">
+            <button 
+              className="modal-btn secondary" 
+              onClick={() => { setShowEditModal(false); setPendingAnime(null); }}
+              disabled={isSavingEdit}
+            >
+              Cancel
+            </button>
+            <button 
+              className="modal-btn primary" 
+              onClick={handleEditConfirm}
+              disabled={isSavingEdit || !editName.trim()}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+            >
+              {isSavingEdit ? (
+                <>
+                  <RefreshCw className="spin" size={16} />
+                  Saving...
+                </>
+              ) : (
+                'Save Changes'
               )}
             </button>
           </div>

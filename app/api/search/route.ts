@@ -12,8 +12,14 @@ export async function GET(request: Request) {
     const res = await fetch(
       `https://api.jikan.moe/v4/anime?q=${encodeURIComponent(q)}&limit=25&page=${page}&sfw=true`
     );
-    const json = await res.json();
 
+    if (!res.ok) {
+      const errorJson = await res.json().catch(() => ({}));
+      const errorMsg = errorJson.message || errorJson.error || `Jikan API returned status ${res.status}`;
+      return NextResponse.json({ error: errorMsg }, { status: res.status });
+    }
+
+    const json = await res.json();
     return NextResponse.json(json);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

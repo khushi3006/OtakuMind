@@ -34,6 +34,7 @@ type Anime = {
   broadcastTime: string | null;
   broadcastTimezone: string | null;
   broadcastString: string | null;
+  type?: string;
 };
 
 type PopularShow = {
@@ -129,7 +130,18 @@ export default function AiringSchedulePage() {
       
       if (!res.ok) throw new Error(json.error || 'Failed to fetch seasonal airing anime');
       
-      setPopularAiring(json.data || []);
+      // Deduplicate before setting state to ensure cards render uniquely
+      const data = json.data || [];
+      const seenIds = new Set<number>();
+      const uniqueData = data.filter((show: PopularShow) => {
+        if (!show.mal_id || seenIds.has(show.mal_id)) {
+          return false;
+        }
+        seenIds.add(show.mal_id);
+        return true;
+      });
+      
+      setPopularAiring(uniqueData);
     } catch (err) {
       console.error(err);
       addToast("Could not load popular seasonal recommendations", "warning");
@@ -209,6 +221,7 @@ export default function AiringSchedulePage() {
         broadcastTime: show.broadcast?.time || null,
         broadcastTimezone: show.broadcast?.timezone || null,
         broadcastString: show.broadcast?.string || null,
+        type: show.type,
       };
       
       const res = await fetch('/api/anime', {

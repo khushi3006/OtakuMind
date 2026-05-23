@@ -128,6 +128,7 @@ exports.Prisma.AnimeScalarFieldEnum = {
   normalizedName: 'normalizedName',
   season: 'season',
   episodesWatched: 'episodesWatched',
+  totalEpisodes: 'totalEpisodes',
   status: 'status',
   imageUrl: 'imageUrl',
   malId: 'malId',

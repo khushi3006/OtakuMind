@@ -87,6 +87,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const {
       name,
+      totalEpisodes,
       episodesWatched,
       status,
       imageUrl,
@@ -147,7 +148,8 @@ export async function POST(request: Request) {
         name,
         normalizedName,
         season,
-        episodesWatched: episodesWatched || 0,
+        totalEpisodes: finalType === 'Movie' ? 0 : (totalEpisodes || 0),
+        episodesWatched: finalType === 'Movie' ? 0 : (episodesWatched || 0),
         status: targetStatus,
         imageUrl: imageUrl || null,
         malId: malId ? Number(malId) : null,

@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { normalizeWatchingOrder } from '@/lib/watch-order';
 import { withDeadlockRetry } from '@/lib/deadlock-retry';
 import { WATCH_ORDER_TRANSACTION_OPTIONS } from '@/lib/transaction-options';
+import { normalizeAnimeName, extractSeasonNumber } from '@/lib/normalize';
 
 function isDroppedAtValidationError(error: unknown) {
   return error instanceof Error && error.message.includes('Unknown argument `droppedAt`');
@@ -16,14 +17,31 @@ export async function PUT(
     const { id } = await params;
     const animeId = parseInt(id, 10);
     const body = await request.json();
-    const { episodesWatched, status, watchOrder } = body;
+    const { name, totalEpisodes, episodesWatched, status, watchOrder } = body;
+    
     const currentAnime = await db.anime.findUnique({
       where: { id: animeId },
-      select: { status: true, watchOrder: true },
+      select: { status: true, watchOrder: true, type: true, episodesWatched: true, totalEpisodes: true },
     });
 
     if (!currentAnime) {
       return NextResponse.json({ error: 'Anime not found' }, { status: 404 });
+    }
+
+    // Validation checks for non-movies
+    if (currentAnime.type !== 'Movie') {
+      const targetEpisodesWatched = episodesWatched !== undefined ? episodesWatched : currentAnime.episodesWatched;
+      const targetTotalEpisodes = totalEpisodes !== undefined ? totalEpisodes : currentAnime.totalEpisodes;
+
+      if (targetEpisodesWatched < 0) {
+        return NextResponse.json({ error: 'Watched episodes cannot be negative' }, { status: 400 });
+      }
+      if (targetTotalEpisodes < 0) {
+        return NextResponse.json({ error: 'Total episodes cannot be negative' }, { status: 400 });
+      }
+      if (targetTotalEpisodes > 0 && targetEpisodesWatched > targetTotalEpisodes) {
+        return NextResponse.json({ error: 'Watched episodes cannot exceed total episodes' }, { status: 400 });
+      }
     }
 
     const isStatusChanging = status !== undefined && status !== currentAnime.status;
@@ -42,8 +60,19 @@ export async function PUT(
       status === 'dropped' ? new Date() :
       null;
 
+    let updatedNormalizedName = undefined;
+    let updatedSeason = undefined;
+    if (name !== undefined) {
+      updatedNormalizedName = normalizeAnimeName(name);
+      updatedSeason = extractSeasonNumber(name);
+    }
+
     const updateData = {
-      episodesWatched: episodesWatched !== undefined ? episodesWatched : undefined,
+      name: name !== undefined ? name : undefined,
+      normalizedName: updatedNormalizedName,
+      season: updatedSeason,
+      totalEpisodes: currentAnime.type === 'Movie' ? 0 : (totalEpisodes !== undefined ? totalEpisodes : undefined),
+      episodesWatched: currentAnime.type === 'Movie' ? 0 : (episodesWatched !== undefined ? episodesWatched : undefined),
       status: status !== undefined ? status : undefined,
       watchOrder: resolvedWatchOrder !== undefined ? resolvedWatchOrder : undefined,
       droppedAt: nextDroppedAt,

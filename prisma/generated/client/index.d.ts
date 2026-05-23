@@ -863,6 +863,7 @@ export namespace Prisma {
     id: number | null
     season: number | null
     episodesWatched: number | null
+    totalEpisodes: number | null
     malId: number | null
     originalOrder: number | null
     watchOrder: number | null
@@ -872,6 +873,7 @@ export namespace Prisma {
     id: number | null
     season: number | null
     episodesWatched: number | null
+    totalEpisodes: number | null
     malId: number | null
     originalOrder: number | null
     watchOrder: number | null
@@ -883,6 +885,7 @@ export namespace Prisma {
     normalizedName: string | null
     season: number | null
     episodesWatched: number | null
+    totalEpisodes: number | null
     status: string | null
     imageUrl: string | null
     malId: number | null
@@ -904,6 +907,7 @@ export namespace Prisma {
     normalizedName: string | null
     season: number | null
     episodesWatched: number | null
+    totalEpisodes: number | null
     status: string | null
     imageUrl: string | null
     malId: number | null
@@ -925,6 +929,7 @@ export namespace Prisma {
     normalizedName: number
     season: number
     episodesWatched: number
+    totalEpisodes: number
     status: number
     imageUrl: number
     malId: number
@@ -946,6 +951,7 @@ export namespace Prisma {
     id?: true
     season?: true
     episodesWatched?: true
+    totalEpisodes?: true
     malId?: true
     originalOrder?: true
     watchOrder?: true
@@ -955,6 +961,7 @@ export namespace Prisma {
     id?: true
     season?: true
     episodesWatched?: true
+    totalEpisodes?: true
     malId?: true
     originalOrder?: true
     watchOrder?: true
@@ -966,6 +973,7 @@ export namespace Prisma {
     normalizedName?: true
     season?: true
     episodesWatched?: true
+    totalEpisodes?: true
     status?: true
     imageUrl?: true
     malId?: true
@@ -987,6 +995,7 @@ export namespace Prisma {
     normalizedName?: true
     season?: true
     episodesWatched?: true
+    totalEpisodes?: true
     status?: true
     imageUrl?: true
     malId?: true
@@ -1008,6 +1017,7 @@ export namespace Prisma {
     normalizedName?: true
     season?: true
     episodesWatched?: true
+    totalEpisodes?: true
     status?: true
     imageUrl?: true
     malId?: true
@@ -1116,6 +1126,7 @@ export namespace Prisma {
     normalizedName: string
     season: number
     episodesWatched: number
+    totalEpisodes: number
     status: string
     imageUrl: string | null
     malId: number | null
@@ -1156,6 +1167,7 @@ export namespace Prisma {
     normalizedName?: boolean
     season?: boolean
     episodesWatched?: boolean
+    totalEpisodes?: boolean
     status?: boolean
     imageUrl?: boolean
     malId?: boolean
@@ -1177,6 +1189,7 @@ export namespace Prisma {
     normalizedName?: boolean
     season?: boolean
     episodesWatched?: boolean
+    totalEpisodes?: boolean
     status?: boolean
     imageUrl?: boolean
     malId?: boolean
@@ -1198,6 +1211,7 @@ export namespace Prisma {
     normalizedName?: boolean
     season?: boolean
     episodesWatched?: boolean
+    totalEpisodes?: boolean
     status?: boolean
     imageUrl?: boolean
     malId?: boolean
@@ -1223,6 +1237,7 @@ export namespace Prisma {
       normalizedName: string
       season: number
       episodesWatched: number
+      totalEpisodes: number
       status: string
       imageUrl: string | null
       malId: number | null
@@ -1634,6 +1649,7 @@ export namespace Prisma {
     readonly normalizedName: FieldRef<"Anime", 'String'>
     readonly season: FieldRef<"Anime", 'Int'>
     readonly episodesWatched: FieldRef<"Anime", 'Int'>
+    readonly totalEpisodes: FieldRef<"Anime", 'Int'>
     readonly status: FieldRef<"Anime", 'String'>
     readonly imageUrl: FieldRef<"Anime", 'String'>
     readonly malId: FieldRef<"Anime", 'Int'>
@@ -1955,6 +1971,7 @@ export namespace Prisma {
     normalizedName: 'normalizedName',
     season: 'season',
     episodesWatched: 'episodesWatched',
+    totalEpisodes: 'totalEpisodes',
     status: 'status',
     imageUrl: 'imageUrl',
     malId: 'malId',
@@ -2077,6 +2094,7 @@ export namespace Prisma {
     normalizedName?: StringFilter<"Anime"> | string
     season?: IntFilter<"Anime"> | number
     episodesWatched?: IntFilter<"Anime"> | number
+    totalEpisodes?: IntFilter<"Anime"> | number
     status?: StringFilter<"Anime"> | string
     imageUrl?: StringNullableFilter<"Anime"> | string | null
     malId?: IntNullableFilter<"Anime"> | number | null
@@ -2098,6 +2116,7 @@ export namespace Prisma {
     normalizedName?: SortOrder
     season?: SortOrder
     episodesWatched?: SortOrder
+    totalEpisodes?: SortOrder
     status?: SortOrder
     imageUrl?: SortOrderInput | SortOrder
     malId?: SortOrderInput | SortOrder
@@ -2124,6 +2143,7 @@ export namespace Prisma {
     normalizedName?: StringFilter<"Anime"> | string
     season?: IntFilter<"Anime"> | number
     episodesWatched?: IntFilter<"Anime"> | number
+    totalEpisodes?: IntFilter<"Anime"> | number
     status?: StringFilter<"Anime"> | string
     imageUrl?: StringNullableFilter<"Anime"> | string | null
     type?: StringFilter<"Anime"> | string
@@ -2144,6 +2164,7 @@ export namespace Prisma {
     normalizedName?: SortOrder
     season?: SortOrder
     episodesWatched?: SortOrder
+    totalEpisodes?: SortOrder
     status?: SortOrder
     imageUrl?: SortOrderInput | SortOrder
     malId?: SortOrderInput | SortOrder
@@ -2173,6 +2194,7 @@ export namespace Prisma {
     normalizedName?: StringWithAggregatesFilter<"Anime"> | string
     season?: IntWithAggregatesFilter<"Anime"> | number
     episodesWatched?: IntWithAggregatesFilter<"Anime"> | number
+    totalEpisodes?: IntWithAggregatesFilter<"Anime"> | number
     status?: StringWithAggregatesFilter<"Anime"> | string
     imageUrl?: StringNullableWithAggregatesFilter<"Anime"> | string | null
     malId?: IntNullableWithAggregatesFilter<"Anime"> | number | null
@@ -2193,6 +2215,7 @@ export namespace Prisma {
     normalizedName: string
     season: number
     episodesWatched?: number
+    totalEpisodes?: number
     status: string
     imageUrl?: string | null
     malId?: number | null
@@ -2214,6 +2237,7 @@ export namespace Prisma {
     normalizedName: string
     season: number
     episodesWatched?: number
+    totalEpisodes?: number
     status: string
     imageUrl?: string | null
     malId?: number | null
@@ -2234,6 +2258,7 @@ export namespace Prisma {
     normalizedName?: StringFieldUpdateOperationsInput | string
     season?: IntFieldUpdateOperationsInput | number
     episodesWatched?: IntFieldUpdateOperationsInput | number
+    totalEpisodes?: IntFieldUpdateOperationsInput | number
     status?: StringFieldUpdateOperationsInput | string
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     malId?: NullableIntFieldUpdateOperationsInput | number | null
@@ -2255,6 +2280,7 @@ export namespace Prisma {
     normalizedName?: StringFieldUpdateOperationsInput | string
     season?: IntFieldUpdateOperationsInput | number
     episodesWatched?: IntFieldUpdateOperationsInput | number
+    totalEpisodes?: IntFieldUpdateOperationsInput | number
     status?: StringFieldUpdateOperationsInput | string
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     malId?: NullableIntFieldUpdateOperationsInput | number | null
@@ -2276,6 +2302,7 @@ export namespace Prisma {
     normalizedName: string
     season: number
     episodesWatched?: number
+    totalEpisodes?: number
     status: string
     imageUrl?: string | null
     malId?: number | null
@@ -2296,6 +2323,7 @@ export namespace Prisma {
     normalizedName?: StringFieldUpdateOperationsInput | string
     season?: IntFieldUpdateOperationsInput | number
     episodesWatched?: IntFieldUpdateOperationsInput | number
+    totalEpisodes?: IntFieldUpdateOperationsInput | number
     status?: StringFieldUpdateOperationsInput | string
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     malId?: NullableIntFieldUpdateOperationsInput | number | null
@@ -2317,6 +2345,7 @@ export namespace Prisma {
     normalizedName?: StringFieldUpdateOperationsInput | string
     season?: IntFieldUpdateOperationsInput | number
     episodesWatched?: IntFieldUpdateOperationsInput | number
+    totalEpisodes?: IntFieldUpdateOperationsInput | number
     status?: StringFieldUpdateOperationsInput | string
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     malId?: NullableIntFieldUpdateOperationsInput | number | null
@@ -2427,6 +2456,7 @@ export namespace Prisma {
     normalizedName?: SortOrder
     season?: SortOrder
     episodesWatched?: SortOrder
+    totalEpisodes?: SortOrder
     status?: SortOrder
     imageUrl?: SortOrder
     malId?: SortOrder
@@ -2446,6 +2476,7 @@ export namespace Prisma {
     id?: SortOrder
     season?: SortOrder
     episodesWatched?: SortOrder
+    totalEpisodes?: SortOrder
     malId?: SortOrder
     originalOrder?: SortOrder
     watchOrder?: SortOrder
@@ -2457,6 +2488,7 @@ export namespace Prisma {
     normalizedName?: SortOrder
     season?: SortOrder
     episodesWatched?: SortOrder
+    totalEpisodes?: SortOrder
     status?: SortOrder
     imageUrl?: SortOrder
     malId?: SortOrder
@@ -2478,6 +2510,7 @@ export namespace Prisma {
     normalizedName?: SortOrder
     season?: SortOrder
     episodesWatched?: SortOrder
+    totalEpisodes?: SortOrder
     status?: SortOrder
     imageUrl?: SortOrder
     malId?: SortOrder
@@ -2497,6 +2530,7 @@ export namespace Prisma {
     id?: SortOrder
     season?: SortOrder
     episodesWatched?: SortOrder
+    totalEpisodes?: SortOrder
     malId?: SortOrder
     originalOrder?: SortOrder
     watchOrder?: SortOrder

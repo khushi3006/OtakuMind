@@ -15,6 +15,7 @@ model Anime {
   normalizedName   String
   season           Int
   episodesWatched  Int      @default(0)
+  totalEpisodes    Int      @default(0)
   status           String   // "completed", "incomplete", "dropped"
   imageUrl         String?
   malId            Int?     @unique // For Jikan API linking
