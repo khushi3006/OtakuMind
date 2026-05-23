@@ -1,8 +1,16 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { normalizeAnimeName, extractSeasonNumber } from '@/lib/normalize';
+import type { Prisma } from '@/prisma/generated/client';
+import { normalizeWatchingOrder } from '@/lib/watch-order';
+import { withDeadlockRetry } from '@/lib/deadlock-retry';
+import { WATCH_ORDER_TRANSACTION_OPTIONS } from '@/lib/transaction-options';
 
 const ALLOWED_LIMITS = [20, 50, 100] as const;
+
+function isDroppedAtValidationError(error: unknown) {
+  return error instanceof Error && error.message.includes('Unknown argument `droppedAt`');
+}
 
 export async function GET(request: Request) {
   try {
@@ -11,9 +19,9 @@ export async function GET(request: Request) {
     const search = searchParams.get('search') || undefined;
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
     const rawLimit = parseInt(searchParams.get('limit') || '20', 10);
-    const limit = ALLOWED_LIMITS.includes(rawLimit as any) ? rawLimit : 20;
+    const limit = ALLOWED_LIMITS.includes(rawLimit as (typeof ALLOWED_LIMITS)[number]) ? rawLimit : 20;
 
-    const where: any = {};
+    const where: Prisma.AnimeWhereInput = {};
     if (status) where.status = status;
     if (search) {
       where.OR = [
@@ -22,19 +30,40 @@ export async function GET(request: Request) {
       ];
     }
 
-    const [animes, total] = await Promise.all([
-      db.anime.findMany({
-        where,
-        orderBy: status === 'completed'
-          ? { originalOrder: 'asc' }
-          : status === 'incomplete'
-            ? [{ watchOrder: { sort: 'asc', nulls: 'last' } }, { createdAt: 'desc' }]
-            : { createdAt: 'desc' },
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      db.anime.count({ where }),
-    ]);
+    const defaultOrderBy = status === 'completed'
+      ? { originalOrder: 'asc' as const }
+      : status === 'incomplete'
+        ? [{ watchOrder: { sort: 'asc' as const, nulls: 'last' as const } }, { createdAt: 'desc' as const }]
+        : [{ droppedAt: { sort: 'desc' as const, nulls: 'last' as const } }, { createdAt: 'desc' as const }];
+
+    let animes;
+    let total;
+
+    try {
+      [animes, total] = await Promise.all([
+        db.anime.findMany({
+          where,
+          orderBy: defaultOrderBy,
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+        db.anime.count({ where }),
+      ]);
+    } catch (error) {
+      if (!(status === 'dropped' && isDroppedAtValidationError(error))) {
+        throw error;
+      }
+
+      [animes, total] = await Promise.all([
+        db.anime.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+        db.anime.count({ where }),
+      ]);
+    }
 
     const result = {
       data: animes,
@@ -47,15 +76,29 @@ export async function GET(request: Request) {
     };
 
     return NextResponse.json(result);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, episodesWatched, status, imageUrl, malId, type } = body;
+    const {
+      name,
+      episodesWatched,
+      status,
+      imageUrl,
+      malId,
+      type,
+      airing,
+      broadcastDay,
+      broadcastTime,
+      broadcastTimezone,
+      broadcastString
+    } = body;
+    const targetStatus = status || 'incomplete';
     
     if (!name) return NextResponse.json({ error: "Name is required" }, { status: 400 });
 
@@ -93,15 +136,6 @@ export async function POST(request: Request) {
       }
     }
 
-    // Determine top position (min watchOrder - 1)
-    const minWatchOrderAnime = await db.anime.findFirst({
-      where: { status: 'incomplete', watchOrder: { not: null } },
-      orderBy: { watchOrder: 'asc' },
-      select: { watchOrder: true }
-    });
-
-    const newWatchOrder = (minWatchOrderAnime?.watchOrder ?? 1) - 1;
-
     let finalType = type || "TV";
     if (!type) {
       const isMovie = name.match(/\b(movie|film)\b/i) || (!name.match(/season/i) && !name.match(/episode/i) && !name.match(/s\d+/i) && !name.match(/part/i) && name.length > 0);
@@ -109,34 +143,75 @@ export async function POST(request: Request) {
     }
 
     try {
-      const newAnime = await db.anime.create({
-        data: {
-          name,
-          normalizedName,
-          season,
-          episodesWatched: episodesWatched || 0,
-          status: status || 'incomplete',
-          imageUrl: imageUrl || null,
-          malId: malId ? Number(malId) : null,
-          type: finalType,
-          watchOrder: newWatchOrder,
-        }
-      });
+      const createData = {
+        name,
+        normalizedName,
+        season,
+        episodesWatched: episodesWatched || 0,
+        status: targetStatus,
+        imageUrl: imageUrl || null,
+        malId: malId ? Number(malId) : null,
+        type: finalType,
+        watchOrder: targetStatus === 'incomplete' ? 1 : null,
+        droppedAt: targetStatus === 'dropped' ? new Date() : null,
+        airing: airing || false,
+        broadcastDay: broadcastDay || null,
+        broadcastTime: broadcastTime || null,
+        broadcastTimezone: broadcastTimezone || null,
+        broadcastString: broadcastString || null,
+      };
 
+      const newAnime = await withDeadlockRetry(() =>
+        db.$transaction(async (tx) => {
+          let createdAnime;
+          try {
+            createdAnime = await tx.anime.create({
+              data: createData
+            });
+          } catch (error) {
+            if (!isDroppedAtValidationError(error)) {
+              throw error;
+            }
 
+            const fallbackCreateData = {
+              ...createData,
+              droppedAt: undefined,
+            };
+            createdAnime = await tx.anime.create({
+              data: fallbackCreateData
+            });
+          }
+
+          if (targetStatus === 'incomplete') {
+            await normalizeWatchingOrder(tx, { pinnedAnimeId: createdAnime.id });
+            return tx.anime.findUniqueOrThrow({ where: { id: createdAnime.id } });
+          }
+
+          return createdAnime;
+        }, WATCH_ORDER_TRANSACTION_OPTIONS)
+      );
 
       return NextResponse.json(newAnime);
-    } catch (error: any) {
-      if (error.code === 'P2002') {
+    } catch (error: unknown) {
+      const message =
+        typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string'
+          ? error.message
+          : 'Unknown error';
+      const code =
+        typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string'
+          ? error.code
+          : undefined;
+      if (code === 'P2002') {
         return NextResponse.json(
           { error: "This anime is already in your watching list", type: "DUPLICATE_INCOMPLETE" },
           { status: 409 }
         );
       }
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: message }, { status: 500 });
     }
 
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

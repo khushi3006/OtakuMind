@@ -889,6 +889,12 @@ export namespace Prisma {
     type: string | null
     originalOrder: number | null
     watchOrder: number | null
+    droppedAt: Date | null
+    airing: boolean | null
+    broadcastDay: string | null
+    broadcastTime: string | null
+    broadcastTimezone: string | null
+    broadcastString: string | null
     createdAt: Date | null
   }
 
@@ -904,6 +910,12 @@ export namespace Prisma {
     type: string | null
     originalOrder: number | null
     watchOrder: number | null
+    droppedAt: Date | null
+    airing: boolean | null
+    broadcastDay: string | null
+    broadcastTime: string | null
+    broadcastTimezone: string | null
+    broadcastString: string | null
     createdAt: Date | null
   }
 
@@ -919,6 +931,12 @@ export namespace Prisma {
     type: number
     originalOrder: number
     watchOrder: number
+    droppedAt: number
+    airing: number
+    broadcastDay: number
+    broadcastTime: number
+    broadcastTimezone: number
+    broadcastString: number
     createdAt: number
     _all: number
   }
@@ -954,6 +972,12 @@ export namespace Prisma {
     type?: true
     originalOrder?: true
     watchOrder?: true
+    droppedAt?: true
+    airing?: true
+    broadcastDay?: true
+    broadcastTime?: true
+    broadcastTimezone?: true
+    broadcastString?: true
     createdAt?: true
   }
 
@@ -969,6 +993,12 @@ export namespace Prisma {
     type?: true
     originalOrder?: true
     watchOrder?: true
+    droppedAt?: true
+    airing?: true
+    broadcastDay?: true
+    broadcastTime?: true
+    broadcastTimezone?: true
+    broadcastString?: true
     createdAt?: true
   }
 
@@ -984,6 +1014,12 @@ export namespace Prisma {
     type?: true
     originalOrder?: true
     watchOrder?: true
+    droppedAt?: true
+    airing?: true
+    broadcastDay?: true
+    broadcastTime?: true
+    broadcastTimezone?: true
+    broadcastString?: true
     createdAt?: true
     _all?: true
   }
@@ -1086,6 +1122,12 @@ export namespace Prisma {
     type: string
     originalOrder: number | null
     watchOrder: number | null
+    droppedAt: Date | null
+    airing: boolean
+    broadcastDay: string | null
+    broadcastTime: string | null
+    broadcastTimezone: string | null
+    broadcastString: string | null
     createdAt: Date
     _count: AnimeCountAggregateOutputType | null
     _avg: AnimeAvgAggregateOutputType | null
@@ -1120,6 +1162,12 @@ export namespace Prisma {
     type?: boolean
     originalOrder?: boolean
     watchOrder?: boolean
+    droppedAt?: boolean
+    airing?: boolean
+    broadcastDay?: boolean
+    broadcastTime?: boolean
+    broadcastTimezone?: boolean
+    broadcastString?: boolean
     createdAt?: boolean
   }, ExtArgs["result"]["anime"]>
 
@@ -1135,6 +1183,12 @@ export namespace Prisma {
     type?: boolean
     originalOrder?: boolean
     watchOrder?: boolean
+    droppedAt?: boolean
+    airing?: boolean
+    broadcastDay?: boolean
+    broadcastTime?: boolean
+    broadcastTimezone?: boolean
+    broadcastString?: boolean
     createdAt?: boolean
   }, ExtArgs["result"]["anime"]>
 
@@ -1150,6 +1204,12 @@ export namespace Prisma {
     type?: boolean
     originalOrder?: boolean
     watchOrder?: boolean
+    droppedAt?: boolean
+    airing?: boolean
+    broadcastDay?: boolean
+    broadcastTime?: boolean
+    broadcastTimezone?: boolean
+    broadcastString?: boolean
     createdAt?: boolean
   }
 
@@ -1169,6 +1229,12 @@ export namespace Prisma {
       type: string
       originalOrder: number | null
       watchOrder: number | null
+      droppedAt: Date | null
+      airing: boolean
+      broadcastDay: string | null
+      broadcastTime: string | null
+      broadcastTimezone: string | null
+      broadcastString: string | null
       createdAt: Date
     }, ExtArgs["result"]["anime"]>
     composites: {}
@@ -1574,6 +1640,12 @@ export namespace Prisma {
     readonly type: FieldRef<"Anime", 'String'>
     readonly originalOrder: FieldRef<"Anime", 'Int'>
     readonly watchOrder: FieldRef<"Anime", 'Int'>
+    readonly droppedAt: FieldRef<"Anime", 'DateTime'>
+    readonly airing: FieldRef<"Anime", 'Boolean'>
+    readonly broadcastDay: FieldRef<"Anime", 'String'>
+    readonly broadcastTime: FieldRef<"Anime", 'String'>
+    readonly broadcastTimezone: FieldRef<"Anime", 'String'>
+    readonly broadcastString: FieldRef<"Anime", 'String'>
     readonly createdAt: FieldRef<"Anime", 'DateTime'>
   }
     
@@ -1889,6 +1961,12 @@ export namespace Prisma {
     type: 'type',
     originalOrder: 'originalOrder',
     watchOrder: 'watchOrder',
+    droppedAt: 'droppedAt',
+    airing: 'airing',
+    broadcastDay: 'broadcastDay',
+    broadcastTime: 'broadcastTime',
+    broadcastTimezone: 'broadcastTimezone',
+    broadcastString: 'broadcastString',
     createdAt: 'createdAt'
   };
 
@@ -1967,6 +2045,13 @@ export namespace Prisma {
 
 
   /**
+   * Reference to a field of type 'Boolean'
+   */
+  export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
+    
+
+
+  /**
    * Reference to a field of type 'Float'
    */
   export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
@@ -1998,6 +2083,12 @@ export namespace Prisma {
     type?: StringFilter<"Anime"> | string
     originalOrder?: IntNullableFilter<"Anime"> | number | null
     watchOrder?: IntNullableFilter<"Anime"> | number | null
+    droppedAt?: DateTimeNullableFilter<"Anime"> | Date | string | null
+    airing?: BoolFilter<"Anime"> | boolean
+    broadcastDay?: StringNullableFilter<"Anime"> | string | null
+    broadcastTime?: StringNullableFilter<"Anime"> | string | null
+    broadcastTimezone?: StringNullableFilter<"Anime"> | string | null
+    broadcastString?: StringNullableFilter<"Anime"> | string | null
     createdAt?: DateTimeFilter<"Anime"> | Date | string
   }
 
@@ -2013,6 +2104,12 @@ export namespace Prisma {
     type?: SortOrder
     originalOrder?: SortOrderInput | SortOrder
     watchOrder?: SortOrderInput | SortOrder
+    droppedAt?: SortOrderInput | SortOrder
+    airing?: SortOrder
+    broadcastDay?: SortOrderInput | SortOrder
+    broadcastTime?: SortOrderInput | SortOrder
+    broadcastTimezone?: SortOrderInput | SortOrder
+    broadcastString?: SortOrderInput | SortOrder
     createdAt?: SortOrder
   }
 
@@ -2032,6 +2129,12 @@ export namespace Prisma {
     type?: StringFilter<"Anime"> | string
     originalOrder?: IntNullableFilter<"Anime"> | number | null
     watchOrder?: IntNullableFilter<"Anime"> | number | null
+    droppedAt?: DateTimeNullableFilter<"Anime"> | Date | string | null
+    airing?: BoolFilter<"Anime"> | boolean
+    broadcastDay?: StringNullableFilter<"Anime"> | string | null
+    broadcastTime?: StringNullableFilter<"Anime"> | string | null
+    broadcastTimezone?: StringNullableFilter<"Anime"> | string | null
+    broadcastString?: StringNullableFilter<"Anime"> | string | null
     createdAt?: DateTimeFilter<"Anime"> | Date | string
   }, "id" | "malId" | "normalizedName_season">
 
@@ -2047,6 +2150,12 @@ export namespace Prisma {
     type?: SortOrder
     originalOrder?: SortOrderInput | SortOrder
     watchOrder?: SortOrderInput | SortOrder
+    droppedAt?: SortOrderInput | SortOrder
+    airing?: SortOrder
+    broadcastDay?: SortOrderInput | SortOrder
+    broadcastTime?: SortOrderInput | SortOrder
+    broadcastTimezone?: SortOrderInput | SortOrder
+    broadcastString?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     _count?: AnimeCountOrderByAggregateInput
     _avg?: AnimeAvgOrderByAggregateInput
@@ -2070,6 +2179,12 @@ export namespace Prisma {
     type?: StringWithAggregatesFilter<"Anime"> | string
     originalOrder?: IntNullableWithAggregatesFilter<"Anime"> | number | null
     watchOrder?: IntNullableWithAggregatesFilter<"Anime"> | number | null
+    droppedAt?: DateTimeNullableWithAggregatesFilter<"Anime"> | Date | string | null
+    airing?: BoolWithAggregatesFilter<"Anime"> | boolean
+    broadcastDay?: StringNullableWithAggregatesFilter<"Anime"> | string | null
+    broadcastTime?: StringNullableWithAggregatesFilter<"Anime"> | string | null
+    broadcastTimezone?: StringNullableWithAggregatesFilter<"Anime"> | string | null
+    broadcastString?: StringNullableWithAggregatesFilter<"Anime"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"Anime"> | Date | string
   }
 
@@ -2084,6 +2199,12 @@ export namespace Prisma {
     type?: string
     originalOrder?: number | null
     watchOrder?: number | null
+    droppedAt?: Date | string | null
+    airing?: boolean
+    broadcastDay?: string | null
+    broadcastTime?: string | null
+    broadcastTimezone?: string | null
+    broadcastString?: string | null
     createdAt?: Date | string
   }
 
@@ -2099,6 +2220,12 @@ export namespace Prisma {
     type?: string
     originalOrder?: number | null
     watchOrder?: number | null
+    droppedAt?: Date | string | null
+    airing?: boolean
+    broadcastDay?: string | null
+    broadcastTime?: string | null
+    broadcastTimezone?: string | null
+    broadcastString?: string | null
     createdAt?: Date | string
   }
 
@@ -2113,6 +2240,12 @@ export namespace Prisma {
     type?: StringFieldUpdateOperationsInput | string
     originalOrder?: NullableIntFieldUpdateOperationsInput | number | null
     watchOrder?: NullableIntFieldUpdateOperationsInput | number | null
+    droppedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    airing?: BoolFieldUpdateOperationsInput | boolean
+    broadcastDay?: NullableStringFieldUpdateOperationsInput | string | null
+    broadcastTime?: NullableStringFieldUpdateOperationsInput | string | null
+    broadcastTimezone?: NullableStringFieldUpdateOperationsInput | string | null
+    broadcastString?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -2128,6 +2261,12 @@ export namespace Prisma {
     type?: StringFieldUpdateOperationsInput | string
     originalOrder?: NullableIntFieldUpdateOperationsInput | number | null
     watchOrder?: NullableIntFieldUpdateOperationsInput | number | null
+    droppedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    airing?: BoolFieldUpdateOperationsInput | boolean
+    broadcastDay?: NullableStringFieldUpdateOperationsInput | string | null
+    broadcastTime?: NullableStringFieldUpdateOperationsInput | string | null
+    broadcastTimezone?: NullableStringFieldUpdateOperationsInput | string | null
+    broadcastString?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -2143,6 +2282,12 @@ export namespace Prisma {
     type?: string
     originalOrder?: number | null
     watchOrder?: number | null
+    droppedAt?: Date | string | null
+    airing?: boolean
+    broadcastDay?: string | null
+    broadcastTime?: string | null
+    broadcastTimezone?: string | null
+    broadcastString?: string | null
     createdAt?: Date | string
   }
 
@@ -2157,6 +2302,12 @@ export namespace Prisma {
     type?: StringFieldUpdateOperationsInput | string
     originalOrder?: NullableIntFieldUpdateOperationsInput | number | null
     watchOrder?: NullableIntFieldUpdateOperationsInput | number | null
+    droppedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    airing?: BoolFieldUpdateOperationsInput | boolean
+    broadcastDay?: NullableStringFieldUpdateOperationsInput | string | null
+    broadcastTime?: NullableStringFieldUpdateOperationsInput | string | null
+    broadcastTimezone?: NullableStringFieldUpdateOperationsInput | string | null
+    broadcastString?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -2172,6 +2323,12 @@ export namespace Prisma {
     type?: StringFieldUpdateOperationsInput | string
     originalOrder?: NullableIntFieldUpdateOperationsInput | number | null
     watchOrder?: NullableIntFieldUpdateOperationsInput | number | null
+    droppedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    airing?: BoolFieldUpdateOperationsInput | boolean
+    broadcastDay?: NullableStringFieldUpdateOperationsInput | string | null
+    broadcastTime?: NullableStringFieldUpdateOperationsInput | string | null
+    broadcastTimezone?: NullableStringFieldUpdateOperationsInput | string | null
+    broadcastString?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -2227,6 +2384,22 @@ export namespace Prisma {
     not?: NestedIntNullableFilter<$PrismaModel> | number | null
   }
 
+  export type DateTimeNullableFilter<$PrismaModel = never> = {
+    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel> | null
+    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    not?: NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
+  }
+
+  export type BoolFilter<$PrismaModel = never> = {
+    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
+    not?: NestedBoolFilter<$PrismaModel> | boolean
+  }
+
   export type DateTimeFilter<$PrismaModel = never> = {
     equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
@@ -2260,6 +2433,12 @@ export namespace Prisma {
     type?: SortOrder
     originalOrder?: SortOrder
     watchOrder?: SortOrder
+    droppedAt?: SortOrder
+    airing?: SortOrder
+    broadcastDay?: SortOrder
+    broadcastTime?: SortOrder
+    broadcastTimezone?: SortOrder
+    broadcastString?: SortOrder
     createdAt?: SortOrder
   }
 
@@ -2284,6 +2463,12 @@ export namespace Prisma {
     type?: SortOrder
     originalOrder?: SortOrder
     watchOrder?: SortOrder
+    droppedAt?: SortOrder
+    airing?: SortOrder
+    broadcastDay?: SortOrder
+    broadcastTime?: SortOrder
+    broadcastTimezone?: SortOrder
+    broadcastString?: SortOrder
     createdAt?: SortOrder
   }
 
@@ -2299,6 +2484,12 @@ export namespace Prisma {
     type?: SortOrder
     originalOrder?: SortOrder
     watchOrder?: SortOrder
+    droppedAt?: SortOrder
+    airing?: SortOrder
+    broadcastDay?: SortOrder
+    broadcastTime?: SortOrder
+    broadcastTimezone?: SortOrder
+    broadcastString?: SortOrder
     createdAt?: SortOrder
   }
 
@@ -2379,6 +2570,28 @@ export namespace Prisma {
     _max?: NestedIntNullableFilter<$PrismaModel>
   }
 
+  export type DateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel> | null
+    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    not?: NestedDateTimeNullableWithAggregatesFilter<$PrismaModel> | Date | string | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedDateTimeNullableFilter<$PrismaModel>
+    _max?: NestedDateTimeNullableFilter<$PrismaModel>
+  }
+
+  export type BoolWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
+    not?: NestedBoolWithAggregatesFilter<$PrismaModel> | boolean
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedBoolFilter<$PrismaModel>
+    _max?: NestedBoolFilter<$PrismaModel>
+  }
+
   export type DateTimeWithAggregatesFilter<$PrismaModel = never> = {
     equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
@@ -2415,6 +2628,14 @@ export namespace Prisma {
     decrement?: number
     multiply?: number
     divide?: number
+  }
+
+  export type NullableDateTimeFieldUpdateOperationsInput = {
+    set?: Date | string | null
+  }
+
+  export type BoolFieldUpdateOperationsInput = {
+    set?: boolean
   }
 
   export type DateTimeFieldUpdateOperationsInput = {
@@ -2469,6 +2690,22 @@ export namespace Prisma {
     gt?: number | IntFieldRefInput<$PrismaModel>
     gte?: number | IntFieldRefInput<$PrismaModel>
     not?: NestedIntNullableFilter<$PrismaModel> | number | null
+  }
+
+  export type NestedDateTimeNullableFilter<$PrismaModel = never> = {
+    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel> | null
+    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    not?: NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
+  }
+
+  export type NestedBoolFilter<$PrismaModel = never> = {
+    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
+    not?: NestedBoolFilter<$PrismaModel> | boolean
   }
 
   export type NestedDateTimeFilter<$PrismaModel = never> = {
@@ -2568,6 +2805,28 @@ export namespace Prisma {
     gt?: number | FloatFieldRefInput<$PrismaModel>
     gte?: number | FloatFieldRefInput<$PrismaModel>
     not?: NestedFloatNullableFilter<$PrismaModel> | number | null
+  }
+
+  export type NestedDateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel> | null
+    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    not?: NestedDateTimeNullableWithAggregatesFilter<$PrismaModel> | Date | string | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedDateTimeNullableFilter<$PrismaModel>
+    _max?: NestedDateTimeNullableFilter<$PrismaModel>
+  }
+
+  export type NestedBoolWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
+    not?: NestedBoolWithAggregatesFilter<$PrismaModel> | boolean
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedBoolFilter<$PrismaModel>
+    _max?: NestedBoolFilter<$PrismaModel>
   }
 
   export type NestedDateTimeWithAggregatesFilter<$PrismaModel = never> = {

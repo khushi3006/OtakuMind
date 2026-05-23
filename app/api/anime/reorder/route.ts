@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { normalizeWatchingOrder, updateWatchOrderItems } from '@/lib/watch-order';
+import { withDeadlockRetry } from '@/lib/deadlock-retry';
+import { WATCH_ORDER_TRANSACTION_OPTIONS } from '@/lib/transaction-options';
 
 /**
  * PUT /api/anime/reorder
@@ -16,17 +19,16 @@ export async function PUT(request: Request) {
     }
 
     // Batch update in a transaction for atomicity
-    await db.$transaction(
-      items.map((item: { id: number; watchOrder: number }) =>
-        db.anime.update({
-          where: { id: item.id },
-          data: { watchOrder: item.watchOrder },
-        })
-      )
+    await withDeadlockRetry(() =>
+      db.$transaction(async (tx) => {
+        await updateWatchOrderItems(tx, items as { id: number; watchOrder: number }[]);
+        await normalizeWatchingOrder(tx);
+      }, WATCH_ORDER_TRANSACTION_OPTIONS)
     );
 
     return NextResponse.json({ success: true, updated: items.length });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

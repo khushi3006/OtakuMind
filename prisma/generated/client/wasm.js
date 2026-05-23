@@ -102,6 +102,12 @@ exports.Prisma.AnimeScalarFieldEnum = {
   type: 'type',
   originalOrder: 'originalOrder',
   watchOrder: 'watchOrder',
+  droppedAt: 'droppedAt',
+  airing: 'airing',
+  broadcastDay: 'broadcastDay',
+  broadcastTime: 'broadcastTime',
+  broadcastTimezone: 'broadcastTimezone',
+  broadcastString: 'broadcastString',
   createdAt: 'createdAt'
 };
 
@@ -135,7 +141,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "C:\\Users\\HP\\Desktop\\OtakuMind\\prisma\\generated\\client",
+      "value": "D:\\Projects\\OtakuMind\\prisma\\generated\\client",
       "fromEnvVar": null
     },
     "config": {
@@ -151,7 +157,7 @@ const config = {
     "previewFeatures": [
       "driverAdapters"
     ],
-    "sourceFilePath": "C:\\Users\\HP\\Desktop\\OtakuMind\\prisma\\schema.prisma",
+    "sourceFilePath": "D:\\Projects\\OtakuMind\\prisma\\schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
@@ -174,13 +180,13 @@ const config = {
       }
     }
   },
-  "inlineSchema": "generator client {\n  provider        = \"prisma-client-js\"\n  previewFeatures = [\"driverAdapters\"]\n  output          = \"./generated/client\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel Anime {\n  id              Int      @id @default(autoincrement())\n  name            String\n  normalizedName  String\n  season          Int\n  episodesWatched Int      @default(0)\n  status          String // \"completed\", \"incomplete\", \"dropped\"\n  imageUrl        String?\n  malId           Int?     @unique // For Jikan API linking\n  type            String   @default(\"TV\") // \"TV\", \"Movie\", \"OVA\", \"Special\"\n  originalOrder   Int? // Preserves the number from 1-601\n  watchOrder      Int? // Custom drag-and-drop ordering for \"Currently Watching\"\n  createdAt       DateTime @default(now())\n\n  // Performance indexes for common query patterns\n  @@unique([normalizedName, season])\n  @@index([status, createdAt])\n  @@index([status, originalOrder])\n  @@index([status, watchOrder])\n  @@index([normalizedName])\n}\n",
-  "inlineSchemaHash": "4151d8e8e0b866b619361e74116b6c24e2a68d64d2d279389a5e7291e0f5aa2a",
+  "inlineSchema": "generator client {\n  provider        = \"prisma-client-js\"\n  previewFeatures = [\"driverAdapters\"]\n  output          = \"./generated/client\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel Anime {\n  id                Int       @id @default(autoincrement())\n  name              String\n  normalizedName    String\n  season            Int\n  episodesWatched   Int       @default(0)\n  status            String // \"completed\", \"incomplete\", \"dropped\"\n  imageUrl          String?\n  malId             Int?      @unique // For Jikan API linking\n  type              String    @default(\"TV\") // \"TV\", \"Movie\", \"OVA\", \"Special\"\n  originalOrder     Int? // Preserves the number from 1-601\n  watchOrder        Int? // Custom drag-and-drop ordering for \"Currently Watching\"\n  droppedAt         DateTime?\n  airing            Boolean   @default(false)\n  broadcastDay      String?\n  broadcastTime     String?\n  broadcastTimezone String?\n  broadcastString   String?\n  createdAt         DateTime  @default(now())\n\n  // Performance indexes for common query patterns\n  @@unique([normalizedName, season])\n  @@index([status, createdAt])\n  @@index([status, droppedAt])\n  @@index([status, originalOrder])\n  @@index([status, watchOrder])\n  @@index([normalizedName])\n}\n",
+  "inlineSchemaHash": "aabc8073765d5f5c83b5ff3524854918c4d27f39829347aafc6f5daf96ce5ada",
   "copyEngine": true
 }
 config.dirname = '/'
 
-config.runtimeDataModel = JSON.parse("{\"models\":{\"Anime\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"normalizedName\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"season\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"episodesWatched\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"status\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"imageUrl\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"malId\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"originalOrder\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"watchOrder\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":null}},\"enums\":{},\"types\":{}}")
+config.runtimeDataModel = JSON.parse("{\"models\":{\"Anime\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"normalizedName\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"season\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"episodesWatched\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"status\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"imageUrl\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"malId\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"originalOrder\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"watchOrder\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"droppedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"airing\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"broadcastDay\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"broadcastTime\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"broadcastTimezone\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"broadcastString\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":null}},\"enums\":{},\"types\":{}}")
 defineDmmfProperty(exports.Prisma, config.runtimeDataModel)
 config.engineWasm = {
   getRuntime: () => require('./query_engine_bg.js'),

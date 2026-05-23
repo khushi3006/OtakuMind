@@ -9,6 +9,7 @@ export default function Navbar() {
 
   const links = [
     { href: '/', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
+    { href: '/airing-schedule', label: 'Airing Schedule', icon: <PlayCircle size={20} /> },
     { href: '/original-list', label: 'Original History', icon: <CheckCircle2 size={20} /> },
   ];
 

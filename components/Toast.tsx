@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { CheckCircle, Info, AlertTriangle } from 'lucide-react';
 
 export type ToastType = 'success' | 'info' | 'warning';
@@ -7,6 +7,7 @@ export interface ToastMessage {
   id: string;
   message: string;
   type: ToastType;
+  duration?: number;
 }
 
 interface ToastProps {
@@ -25,12 +26,17 @@ const Toast: React.FC<ToastProps> = ({ messages, onRemove }) => {
 };
 
 const ToastItem: React.FC<{ message: ToastMessage; onRemove: (id: string) => void }> = ({ message, onRemove }) => {
+  const defaultDuration =
+    message.type === 'success' ? 2200 :
+    message.type === 'info' ? 3000 :
+    4000;
+
   useEffect(() => {
     const timer = setTimeout(() => {
       onRemove(message.id);
-    }, 4000);
+    }, message.duration ?? defaultDuration);
     return () => clearTimeout(timer);
-  }, [message.id, onRemove]);
+  }, [defaultDuration, message.duration, message.id, onRemove]);
 
   const Icon = message.type === 'success' ? CheckCircle : message.type === 'warning' ? AlertTriangle : Info;
 

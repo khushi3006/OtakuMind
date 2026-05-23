@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { Search, Plus, Minus, Check, Trash2, XCircle, PlaySquare, RefreshCw, PlayCircle, ChevronLeft, ChevronRight, GripVertical, AlertCircle } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import Modal from '@/components/Modal';
 import Toast, { type ToastMessage } from '@/components/Toast';
 
+
+import { calculateAiringCountdown, getLocalBroadcastDay } from '@/lib/airing-utils';
 
 type Anime = {
   id: number;
@@ -18,6 +20,11 @@ type Anime = {
   imageUrl: string | null;
   malId: number | null;
   watchOrder: number | null;
+  airing: boolean;
+  broadcastDay: string | null;
+  broadcastTime: string | null;
+  broadcastTimezone: string | null;
+  broadcastString: string | null;
 };
 
 type Pagination = {
@@ -28,12 +35,20 @@ type Pagination = {
 };
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100] as const;
+type TabKey = 'watching' | 'completed' | 'dropped';
+const STATUS_MAP: Record<TabKey, string> = {
+  watching: 'incomplete',
+  completed: 'completed',
+  dropped: 'dropped',
+};
 
 export default function Home() {
   const [animes, setAnimes] = useState<Anime[]>([]);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 20, total: 0, totalPages: 0 });
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [localSearchQuery, setLocalSearchQuery] = useState('');
+  const [debouncedLocalSearchQuery, setDebouncedLocalSearchQuery] = useState('');
   const [searchPage, setSearchPage] = useState(1);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
@@ -41,8 +56,13 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [isWakingUp, setIsWakingUp] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
-  const [activeTab, setActiveTab] = useState<'watching' | 'completed' | 'dropped'>('watching');
+  const [activeTab, setActiveTab] = useState<TabKey>('watching');
   const [pageSize, setPageSize] = useState<number>(20);
+  const activeTabRef = useRef<TabKey>(activeTab);
+  const currentPageRef = useRef(1);
+  const pageSizeRef = useRef(pageSize);
+  const latestVisibleRequestRef = useRef(0);
+  const visibleRequestAbortRef = useRef<AbortController | null>(null);
 
   // Track per-tab pages
   const [tabPages, setTabPages] = useState<Record<string, number>>({
@@ -55,92 +75,192 @@ export default function Home() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showDropModal, setShowDropModal] = useState(false);
   const [pendingAnime, setPendingAnime] = useState<Anime | null>(null);
   const [isAdding, setIsAdding] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const addToast = useCallback((message: string, type: 'success' | 'info' | 'warning' = 'info') => {
+
+
+  const addToast = useCallback((
+    message: string,
+    type: 'success' | 'info' | 'warning' = 'info',
+    duration?: number
+  ) => {
     const id = Math.random().toString(36).substring(2, 9);
-    setToasts(prev => [...prev, { id, message, type }]);
+    setToasts(prev => [...prev, { id, message, type, duration }]);
   }, []);
 
   const removeToast = useCallback((id: string) => {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
-  const statusMap: Record<string, string> = {
-    watching: 'incomplete',
-    completed: 'completed',
-    dropped: 'dropped',
-  };
-
   const currentPage = tabPages[activeTab] || 1;
 
-  const fetchAnimes = useCallback(async (tab: string, page: number, force = false, isRetry = false) => {
-    if (!isRetry) {
+  const parseApiResponse = useCallback(async (res: Response) => {
+    const contentType = res.headers.get('content-type') || '';
+    const isJson = contentType.includes('application/json');
+    const payload = isJson ? await res.json() : await res.text();
+
+    if (!res.ok) {
+      const message =
+        isJson && payload && typeof payload === 'object' && 'error' in payload && typeof payload.error === 'string'
+          ? payload.error
+          : typeof payload === 'string' && payload.trim().length > 0
+            ? payload
+            : `Request failed with status ${res.status}`;
+
+      throw new Error(message);
+    }
+
+    return payload;
+  }, []);
+
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
+
+  useEffect(() => {
+    currentPageRef.current = currentPage;
+  }, [currentPage]);
+
+  useEffect(() => {
+    pageSizeRef.current = pageSize;
+  }, [pageSize]);
+
+  const fetchAnimes = useCallback(async (
+    tab: TabKey,
+    page: number,
+    options: { showLoader?: boolean; isRetry?: boolean } = {}
+  ) => {
+    const { showLoader = true, isRetry = false } = options;
+    const requestedPageSize = pageSize;
+    const isCurrentViewRequest =
+      activeTabRef.current === tab &&
+      currentPageRef.current === page &&
+      pageSizeRef.current === requestedPageSize;
+    let visibleRequestId: number | null = null;
+    let controller: AbortController | null = null;
+
+    if (showLoader && !isCurrentViewRequest) {
+      return;
+    }
+
+    if (showLoader) {
+      if (!isRetry) {
+        latestVisibleRequestRef.current += 1;
+      }
+      visibleRequestId = latestVisibleRequestRef.current;
+      visibleRequestAbortRef.current?.abort();
+      controller = new AbortController();
+      visibleRequestAbortRef.current = controller;
+    }
+
+    if (showLoader && !isRetry) {
       setLoading(true);
       setIsWakingUp(false);
     }
     try {
-      const status = statusMap[tab];
-      const res = await fetch(`/api/anime?status=${status}&page=${page}&limit=${pageSize}`);
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Failed to fetch');
+      const status = STATUS_MAP[tab];
+      const searchParam = (tab === 'completed' || tab === 'dropped') && debouncedLocalSearchQuery ? `&search=${encodeURIComponent(debouncedLocalSearchQuery)}` : '';
+      const res = await fetch(
+        `/api/anime?status=${status}&page=${page}&limit=${requestedPageSize}${searchParam}`,
+        controller ? { signal: controller.signal } : undefined
+      );
+      const json = await parseApiResponse(res);
+
+      const isStillCurrentView =
+        activeTabRef.current === tab &&
+        currentPageRef.current === page &&
+        pageSizeRef.current === requestedPageSize;
+      const isLatestVisibleRequest =
+        !showLoader || visibleRequestId === latestVisibleRequestRef.current;
+
+      if (!isStillCurrentView || !isLatestVisibleRequest) {
+        return;
+      }
 
       // If we are on a page that is now empty, but there are items in the list overall,
       // and we are not on the first page, go to the last available page.
       if (json.data.length === 0 && json.pagination.total > 0 && page > 1) {
         const lastValidPage = Math.max(1, json.pagination.totalPages);
-        goToPage(lastValidPage);
-        // Recursive fetch to switch to the correct page without losing loading state
-        return await fetchAnimes(tab, lastValidPage, true);
+        setTabPages(prev => ({ ...prev, [tab]: lastValidPage }));
+        return await fetchAnimes(tab, lastValidPage, { showLoader });
       }
 
       setAnimes(json.data);
       setPagination(json.pagination);
       setIsWakingUp(false);
-      setLoading(false);
-    } catch (e: any) {
-      console.error(e);
-      const msg = e.message || String(e);
-      if (msg.includes('SSL connection') || msg.includes('consuming input failed') || msg.includes('Database error')) {
-        setIsWakingUp(true);
-        setTimeout(() => {
-          fetchAnimes(tab, page, force, true);
-        }, 3000);
-      } else {
-        setIsWakingUp(false);
+      if (showLoader) {
         setLoading(false);
       }
+    } catch (e: unknown) {
+      const error = e instanceof Error ? e : new Error(String(e));
+
+      if (error.name === 'AbortError') {
+        return;
+      }
+
+      console.error(error);
+      const msg = error.message || String(error);
+      if (msg.includes('SSL connection') || msg.includes('consuming input failed') || msg.includes('Database error') || msg.includes('ENOTFOUND') || msg.includes('getaddrinfo') || msg.includes("Can't reach database server")) {
+        if (showLoader && visibleRequestId === latestVisibleRequestRef.current) {
+          setIsWakingUp(true);
+        }
+        setTimeout(() => {
+          void fetchAnimes(tab, page, { showLoader, isRetry: true });
+        }, 3000);
+      } else {
+        if (!showLoader || visibleRequestId === latestVisibleRequestRef.current) {
+          setIsWakingUp(false);
+        }
+        if (showLoader && visibleRequestId === latestVisibleRequestRef.current) {
+          setLoading(false);
+        }
+      }
     }
-  }, [pageSize]);
+  }, [pageSize, parseApiResponse, debouncedLocalSearchQuery]);
 
   const fetchStats = useCallback(async (isRetry = false) => {
     try {
       const res = await fetch('/api/stats');
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to fetch');
+      const data = await parseApiResponse(res);
       setStats(data.uniqueTotal || 0);
-    } catch (e: any) {
-      console.error(e);
-      const msg = e.message || String(e);
-      if (msg.includes('SSL connection') || msg.includes('consuming input failed') || msg.includes('Database error')) {
+    } catch (e: unknown) {
+      const error = e instanceof Error ? e : new Error(String(e));
+      console.error(error);
+      const msg = error.message || String(error);
+      if (msg.includes('SSL connection') || msg.includes('consuming input failed') || msg.includes('Database error') || msg.includes('ENOTFOUND') || msg.includes('getaddrinfo') || msg.includes("Can't reach database server")) {
         setTimeout(() => {
           fetchStats(true);
         }, 3000);
       }
     }
-  }, []);
+  }, [parseApiResponse]);
 
   // Fetch on mount and whenever tab or page changes
   useEffect(() => {
     fetchAnimes(activeTab, currentPage);
   }, [activeTab, currentPage, fetchAnimes]);
 
-  // Fetch stats only once on mount
+  // Fetch stats on mount
   useEffect(() => {
     fetchStats();
   }, [fetchStats]);
+
+  // Debounce local search query
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedLocalSearchQuery(localSearchQuery);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [localSearchQuery]);
+
+  // Reset page to 1 on local search
+  useEffect(() => {
+    if (activeTab === 'completed' || activeTab === 'dropped') {
+      setTabPages(prev => ({ ...prev, [activeTab]: 1 }));
+    }
+  }, [debouncedLocalSearchQuery, activeTab]);
 
   // Debounced Jikan search
   useEffect(() => {
@@ -151,7 +271,7 @@ export default function Home() {
       if (searchQuery.length >= 3) {
         setIsSearching(true);
         fetch(`/api/search?q=${searchQuery}&page=1`)
-          .then(res => res.json())
+          .then(parseApiResponse)
           .then(data => {
             const items = data.data || [];
             const uniqueItems = Array.from(new Map(items.map((item: any) => [item.mal_id, item])).values()) as any[];
@@ -164,14 +284,14 @@ export default function Home() {
       }
     }, 400);
     return () => clearTimeout(delayDebounce);
-  }, [searchQuery]);
+  }, [searchQuery, parseApiResponse]);
 
   const loadMoreSuggestions = async () => {
     const nextPage = searchPage + 1;
     setIsSearching(true);
     try {
       const res = await fetch(`/api/search?q=${searchQuery}&page=${nextPage}`);
-      const data = await res.json();
+      const data = await parseApiResponse(res);
       setSuggestions(prev => {
         const newItems = data.data || [];
         const combined = [...prev, ...newItems];
@@ -203,7 +323,12 @@ export default function Home() {
         episodesWatched: 0,
         status: 'incomplete',
         imageUrl: sugg.images?.jpg?.image_url || null,
-        malId: sugg.mal_id
+        malId: sugg.mal_id,
+        airing: sugg.airing || false,
+        broadcastDay: sugg.broadcast?.day || null,
+        broadcastTime: sugg.broadcast?.time || null,
+        broadcastTimezone: sugg.broadcast?.timezone || null,
+        broadcastString: sugg.broadcast?.string || null,
       };
       
       const res = await fetch('/api/anime', {
@@ -212,8 +337,9 @@ export default function Home() {
         body: JSON.stringify(newAnime)
       });
 
-      
-      const data = await res.json();
+      const data = res.status === 409
+        ? await res.json()
+        : await parseApiResponse(res);
 
       if (res.status === 409) {
         if (data.type === 'DUPLICATE_INCOMPLETE') {
@@ -235,8 +361,8 @@ export default function Home() {
           setActiveTab('watching');
         }
         setTabPages(prev => ({ ...prev, watching: 1 }));
-        fetchAnimes('watching', 1, true);
-        fetchStats();
+        void fetchAnimes('watching', 1, { showLoader: false });
+        void fetchStats();
         setSearchQuery('');
         setSuggestions([]);
       }
@@ -252,34 +378,49 @@ export default function Home() {
 
   const updateAnime = async (id: number, updates: Partial<Anime>) => {
     const backup = [...animes];
+    const paginationBackup = pagination;
 
     // Optimistic update
     if (updates.status) {
       // Status change → remove from current list
       setAnimes(prev => prev.filter(a => a.id !== id));
-      setPagination(prev => ({ ...prev, total: prev.total - 1 }));
+      setPagination(prev => ({ ...prev, total: Math.max(0, prev.total - 1) }));
     } else {
       setAnimes(prev => prev.map(a => a.id === id ? { ...a, ...updates } : a));
     }
+
+    const doPut = async (retryCount = 0): Promise<any> => {
+      try {
+        const res = await fetch(`/api/anime/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updates)
+        });
+        return await parseApiResponse(res);
+      } catch (e: any) {
+        const msg = e.message || String(e);
+        if ((msg.includes('SSL connection') || msg.includes('consuming input failed') || msg.includes('Database error') || msg.includes('ENOTFOUND') || msg.includes('getaddrinfo') || msg.includes("Can't reach database server")) && retryCount < 3) {
+          await new Promise(r => setTimeout(r, 3000));
+          return doPut(retryCount + 1);
+        }
+        throw e;
+      }
+    };
     
     try {
-      const res = await fetch(`/api/anime/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates)
-      });
-      if (!res.ok) throw new Error('Update failed');
-
-
+      const data = await doPut();
 
       if (updates.status) {
-        fetchStats();
-        // Item moved between lists, refresh current view to fill gaps
-        fetchAnimes(activeTab, currentPage, true);
+        void fetchStats();
+        // Re-sync the current tab in the background to fill pagination gaps.
+        void fetchAnimes(activeTabRef.current, currentPageRef.current, { showLoader: false });
       }
+
+      return data;
     } catch (e) {
-      // Rollback on failure
       setAnimes(backup);
+      setPagination(paginationBackup);
+      throw e;
     }
   };
 
@@ -287,16 +428,7 @@ export default function Home() {
     if (!pendingAnime) return;
     
     try {
-      // Determine top watchOrder
-      const res = await fetch('/api/anime?status=incomplete&page=1&limit=1');
-      const json = await res.json();
-      const minOrder = json.data?.[0]?.watchOrder !== undefined ? json.data[0].watchOrder : 1;
-      const newWatchOrder = (minOrder ?? 1) - 1;
-
-      await updateAnime(pendingAnime.id, { 
-        status: 'incomplete', 
-        watchOrder: newWatchOrder 
-      });
+      await updateAnime(pendingAnime.id, { status: 'incomplete' });
       
       addToast(`Moved ${pendingAnime.name} to Watching at the top`, 'success');
       setShowMoveModal(false);
@@ -305,7 +437,7 @@ export default function Home() {
 
       setActiveTab('watching');
       setTabPages(prev => ({ ...prev, watching: 1 }));
-      fetchAnimes('watching', 1, true);
+      void fetchAnimes('watching', 1, { showLoader: false });
     } catch (e) {
       addToast("Failed to move anime", 'warning');
     }
@@ -320,44 +452,42 @@ export default function Home() {
   const handleConfirmDelete = async () => {
     if (!pendingAnime) return;
     const id = pendingAnime.id;
+    const backup = [...animes];
+    const paginationBackup = pagination;
     
+    setIsDeleting(true);
+
     // Optimistic removal
     setAnimes(prev => prev.filter(a => a.id !== id));
-    setPagination(prev => ({ ...prev, total: prev.total - 1 }));
+    setPagination(prev => ({ ...prev, total: Math.max(0, prev.total - 1) }));
 
     try {
-      await fetch(`/api/anime/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/anime/${id}`, { method: 'DELETE' });
+      await parseApiResponse(res);
+      
+      // Close modal and show toast immediately on success
+      setShowDeleteModal(false);
       addToast(`Permanently deleted ${pendingAnime.name}`, 'success');
 
-      fetchStats();
-      // Ensure we re-fetch to fill gaps and handle page transitions
-      fetchAnimes(activeTab, currentPage, true);
+      void fetchStats();
+      // Re-sync in the background so the next item slides in without a full-screen loader.
+      void fetchAnimes(activeTab, currentPage, { showLoader: false });
     } catch (e) {
-      // Refetch on error
-      fetchAnimes(activeTab, currentPage, true);
+      setAnimes(backup);
+      setPagination(paginationBackup);
       addToast("Failed to delete anime", "warning");
     } finally {
-      setShowDeleteModal(false);
+      setIsDeleting(false);
       setPendingAnime(null);
     }
   };
 
-  const handleDropInitiate = (anime: Anime) => {
-    setPendingAnime(anime);
-    setShowDropModal(true);
-  };
-
-  const handleConfirmDrop = async () => {
-    if (!pendingAnime) return;
-    
+  const handleDropInitiate = async (anime: Anime) => {
     try {
-      await updateAnime(pendingAnime.id, { status: 'dropped' });
-      addToast(`Moved ${pendingAnime.name} to Dropped`, 'info');
-    } catch (e) {
+      addToast(`Moved ${anime.name} to Dropped`, 'info', 900);
+      await updateAnime(anime.id, { status: 'dropped' });
+    } catch {
       addToast("Failed to drop anime", "warning");
-    } finally {
-      setShowDropModal(false);
-      setPendingAnime(null);
     }
   };
 
@@ -395,7 +525,7 @@ export default function Home() {
     } catch (e) {
       // Rollback on failure
       console.error('Reorder failed:', e);
-      fetchAnimes(activeTab, currentPage, true);
+      void fetchAnimes(activeTab, currentPage, { showLoader: false });
     }
   };
 
@@ -405,7 +535,7 @@ export default function Home() {
       await fetch('/api/seed');
 
       await Promise.all([
-        fetchAnimes(activeTab, 1, true),
+        fetchAnimes(activeTab, 1),
         fetchStats()
       ]);
       setTabPages(prev => ({ ...prev, [activeTab]: 1 }));
@@ -420,8 +550,10 @@ export default function Home() {
     setTabPages(prev => ({ ...prev, [activeTab]: page }));
   };
 
-  const handleTabChange = (tab: 'watching' | 'completed' | 'dropped') => {
+  const handleTabChange = (tab: TabKey) => {
     setActiveTab(tab);
+    setLocalSearchQuery('');
+    setDebouncedLocalSearchQuery('');
   };
 
   const handlePageSizeChange = (newSize: number) => {
@@ -487,7 +619,10 @@ export default function Home() {
     );
   };
 
+
+
   const isWatchingTab = activeTab === 'watching';
+
 
   const renderList = () => {
     if (animes.length === 0 && !loading) return <p className="empty-state">No anime found</p>;
@@ -525,7 +660,18 @@ export default function Home() {
                           <GripVertical size={16} />
                         </div>
                         <div className="col-title-info">
-                          <span className="anime-title-main">{anime.name}</span>
+                          <div className="anime-title-row">
+                            <span className="anime-title-main">{anime.name}</span>
+                            {anime.airing && (() => {
+                              const countdown = calculateAiringCountdown(anime.broadcastDay, anime.broadcastTime);
+                              if (!countdown) return null;
+                              return (
+                                <span className={`airing-pill-badge ${countdown.isAiringNow ? 'airing-now' : countdown.isToday ? 'airing-today' : ''}`} title={anime.broadcastString || ''}>
+                                  {countdown.isAiringNow ? '🟢 Airing Now' : `Ep ${anime.episodesWatched + 1} ${countdown.label}`}
+                                </span>
+                              );
+                            })()}
+                          </div>
                           <span className="anime-meta-mini">Season {anime.season} &middot; {anime.normalizedName}</span>
                         </div>
                         
@@ -648,61 +794,78 @@ export default function Home() {
         </div>
       )}
 
-      <div className="search-section">
-        <div className="search-wrapper">
-          <Search className="search-icon" size={20} />
-          <input 
-            type="text" 
-            placeholder="Search anime to add..." 
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="search-input"
-          />
-        </div>
-        
-        {suggestions.length > 0 && (
-          <div className="search-suggestions animate-fade-in" onScroll={handleScroll}>
-            {suggestions.map((sugg) => (
-              <div 
-                key={sugg.mal_id} 
-                className={`suggestion-item ${isAdding === String(sugg.mal_id) ? 'is-adding' : ''}`} 
-                onClick={() => handleAddAnime(sugg)}
-              >
-                <img src={sugg.images?.jpg?.image_url} alt="" className="sugg-img" />
-                <div className="sugg-info">
-                  <h4>{sugg.title_english || sugg.title}</h4>
-                  {sugg.title_english && sugg.title_english !== sugg.title && (
-                    <span style={{ display: 'block', fontSize: '0.85em', opacity: 0.8, marginBottom: '2px' }}>
-                      {sugg.title}
-                    </span>
-                  )}
-                  <span>{sugg.year || 'N/A'} &middot; {sugg.type}</span>
-                </div>
-                <button className="btn-add" disabled={isAdding === String(sugg.mal_id)}>
-                  {isAdding === String(sugg.mal_id) ? <RefreshCw className="spin" size={18} /> : <Plus size={18} />}
-                </button>
-              </div>
-            ))}
-
-            {isSearching && hasNextPage && (
-              <div 
-                style={{
-                  width: '100%',
-                  padding: '1rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'var(--accent-color)',
-                  borderTop: '1px solid var(--border-color)',
-                  background: 'var(--bg-color)'
-                }}
-              >
-                <RefreshCw className="spin" size={20} />
-              </div>
-            )}
+      {activeTab === 'watching' && (
+        <div className="search-section animate-fade-in">
+          <div className="search-wrapper">
+            <Search className="search-icon" size={20} />
+            <input 
+              type="text" 
+              placeholder="Search anime to add..." 
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="search-input"
+            />
           </div>
-        )}
-      </div>
+          
+          {suggestions.length > 0 && (
+            <div className="search-suggestions animate-fade-in" onScroll={handleScroll}>
+              {suggestions.map((sugg) => (
+                <div 
+                  key={sugg.mal_id} 
+                  className={`suggestion-item ${isAdding === String(sugg.mal_id) ? 'is-adding' : ''}`} 
+                  onClick={() => handleAddAnime(sugg)}
+                >
+                  <img src={sugg.images?.jpg?.image_url} alt="" className="sugg-img" />
+                  <div className="sugg-info">
+                    <h4>{sugg.title_english || sugg.title}</h4>
+                    {sugg.title_english && sugg.title_english !== sugg.title && (
+                      <span style={{ display: 'block', fontSize: '0.85em', opacity: 0.8, marginBottom: '2px' }}>
+                        {sugg.title}
+                      </span>
+                    )}
+                    <span>{sugg.year || 'N/A'} &middot; {sugg.type}</span>
+                  </div>
+                  <button className="btn-add" disabled={isAdding === String(sugg.mal_id)}>
+                    {isAdding === String(sugg.mal_id) ? <RefreshCw className="spin" size={18} /> : <Plus size={18} />}
+                  </button>
+                </div>
+              ))}
+
+              {isSearching && hasNextPage && (
+                <div 
+                  style={{
+                    width: '100%',
+                    padding: '1rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--accent-color)',
+                    borderTop: '1px solid var(--border-color)',
+                    background: 'var(--bg-color)'
+                  }}
+                >
+                  <RefreshCw className="spin" size={20} />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {(activeTab === 'completed' || activeTab === 'dropped') && (
+        <div className="search-section animate-fade-in">
+          <div className="search-wrapper">
+            <Search className="search-icon" size={20} />
+            <input 
+              type="text" 
+              placeholder={activeTab === 'completed' ? "Search completed anime..." : "Search dropped anime..."}
+              value={localSearchQuery}
+              onChange={e => setLocalSearchQuery(e.target.value)}
+              className="search-input"
+            />
+          </div>
+        </div>
+      )}
 
       <div className="tabs-row">
         <div className="tabs">
@@ -730,19 +893,21 @@ export default function Home() {
       ) : (
         <DragDropContext onDragEnd={handleDragEnd}>
           <div className="lists-container">
-            <section className="list-section animate-fade-in">
-              <h2 className="section-title">
-                {activeTab === 'watching' && <><PlayCircle size={22} color="#a3b18a" /> Currently Watching</>}
-                {activeTab === 'completed' && <><Check size={22} color="#a3b18a" /> Completed Anime</>}
-                {activeTab === 'dropped' && <><XCircle size={22} color="#d68c8c" /> Dropped Anime</>}
-              </h2>
-              {renderList()}
-              {renderPagination()}
-            </section>
-            
-            <div className="dashboard-promo">
-              <p>Looking for your original detailed history with numbering?</p>
-              <Link href="/original-list" className="btn-link">View Original Numbered List &rarr;</Link>
+            <div className="main-lists-column">
+              <section className="list-section animate-fade-in">
+                <h2 className="section-title">
+                  {activeTab === 'watching' && <><PlayCircle size={22} color="#a3b18a" /> Currently Watching</>}
+                  {activeTab === 'completed' && <><Check size={22} color="#a3b18a" /> Completed Anime</>}
+                  {activeTab === 'dropped' && <><XCircle size={22} color="#d68c8c" /> Dropped Anime</>}
+                </h2>
+                {renderList()}
+                {renderPagination()}
+              </section>
+              
+              <div className="dashboard-promo">
+                <p>Looking for your original detailed history with numbering?</p>
+                <Link href="/original-list" className="btn-link">View Original Numbered List &rarr;</Link>
+              </div>
             </div>
           </div>
         </DragDropContext>
@@ -776,7 +941,7 @@ export default function Home() {
       {/* Delete Confirmation Modal */}
       <Modal
         isOpen={showDeleteModal}
-        onClose={() => { setShowDeleteModal(false); setPendingAnime(null); }}
+        onClose={() => { if (!isDeleting) { setShowDeleteModal(false); setPendingAnime(null); } }}
         title="Delete Anime"
       >
         <div className="move-modal-inner">
@@ -788,41 +953,32 @@ export default function Home() {
           </p>
           <p className="modal-description-sub">This action is permanent and will remove all tracking history for this anime.</p>
           <div className="modal-actions">
-            <button className="modal-btn secondary" onClick={() => { setShowDeleteModal(false); setPendingAnime(null); }}>
+            <button 
+              className="modal-btn secondary" 
+              onClick={() => { setShowDeleteModal(false); setPendingAnime(null); }}
+              disabled={isDeleting}
+            >
               No, Keep It
             </button>
-            <button className="modal-btn danger" onClick={handleConfirmDelete}>
-              Delete Permanently
+            <button 
+              className="modal-btn danger" 
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+            >
+              {isDeleting ? (
+                <>
+                  <RefreshCw className="spin" size={16} />
+                  Deleting...
+                </>
+              ) : (
+                'Delete Permanently'
+              )}
             </button>
           </div>
         </div>
       </Modal>
 
-      {/* Drop Confirmation Modal */}
-      <Modal
-        isOpen={showDropModal}
-        onClose={() => { setShowDropModal(false); setPendingAnime(null); }}
-        title="Drop Anime"
-      >
-        <div className="move-modal-inner">
-          <div className="move-modal-icon">
-            <XCircle size={42} color="#d68c8c" />
-          </div>
-          <p>
-            Move <strong>{pendingAnime?.name}</strong> to your Dropped list?
-          </p>
-          <p className="modal-description-sub">You can always find it in the Dropped tab later.</p>
-          <div className="modal-actions">
-            <button className="modal-btn secondary" onClick={() => { setShowDropModal(false); setPendingAnime(null); }}>
-              No, Keep It
-            </button>
-            <button className="modal-btn danger" onClick={handleConfirmDrop}>
-              Move to Dropped
-            </button>
-          </div>
-        </div>
-      </Modal>
     </main>
   );
 }
-
