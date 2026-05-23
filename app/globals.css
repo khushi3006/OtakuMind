@@ -1038,6 +1038,40 @@ button {
   border-color: var(--accent-color);
 }
 
+/* Export Button */
+.btn-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 0.45rem 0.9rem;
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-export:hover:not(:disabled) {
+  background: rgba(163, 177, 138, 0.08);
+  border-color: rgba(163, 177, 138, 0.4);
+  color: var(--accent-hover);
+  transform: translateY(-1px);
+}
+
+.btn-export:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-export:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Pagination Controls */
 .pagination-controls {
   display: flex;

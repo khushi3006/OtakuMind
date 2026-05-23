@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { Search, Plus, Minus, Check, Trash2, XCircle, PlaySquare, RefreshCw, PlayCircle, ChevronLeft, ChevronRight, GripVertical, AlertCircle } from 'lucide-react';
+import { Search, Plus, Minus, Check, Trash2, XCircle, PlaySquare, RefreshCw, PlayCircle, ChevronLeft, ChevronRight, GripVertical, AlertCircle, Download } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import Modal from '@/components/Modal';
 import Toast, { type ToastMessage } from '@/components/Toast';
@@ -78,6 +78,7 @@ export default function Home() {
   const [pendingAnime, setPendingAnime] = useState<Anime | null>(null);
   const [isAdding, setIsAdding] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
 
 
@@ -546,6 +547,36 @@ export default function Home() {
     }
   };
 
+  const handleExportExcel = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    addToast("Generating Excel file, please wait...", "info", 3000);
+    
+    try {
+      const response = await fetch('/api/anime/export');
+      if (!response.ok) {
+        throw new Error('Export request failed');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'OtakuMind_Anime_Collection.xlsx');
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      addToast("Collection exported successfully!", "success");
+    } catch (e) {
+      console.error(e);
+      addToast("Failed to export collection", "warning");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const goToPage = (page: number) => {
     setTabPages(prev => ({ ...prev, [activeTab]: page }));
   };
@@ -874,14 +905,30 @@ export default function Home() {
           <button className={`tab-btn ${activeTab === 'dropped' ? 'active' : ''}`} onClick={() => handleTabChange('dropped')}>Dropped</button>
         </div>
 
-        <div className="page-size-selector">
-          <label>Show</label>
-          <select value={pageSize} onChange={(e) => handlePageSizeChange(Number(e.target.value))}>
-            {PAGE_SIZE_OPTIONS.map(size => (
-              <option key={size} value={size}>{size}</option>
-            ))}
-          </select>
-          <label>per page</label>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+          <div className="page-size-selector">
+            <label>Show</label>
+            <select value={pageSize} onChange={(e) => handlePageSizeChange(Number(e.target.value))}>
+              {PAGE_SIZE_OPTIONS.map(size => (
+                <option key={size} value={size}>{size}</option>
+              ))}
+            </select>
+            <label>per page</label>
+          </div>
+
+          <button 
+            className="btn-export animate-fade-in" 
+            onClick={handleExportExcel} 
+            disabled={isExporting}
+            title="Export all anime to formatted Excel workbook"
+          >
+            {isExporting ? (
+              <RefreshCw className="spin" size={15} />
+            ) : (
+              <Download size={15} />
+            )}
+            {isExporting ? 'Exporting...' : 'Export to Excel'}
+          </button>
         </div>
       </div>
 
