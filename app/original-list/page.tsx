@@ -25,6 +25,13 @@ type Pagination = {
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100] as const;
 
+export function formatSeasonText(season: number, type: string): string {
+  if (type === 'Movie') return 'Movie';
+  if (type === 'OVA') return 'OVA';
+  if (season === 99) return 'Final Season';
+  return `Season ${season}`;
+}
+
 export default function OriginalListPage() {
   const [animes, setAnimes] = useState<Anime[]>([]);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 20, total: 0, totalPages: 0 });
@@ -233,7 +240,7 @@ export default function OriginalListPage() {
                 <div className="col-title-detail">
                   <span className="anime-name-text">{anime.name}</span>
                   <div className="anime-sub-details">
-                    <CalendarDays size={12} /> Season {anime.season} 
+                    <CalendarDays size={12} /> {formatSeasonText(anime.season, anime.type)} 
                     {anime.malId && (
                       <a 
                         href={`https://myanimelist.net/anime/${anime.malId}`} 

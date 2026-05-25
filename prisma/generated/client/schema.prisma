@@ -23,17 +23,20 @@ model Anime {
   originalOrder     Int? // Preserves the number from 1-601
   watchOrder        Int? // Custom drag-and-drop ordering for "Currently Watching"
   droppedAt         DateTime?
+  completedAt       DateTime?
   airing            Boolean   @default(false)
   broadcastDay      String?
   broadcastTime     String?
   broadcastTimezone String?
   broadcastString   String?
+  airingStart       String?
   createdAt         DateTime  @default(now())
 
   // Performance indexes for common query patterns
   @@unique([normalizedName, season])
   @@index([status, createdAt])
   @@index([status, droppedAt])
+  @@index([status, completedAt])
   @@index([status, originalOrder])
   @@index([status, watchOrder])
   @@index([normalizedName])

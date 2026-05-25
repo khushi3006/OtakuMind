@@ -19,7 +19,77 @@ export type CountdownResult = {
 };
 
 /**
- * Calculates the next airing time in UTC and the countdown details
+ * Helper to adjust a Date to IST (UTC+5:30) represented as a UTC date.
+ * Calling getUTC* methods on the returned Date yields correct IST values.
+ */
+export function getISTDate(date: Date = new Date()): Date {
+  return new Date(date.getTime() + 5.5 * 60 * 60 * 1000);
+}
+
+/**
+ * Converts a weekly broadcast day and time in JST (UTC+9) to IST (UTC+5:30).
+ */
+export function getISTBroadcastDetails(
+  broadcastDay: string | null,
+  broadcastTime: string | null
+): { day: string; time: string } | null {
+  if (!broadcastDay || !broadcastTime) return null;
+
+  const normalizedDay = broadcastDay.toLowerCase().replace(/s$/, ''); // "Saturdays" -> "saturday"
+  const dayIndex = DAY_MAP[normalizedDay];
+  if (dayIndex === undefined) return null;
+
+  const timeMatch = broadcastTime.match(/^(\d{2}):(\d{2})$/);
+  if (!timeMatch) return null;
+
+  const jstHour = parseInt(timeMatch[1], 10);
+  const jstMinute = parseInt(timeMatch[2], 10);
+
+  let istMinute = jstMinute - 30;
+  let istHour = jstHour - 3;
+  let istDayIndex = dayIndex;
+
+  if (istMinute < 0) {
+    istMinute += 60;
+    istHour -= 1;
+  }
+  if (istHour < 0) {
+    istHour += 24;
+    istDayIndex = (istDayIndex - 1 + 7) % 7;
+  }
+
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const formattedTime = `${String(istHour).padStart(2, '0')}:${String(istMinute).padStart(2, '0')}`;
+  
+  return {
+    day: days[istDayIndex],
+    time: formattedTime
+  };
+}
+
+/**
+ * Calculates the next upcoming episode number based on the airing start timestamp.
+ */
+export function getUpcomingEpisodeNumber(
+  airingStart: string | null | undefined
+): number | null {
+  if (!airingStart) return null;
+  const start = new Date(airingStart);
+  if (isNaN(start.getTime())) return null;
+
+  const now = new Date();
+  if (now < start) {
+    return 1;
+  }
+
+  const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
+  const weeksPassed = Math.floor((now.getTime() - start.getTime()) / oneWeekMs);
+  return weeksPassed + 2;
+}
+
+/**
+ * Calculates the next airing time in UTC and the countdown details.
+ * Performs checks using Indian Standard Time (IST).
  */
 export function calculateAiringCountdown(
   broadcastDay: string | null,
@@ -78,10 +148,10 @@ export function calculateAiringCountdown(
   const hours = Math.max(0, Math.floor((diffMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000)));
   const minutes = Math.max(0, Math.floor((diffMs % (60 * 60 * 1000)) / (60 * 1000)));
 
-  // Determine if it airs today in user's local day
-  const localAiringDay = nextBroadcast.getDay();
-  const localToday = now.getDay();
-  const isToday = localAiringDay === localToday && !isAiringNow;
+  // Determine if it airs today in IST
+  const istBroadcast = getISTDate(nextBroadcast);
+  const istNow = getISTDate(now);
+  const isToday = istBroadcast.getUTCDay() === istNow.getUTCDay() && !isAiringNow;
 
   let label = '';
   if (isAiringNow) {
@@ -108,18 +178,12 @@ export function calculateAiringCountdown(
 }
 
 /**
- * Gets the local day name (e.g. "Monday") for the broadcast schedule
+ * Gets the broadcast day name in IST (e.g. "Monday") for the weekly schedule
  */
 export function getLocalBroadcastDay(
   broadcastDay: string | null,
   broadcastTime: string | null
 ): string {
-  const countdown = calculateAiringCountdown(broadcastDay, broadcastTime);
-  if (!countdown) return 'Unknown';
-
-  const now = new Date();
-  const nextBroadcast = new Date(now.getTime() + countdown.diffMs);
-  
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  return days[nextBroadcast.getDay()];
+  const istDetails = getISTBroadcastDetails(broadcastDay, broadcastTime);
+  return istDetails ? istDetails.day : 'Unknown';
 }

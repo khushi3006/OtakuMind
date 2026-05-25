@@ -1038,6 +1038,33 @@ button {
   border-color: var(--accent-color);
 }
 
+/* Sort Selector */
+.sort-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.sort-selector select {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-primary);
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.sort-selector select:focus {
+  border-color: var(--accent-color);
+}
+
 /* Export Button */
 .btn-export {
   display: inline-flex;

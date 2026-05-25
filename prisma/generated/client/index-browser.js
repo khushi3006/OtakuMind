@@ -136,11 +136,13 @@ exports.Prisma.AnimeScalarFieldEnum = {
   originalOrder: 'originalOrder',
   watchOrder: 'watchOrder',
   droppedAt: 'droppedAt',
+  completedAt: 'completedAt',
   airing: 'airing',
   broadcastDay: 'broadcastDay',
   broadcastTime: 'broadcastTime',
   broadcastTimezone: 'broadcastTimezone',
   broadcastString: 'broadcastString',
+  airingStart: 'airingStart',
   createdAt: 'createdAt'
 };
 

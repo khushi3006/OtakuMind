@@ -5,8 +5,11 @@ import { withDeadlockRetry } from '@/lib/deadlock-retry';
 import { WATCH_ORDER_TRANSACTION_OPTIONS } from '@/lib/transaction-options';
 import { normalizeAnimeName, extractSeasonNumber } from '@/lib/normalize';
 
-function isDroppedAtValidationError(error: unknown) {
-  return error instanceof Error && error.message.includes('Unknown argument `droppedAt`');
+function isSchemaValidationError(error: unknown) {
+  return error instanceof Error && (
+    error.message.includes('Unknown argument `completedAt`') ||
+    error.message.includes('Unknown argument `droppedAt`')
+  );
 }
 
 export async function PUT(
@@ -17,7 +20,7 @@ export async function PUT(
     const { id } = await params;
     const animeId = parseInt(id, 10);
     const body = await request.json();
-    const { name, totalEpisodes, episodesWatched, status, watchOrder } = body;
+    const { name, totalEpisodes, episodesWatched, status, watchOrder, season, normalizedName, type } = body;
     
     const currentAnime = await db.anime.findUnique({
       where: { id: animeId },
@@ -28,8 +31,10 @@ export async function PUT(
       return NextResponse.json({ error: 'Anime not found' }, { status: 404 });
     }
 
+    const targetType = type !== undefined ? type : currentAnime.type;
+
     // Validation checks for non-movies
-    if (currentAnime.type !== 'Movie') {
+    if (targetType !== 'Movie') {
       const targetEpisodesWatched = episodesWatched !== undefined ? episodesWatched : currentAnime.episodesWatched;
       const targetTotalEpisodes = totalEpisodes !== undefined ? totalEpisodes : currentAnime.totalEpisodes;
 
@@ -60,22 +65,33 @@ export async function PUT(
       status === 'dropped' ? new Date() :
       null;
 
-    let updatedNormalizedName = undefined;
-    let updatedSeason = undefined;
+    const nextCompletedAt =
+      status === undefined ? undefined :
+      status === 'completed' ? new Date() :
+      null;
+
+    let updatedNormalizedName = normalizedName !== undefined ? normalizedName : undefined;
+    let updatedSeason = season !== undefined ? season : undefined;
     if (name !== undefined) {
-      updatedNormalizedName = normalizeAnimeName(name);
-      updatedSeason = extractSeasonNumber(name);
+      if (updatedNormalizedName === undefined) {
+        updatedNormalizedName = normalizeAnimeName(name);
+      }
+      if (updatedSeason === undefined) {
+        updatedSeason = extractSeasonNumber(name);
+      }
     }
 
     const updateData = {
       name: name !== undefined ? name : undefined,
       normalizedName: updatedNormalizedName,
       season: updatedSeason,
-      totalEpisodes: currentAnime.type === 'Movie' ? 0 : (totalEpisodes !== undefined ? totalEpisodes : undefined),
-      episodesWatched: currentAnime.type === 'Movie' ? 0 : (episodesWatched !== undefined ? episodesWatched : undefined),
+      type: type !== undefined ? type : undefined,
+      totalEpisodes: targetType === 'Movie' ? 0 : (totalEpisodes !== undefined ? totalEpisodes : undefined),
+      episodesWatched: targetType === 'Movie' ? 0 : (episodesWatched !== undefined ? episodesWatched : undefined),
       status: status !== undefined ? status : undefined,
       watchOrder: resolvedWatchOrder !== undefined ? resolvedWatchOrder : undefined,
       droppedAt: nextDroppedAt,
+      completedAt: nextCompletedAt,
     };
 
     const updatedAnime = await withDeadlockRetry(() =>
@@ -87,13 +103,14 @@ export async function PUT(
             data: updateData,
           });
         } catch (error) {
-          if (!isDroppedAtValidationError(error)) {
+          if (!isSchemaValidationError(error)) {
             throw error;
           }
 
           const fallbackUpdateData = {
             ...updateData,
             droppedAt: undefined,
+            completedAt: undefined,
           };
           nextAnime = await tx.anime.update({
             where: { id: animeId },
@@ -115,6 +132,16 @@ export async function PUT(
 
     return NextResponse.json(updatedAnime);
   } catch (error: unknown) {
+    const code =
+      typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string'
+        ? error.code
+        : undefined;
+    if (code === 'P2002') {
+      return NextResponse.json(
+        { error: "An anime with this same subtitle/slug and season already exists." },
+        { status: 409 }
+      );
+    }
     const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 500 });
   }

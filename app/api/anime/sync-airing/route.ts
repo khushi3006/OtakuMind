@@ -79,6 +79,7 @@ async function updateAnimeAiringInfo(id: number, data: any) {
       broadcastTime: broadcast.time || null,
       broadcastTimezone: broadcast.timezone || null,
       broadcastString: broadcast.string || null,
+      airingStart: data.aired?.from || null,
     },
   });
 }

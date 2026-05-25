@@ -10,8 +10,15 @@ export async function GET() {
       WHERE status IN ('completed', 'incomplete')
     `;
 
+    const slugsResult = await db.anime.findMany({
+      select: { normalizedName: true },
+      distinct: ['normalizedName'],
+      orderBy: { normalizedName: 'asc' },
+    });
+
     const result = {
       uniqueTotal: Number(countResult[0]?.count || 0),
+      slugs: slugsResult.map(a => a.normalizedName),
     };
 
     return NextResponse.json(result);

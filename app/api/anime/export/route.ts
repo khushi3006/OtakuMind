@@ -23,8 +23,11 @@ const thinBorder = {
   right: { style: 'thin' as const, color: { argb: LIGHT_GRAY_BORDER } }
 };
 
-function isDroppedAtValidationError(error: unknown) {
-  return error instanceof Error && error.message.includes('Unknown argument `droppedAt`');
+function isSchemaValidationError(error: unknown) {
+  return error instanceof Error && (
+    error.message.includes('Unknown argument `completedAt`') ||
+    error.message.includes('Unknown argument `droppedAt`')
+  );
 }
 
 export async function GET() {
@@ -62,7 +65,7 @@ export async function GET() {
         ]
       });
     } catch (error) {
-      if (isDroppedAtValidationError(error)) {
+      if (isSchemaValidationError(error)) {
         dropped = await db.anime.findMany({
           where: { status: 'dropped' },
           orderBy: { createdAt: 'desc' }
@@ -72,10 +75,26 @@ export async function GET() {
       }
     }
 
-    const completed = await db.anime.findMany({
-      where: { status: 'completed' },
-      orderBy: { originalOrder: 'asc' }
-    });
+    // Handle completed with compatibility fallback
+    let completed = [];
+    try {
+      completed = await db.anime.findMany({
+        where: { status: 'completed' },
+        orderBy: [
+          { completedAt: { sort: 'desc', nulls: 'last' } },
+          { originalOrder: 'asc' }
+        ]
+      });
+    } catch (error) {
+      if (isSchemaValidationError(error)) {
+        completed = await db.anime.findMany({
+          where: { status: 'completed' },
+          orderBy: { originalOrder: 'asc' }
+        });
+      } else {
+        throw error;
+      }
+    }
 
     const uniqueTotal = Number(uniqueCountResult[0]?.count || 0);
     const totalEpisodes = totalEpisodesResult._sum.episodesWatched || 0;

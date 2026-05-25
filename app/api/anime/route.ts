@@ -8,8 +8,11 @@ import { WATCH_ORDER_TRANSACTION_OPTIONS } from '@/lib/transaction-options';
 
 const ALLOWED_LIMITS = [20, 50, 100] as const;
 
-function isDroppedAtValidationError(error: unknown) {
-  return error instanceof Error && error.message.includes('Unknown argument `droppedAt`');
+function isSchemaValidationError(error: unknown) {
+  return error instanceof Error && (
+    error.message.includes('Unknown argument `completedAt`') ||
+    error.message.includes('Unknown argument `droppedAt`')
+  );
 }
 
 export async function GET(request: Request) {
@@ -17,6 +20,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status') || undefined;
     const search = searchParams.get('search') || undefined;
+    const sort = searchParams.get('sort') || undefined;
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
     const rawLimit = parseInt(searchParams.get('limit') || '20', 10);
     const limit = ALLOWED_LIMITS.includes(rawLimit as (typeof ALLOWED_LIMITS)[number]) ? rawLimit : 20;
@@ -30,11 +34,35 @@ export async function GET(request: Request) {
       ];
     }
 
-    const defaultOrderBy = status === 'completed'
-      ? { originalOrder: 'asc' as const }
-      : status === 'incomplete'
-        ? [{ watchOrder: { sort: 'asc' as const, nulls: 'last' as const } }, { createdAt: 'desc' as const }]
-        : [{ droppedAt: { sort: 'desc' as const, nulls: 'last' as const } }, { createdAt: 'desc' as const }];
+    let orderBy: any;
+    if (status === 'completed') {
+      if (sort === 'completed_asc') {
+        orderBy = [
+          { completedAt: { sort: 'asc' as const, nulls: 'last' as const } },
+          { originalOrder: 'asc' as const },
+          { createdAt: 'desc' as const }
+        ];
+      } else if (sort === 'created_desc') {
+        orderBy = [{ createdAt: 'desc' as const }];
+      } else if (sort === 'created_asc') {
+        orderBy = [{ createdAt: 'asc' as const }];
+      } else if (sort === 'alphabetical_asc') {
+        orderBy = [{ name: 'asc' as const }];
+      } else if (sort === 'alphabetical_desc') {
+        orderBy = [{ name: 'desc' as const }];
+      } else {
+        // Default to LIFO: Recently Completed
+        orderBy = [
+          { completedAt: { sort: 'desc' as const, nulls: 'last' as const } },
+          { originalOrder: 'asc' as const },
+          { createdAt: 'desc' as const }
+        ];
+      }
+    } else if (status === 'incomplete') {
+      orderBy = [{ watchOrder: { sort: 'asc' as const, nulls: 'last' as const } }, { createdAt: 'desc' as const }];
+    } else {
+      orderBy = [{ droppedAt: { sort: 'desc' as const, nulls: 'last' as const } }, { createdAt: 'desc' as const }];
+    }
 
     let animes;
     let total;
@@ -43,21 +71,25 @@ export async function GET(request: Request) {
       [animes, total] = await Promise.all([
         db.anime.findMany({
           where,
-          orderBy: defaultOrderBy,
+          orderBy,
           skip: (page - 1) * limit,
           take: limit,
         }),
         db.anime.count({ where }),
       ]);
     } catch (error) {
-      if (!(status === 'dropped' && isDroppedAtValidationError(error))) {
+      if (!isSchemaValidationError(error)) {
         throw error;
       }
+
+      const fallbackOrderBy = status === 'completed'
+        ? { originalOrder: 'asc' as const }
+        : { createdAt: 'desc' as const };
 
       [animes, total] = await Promise.all([
         db.anime.findMany({
           where,
-          orderBy: { createdAt: 'desc' },
+          orderBy: fallbackOrderBy,
           skip: (page - 1) * limit,
           take: limit,
         }),
@@ -97,7 +129,8 @@ export async function POST(request: Request) {
       broadcastDay,
       broadcastTime,
       broadcastTimezone,
-      broadcastString
+      broadcastString,
+      airingStart
     } = body;
     const targetStatus = status || 'incomplete';
     
@@ -156,11 +189,13 @@ export async function POST(request: Request) {
         type: finalType,
         watchOrder: targetStatus === 'incomplete' ? 1 : null,
         droppedAt: targetStatus === 'dropped' ? new Date() : null,
+        completedAt: targetStatus === 'completed' ? new Date() : null,
         airing: airing || false,
         broadcastDay: broadcastDay || null,
         broadcastTime: broadcastTime || null,
         broadcastTimezone: broadcastTimezone || null,
         broadcastString: broadcastString || null,
+        airingStart: airingStart || null,
       };
 
       const newAnime = await withDeadlockRetry(() =>
@@ -171,13 +206,14 @@ export async function POST(request: Request) {
               data: createData
             });
           } catch (error) {
-            if (!isDroppedAtValidationError(error)) {
+            if (!isSchemaValidationError(error)) {
               throw error;
             }
 
             const fallbackCreateData = {
               ...createData,
               droppedAt: undefined,
+              completedAt: undefined,
             };
             createdAnime = await tx.anime.create({
               data: fallbackCreateData

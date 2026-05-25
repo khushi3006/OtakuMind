@@ -8,7 +8,7 @@ import Modal from '@/components/Modal';
 import Toast, { type ToastMessage } from '@/components/Toast';
 
 
-import { calculateAiringCountdown, getLocalBroadcastDay } from '@/lib/airing-utils';
+import { calculateAiringCountdown, getLocalBroadcastDay, getUpcomingEpisodeNumber } from '@/lib/airing-utils';
 
 type Anime = {
   id: number;
@@ -26,6 +26,7 @@ type Anime = {
   broadcastTime: string | null;
   broadcastTimezone: string | null;
   broadcastString: string | null;
+  airingStart?: string | null;
   type: string;
 };
 
@@ -44,6 +45,31 @@ const STATUS_MAP: Record<TabKey, string> = {
   dropped: 'dropped',
 };
 
+export function formatSeasonText(season: number, type: string): string {
+  if (type === 'Movie') return 'Movie';
+  if (type === 'OVA') return 'OVA';
+  if (season === 99) return 'Final Season';
+  return `Season ${season}`;
+}
+
+export function parseSeasonField(value: string): { season: number; type: string } {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'movie') {
+    return { season: 1, type: 'Movie' };
+  }
+  if (normalized === 'ova') {
+    return { season: 1, type: 'OVA' };
+  }
+  if (normalized === 'final season' || normalized === 'the final season') {
+    return { season: 99, type: 'TV' };
+  }
+  const match = normalized.match(/(?:season|s)?\s*(\d+)/i);
+  if (match) {
+    return { season: parseInt(match[1], 10), type: 'TV' };
+  }
+  return { season: 1, type: 'TV' };
+}
+
 export default function Home() {
   const [animes, setAnimes] = useState<Anime[]>([]);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 20, total: 0, totalPages: 0 });
@@ -59,11 +85,31 @@ export default function Home() {
   const [isWakingUp, setIsWakingUp] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>('watching');
   const [pageSize, setPageSize] = useState<number>(20);
+  const [completedSort, setCompletedSort] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('otakumind_completed_sort') || 'completed_desc';
+    }
+    return 'completed_desc';
+  });
+
+  const handleSortChange = (newSort: string) => {
+    setCompletedSort(newSort);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('otakumind_completed_sort', newSort);
+    }
+    setTabPages(prev => ({ ...prev, completed: 1 }));
+  };
+
   const activeTabRef = useRef<TabKey>(activeTab);
   const currentPageRef = useRef(1);
   const pageSizeRef = useRef(pageSize);
   const latestVisibleRequestRef = useRef(0);
   const visibleRequestAbortRef = useRef<AbortController | null>(null);
+
+  // Request sequencing and in-flight state tracking for robust UI sync
+  const latestRequestRef = useRef(0);
+  const pendingUpdatesRef = useRef<Map<number, Partial<Anime> & { expiresAtRequestId?: number }>>(new Map());
+  const pendingDeletionsRef = useRef<Map<number, { expiresAtRequestId?: number }>>(new Map());
 
   // Track per-tab pages
   const [tabPages, setTabPages] = useState<Record<string, number>>({
@@ -81,6 +127,9 @@ export default function Home() {
   const [editName, setEditName] = useState('');
   const [editTotalEpisodes, setEditTotalEpisodes] = useState('');
   const [editEpisodesWatched, setEditEpisodesWatched] = useState('');
+  const [editSeason, setEditSeason] = useState('');
+  const [editSlug, setEditSlug] = useState('');
+  const [existingSlugs, setExistingSlugs] = useState<string[]>([]);
   const [editError, setEditError] = useState<string | null>(null);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [isAdding, setIsAdding] = useState<string | null>(null);
@@ -153,6 +202,11 @@ export default function Home() {
       return;
     }
 
+    if (!isRetry) {
+      latestRequestRef.current += 1;
+    }
+    const requestId = latestRequestRef.current;
+
     if (showLoader) {
       if (!isRetry) {
         latestVisibleRequestRef.current += 1;
@@ -170,8 +224,9 @@ export default function Home() {
     try {
       const status = STATUS_MAP[tab];
       const searchParam = (tab === 'completed' || tab === 'dropped') && debouncedLocalSearchQuery ? `&search=${encodeURIComponent(debouncedLocalSearchQuery)}` : '';
+      const sortParam = tab === 'completed' ? `&sort=${completedSort}` : '';
       const res = await fetch(
-        `/api/anime?status=${status}&page=${page}&limit=${requestedPageSize}${searchParam}`,
+        `/api/anime?status=${status}&page=${page}&limit=${requestedPageSize}${searchParam}${sortParam}`,
         controller ? { signal: controller.signal } : undefined
       );
       const json = await parseApiResponse(res);
@@ -182,8 +237,9 @@ export default function Home() {
         pageSizeRef.current === requestedPageSize;
       const isLatestVisibleRequest =
         !showLoader || visibleRequestId === latestVisibleRequestRef.current;
+      const isLatestRequest = requestId === latestRequestRef.current;
 
-      if (!isStillCurrentView || !isLatestVisibleRequest) {
+      if (!isStillCurrentView || !isLatestVisibleRequest || !isLatestRequest) {
         return;
       }
 
@@ -195,7 +251,42 @@ export default function Home() {
         return await fetchAnimes(tab, lastValidPage, { showLoader });
       }
 
-      setAnimes(json.data);
+      // 1. Expire any pending updates/deletions whose triggering fetch has successfully completed.
+      for (const [id, pending] of pendingUpdatesRef.current.entries()) {
+        if (pending.expiresAtRequestId !== undefined && requestId >= pending.expiresAtRequestId) {
+          pendingUpdatesRef.current.delete(id);
+        }
+      }
+      for (const [id, pending] of pendingDeletionsRef.current.entries()) {
+        if (pending.expiresAtRequestId !== undefined && requestId >= pending.expiresAtRequestId) {
+          pendingDeletionsRef.current.delete(id);
+        }
+      }
+
+      // 2. Filter/Merge data using remaining pending updates/deletions
+      let processedList = json.data.map((anime: Anime) => {
+        const pending = pendingUpdatesRef.current.get(anime.id);
+        if (pending) {
+          return { ...anime, ...pending };
+        }
+        return anime;
+      });
+
+      processedList = processedList.filter((anime: Anime) => {
+        if (pendingDeletionsRef.current.has(anime.id)) {
+          return false;
+        }
+        const pending = pendingUpdatesRef.current.get(anime.id);
+        if (pending && pending.status !== undefined) {
+          const targetStatus = STATUS_MAP[tab];
+          if (pending.status !== targetStatus) {
+            return false;
+          }
+        }
+        return true;
+      });
+
+      setAnimes(processedList);
       setPagination(json.pagination);
       setIsWakingUp(false);
       if (showLoader) {
@@ -226,13 +317,14 @@ export default function Home() {
         }
       }
     }
-  }, [pageSize, parseApiResponse, debouncedLocalSearchQuery]);
+  }, [pageSize, parseApiResponse, debouncedLocalSearchQuery, completedSort]);
 
   const fetchStats = useCallback(async (isRetry = false) => {
     try {
       const res = await fetch('/api/stats');
       const data = await parseApiResponse(res);
       setStats(data.uniqueTotal || 0);
+      setExistingSlugs(data.slugs || []);
     } catch (e: unknown) {
       const error = e instanceof Error ? e : new Error(String(e));
       console.error(error);
@@ -343,6 +435,8 @@ export default function Home() {
         broadcastTimezone: sugg.broadcast?.timezone || null,
         broadcastString: sugg.broadcast?.string || null,
         type: sugg.type,
+        totalEpisodes: sugg.episodes || 0,
+        airingStart: sugg.aired?.from || null,
       };
       
       const res = await fetch('/api/anime', {
@@ -394,6 +488,9 @@ export default function Home() {
     const backup = [...animes];
     const paginationBackup = pagination;
 
+    // Track the pending update in-flight
+    pendingUpdatesRef.current.set(id, { ...updates, expiresAtRequestId: undefined });
+
     // Optimistic update
     if (updates.status) {
       // Status change → remove from current list
@@ -427,13 +524,23 @@ export default function Home() {
       if (updates.status) {
         void fetchStats();
         // Re-sync the current tab in the background to fill pagination gaps.
-        void fetchAnimes(activeTabRef.current, currentPageRef.current, { showLoader: false });
+        const nextFetchPromise = fetchAnimes(activeTabRef.current, currentPageRef.current, { showLoader: false });
+        // The fetch request generated above incremented latestRequestRef.current synchronously.
+        const generatedRequestId = latestRequestRef.current;
+        // Keep the pending update active until this resync fetch successfully completes
+        pendingUpdatesRef.current.set(id, { ...updates, expiresAtRequestId: generatedRequestId });
+        await nextFetchPromise;
+      } else {
+        // Simple property updates are resolved immediately once PUT completes.
+        pendingUpdatesRef.current.delete(id);
       }
 
       return data;
     } catch (e) {
+      // Revert optimistic updates
       setAnimes(backup);
       setPagination(paginationBackup);
+      pendingUpdatesRef.current.delete(id);
       throw e;
     }
   };
@@ -471,6 +578,9 @@ export default function Home() {
     
     setIsDeleting(true);
 
+    // Track pending deletion
+    pendingDeletionsRef.current.set(id, { expiresAtRequestId: undefined });
+
     // Optimistic removal
     setAnimes(prev => prev.filter(a => a.id !== id));
     setPagination(prev => ({ ...prev, total: Math.max(0, prev.total - 1) }));
@@ -485,10 +595,14 @@ export default function Home() {
 
       void fetchStats();
       // Re-sync in the background so the next item slides in without a full-screen loader.
-      void fetchAnimes(activeTab, currentPage, { showLoader: false });
+      const nextFetchPromise = fetchAnimes(activeTab, currentPage, { showLoader: false });
+      const generatedRequestId = latestRequestRef.current;
+      pendingDeletionsRef.current.set(id, { expiresAtRequestId: generatedRequestId });
+      await nextFetchPromise;
     } catch (e) {
       setAnimes(backup);
       setPagination(paginationBackup);
+      pendingDeletionsRef.current.delete(id);
       addToast("Failed to delete anime", "warning");
     } finally {
       setIsDeleting(false);
@@ -501,15 +615,20 @@ export default function Home() {
     setEditName(anime.name);
     setEditTotalEpisodes(anime.type === 'Movie' ? '0' : String(anime.totalEpisodes || 0));
     setEditEpisodesWatched(anime.type === 'Movie' ? '0' : String(anime.episodesWatched || 0));
+    setEditSeason(formatSeasonText(anime.season, anime.type));
+    setEditSlug(anime.normalizedName);
     setEditError(null);
     setShowEditModal(true);
   };
 
   const handleEditConfirm = async () => {
     if (!pendingAnime) return;
+
+    const { season, type } = parseSeasonField(editSeason);
+    const isMovieSelected = type === 'Movie';
     
     // Frontend validation (for non-movies)
-    if (pendingAnime.type !== 'Movie') {
+    if (!isMovieSelected) {
       const watched = parseInt(editEpisodesWatched, 10);
       const total = parseInt(editTotalEpisodes, 10);
 
@@ -527,14 +646,22 @@ export default function Home() {
       }
     }
 
+    if (!editSlug.trim()) {
+      setEditError("Subtitle / Slug field cannot be empty.");
+      return;
+    }
+
     setIsSavingEdit(true);
     setEditError(null);
 
     try {
       const updates = {
         name: editName.trim(),
-        totalEpisodes: pendingAnime.type === 'Movie' ? 0 : parseInt(editTotalEpisodes, 10),
-        episodesWatched: pendingAnime.type === 'Movie' ? 0 : parseInt(editEpisodesWatched, 10),
+        season,
+        normalizedName: editSlug.trim().toLowerCase(),
+        type,
+        totalEpisodes: isMovieSelected ? 0 : parseInt(editTotalEpisodes, 10),
+        episodesWatched: isMovieSelected ? 0 : parseInt(editEpisodesWatched, 10),
       };
 
       const updatedAnime = await updateAnime(pendingAnime.id, updates);
@@ -747,14 +874,16 @@ export default function Home() {
                             {anime.airing && (() => {
                               const countdown = calculateAiringCountdown(anime.broadcastDay, anime.broadcastTime);
                               if (!countdown) return null;
+                              const upcomingEp = getUpcomingEpisodeNumber(anime.airingStart);
+                              const label = upcomingEp ? `Ep ${upcomingEp} ${countdown.label}` : `Next episode ${countdown.label}`;
                               return (
                                 <span className={`airing-pill-badge ${countdown.isAiringNow ? 'airing-now' : countdown.isToday ? 'airing-today' : ''}`} title={anime.broadcastString || ''}>
-                                  {countdown.isAiringNow ? '🟢 Airing Now' : `Ep ${anime.episodesWatched + 1} ${countdown.label}`}
+                                  {countdown.isAiringNow ? '🟢 Airing Now' : label}
                                 </span>
                               );
                             })()}
                           </div>
-                          <span className="anime-meta-mini">Season {anime.season} &middot; {anime.normalizedName}</span>
+                          <span className="anime-meta-mini">{formatSeasonText(anime.season, anime.type)} &middot; {anime.normalizedName}</span>
                         </div>
                         
                         <div className="col-ep-control">
@@ -815,7 +944,7 @@ export default function Home() {
               <div key={anime.id} className="compact-list-row" style={{ animationDelay: `${i * 20}ms` }}>
                 <div className="col-title-info">
                   <span className="anime-title-main">{anime.name}</span>
-                  <span className="anime-meta-mini">Season {anime.season} &middot; {anime.normalizedName}</span>
+                  <span className="anime-meta-mini">{formatSeasonText(anime.season, anime.type)} &middot; {anime.normalizedName}</span>
                 </div>
                 
                 <div className="col-ep-control">
@@ -981,6 +1110,20 @@ export default function Home() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+          {activeTab === 'completed' && (
+            <div className="sort-selector animate-fade-in">
+              <label>Sort</label>
+              <select value={completedSort} onChange={(e) => handleSortChange(e.target.value)}>
+                <option value="completed_desc">Recently Completed (LIFO)</option>
+                <option value="completed_asc">Oldest Completed (FIFO)</option>
+                <option value="created_desc">Recently Added (LIFO)</option>
+                <option value="created_asc">Oldest Added (FIFO)</option>
+                <option value="alphabetical_asc">Title (A-Z)</option>
+                <option value="alphabetical_desc">Title (Z-A)</option>
+              </select>
+            </div>
+          )}
+
           <div className="page-size-selector">
             <label>Show</label>
             <select value={pageSize} onChange={(e) => handlePageSizeChange(Number(e.target.value))}>
@@ -1123,25 +1266,70 @@ export default function Home() {
             />
           </div>
 
-          {pendingAnime?.type === 'Movie' ? (
+          <div className="form-group">
+            <label className="form-label" htmlFor="edit-season">Season</label>
+            <input
+              id="edit-season"
+              type="text"
+              list="season-options"
+              className="form-input"
+              value={editSeason}
+              onChange={e => setEditSeason(e.target.value)}
+              disabled={isSavingEdit}
+              placeholder="e.g. Season 1, Final Season, Movie..."
+            />
+            <datalist id="season-options">
+              <option value="Season 1" />
+              <option value="Season 2" />
+              <option value="Season 3" />
+              <option value="Season 4" />
+              <option value="Season 5" />
+              <option value="Final Season" />
+              <option value="Movie" />
+              <option value="OVA" />
+            </datalist>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label" htmlFor="edit-slug">Subtitle / Slug</label>
+            <input
+              id="edit-slug"
+              type="text"
+              list="slug-options"
+              className="form-input"
+              value={editSlug}
+              onChange={e => setEditSlug(e.target.value)}
+              disabled={isSavingEdit}
+              placeholder="e.g. death note, one punch man..."
+            />
+            <datalist id="slug-options">
+              {existingSlugs.map(slug => (
+                <option key={slug} value={slug} />
+              ))}
+            </datalist>
+          </div>
+
+          {editSeason.trim().toLowerCase() === 'movie' ? (
             <div className="movie-modal-note">
               This entry is a Movie. Episode tracking is not applicable.
             </div>
           ) : (
             <>
-              <div className="form-group">
-                <label className="form-label" htmlFor="edit-total-episodes">Total Episodes</label>
-                <input
-                  id="edit-total-episodes"
-                  type="number"
-                  min="0"
-                  className="form-input"
-                  value={editTotalEpisodes}
-                  onChange={e => setEditTotalEpisodes(e.target.value)}
-                  disabled={isSavingEdit}
-                  placeholder="e.g. 12, 24, 100 (0 for ongoing)"
-                />
-              </div>
+              {pendingAnime && pendingAnime.totalEpisodes !== undefined && pendingAnime.totalEpisodes !== null && pendingAnime.totalEpisodes > 0 ? (
+                <div className="form-group">
+                  <label className="form-label" htmlFor="edit-total-episodes">Total Episodes</label>
+                  <input
+                    id="edit-total-episodes"
+                    type="number"
+                    min="0"
+                    className="form-input"
+                    value={editTotalEpisodes}
+                    onChange={e => setEditTotalEpisodes(e.target.value)}
+                    disabled={isSavingEdit}
+                    placeholder="e.g. 12, 24, 100"
+                  />
+                </div>
+              ) : null}
 
               <div className="form-group">
                 <label className="form-label" htmlFor="edit-progress">Episodes Watched</label>
@@ -1170,7 +1358,7 @@ export default function Home() {
             <button 
               className="modal-btn primary" 
               onClick={handleEditConfirm}
-              disabled={isSavingEdit || !editName.trim()}
+              disabled={isSavingEdit || !editName.trim() || !editSlug.trim()}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
             >
               {isSavingEdit ? (

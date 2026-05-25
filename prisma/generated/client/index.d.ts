@@ -893,11 +893,13 @@ export namespace Prisma {
     originalOrder: number | null
     watchOrder: number | null
     droppedAt: Date | null
+    completedAt: Date | null
     airing: boolean | null
     broadcastDay: string | null
     broadcastTime: string | null
     broadcastTimezone: string | null
     broadcastString: string | null
+    airingStart: string | null
     createdAt: Date | null
   }
 
@@ -915,11 +917,13 @@ export namespace Prisma {
     originalOrder: number | null
     watchOrder: number | null
     droppedAt: Date | null
+    completedAt: Date | null
     airing: boolean | null
     broadcastDay: string | null
     broadcastTime: string | null
     broadcastTimezone: string | null
     broadcastString: string | null
+    airingStart: string | null
     createdAt: Date | null
   }
 
@@ -937,11 +941,13 @@ export namespace Prisma {
     originalOrder: number
     watchOrder: number
     droppedAt: number
+    completedAt: number
     airing: number
     broadcastDay: number
     broadcastTime: number
     broadcastTimezone: number
     broadcastString: number
+    airingStart: number
     createdAt: number
     _all: number
   }
@@ -981,11 +987,13 @@ export namespace Prisma {
     originalOrder?: true
     watchOrder?: true
     droppedAt?: true
+    completedAt?: true
     airing?: true
     broadcastDay?: true
     broadcastTime?: true
     broadcastTimezone?: true
     broadcastString?: true
+    airingStart?: true
     createdAt?: true
   }
 
@@ -1003,11 +1011,13 @@ export namespace Prisma {
     originalOrder?: true
     watchOrder?: true
     droppedAt?: true
+    completedAt?: true
     airing?: true
     broadcastDay?: true
     broadcastTime?: true
     broadcastTimezone?: true
     broadcastString?: true
+    airingStart?: true
     createdAt?: true
   }
 
@@ -1025,11 +1035,13 @@ export namespace Prisma {
     originalOrder?: true
     watchOrder?: true
     droppedAt?: true
+    completedAt?: true
     airing?: true
     broadcastDay?: true
     broadcastTime?: true
     broadcastTimezone?: true
     broadcastString?: true
+    airingStart?: true
     createdAt?: true
     _all?: true
   }
@@ -1134,11 +1146,13 @@ export namespace Prisma {
     originalOrder: number | null
     watchOrder: number | null
     droppedAt: Date | null
+    completedAt: Date | null
     airing: boolean
     broadcastDay: string | null
     broadcastTime: string | null
     broadcastTimezone: string | null
     broadcastString: string | null
+    airingStart: string | null
     createdAt: Date
     _count: AnimeCountAggregateOutputType | null
     _avg: AnimeAvgAggregateOutputType | null
@@ -1175,11 +1189,13 @@ export namespace Prisma {
     originalOrder?: boolean
     watchOrder?: boolean
     droppedAt?: boolean
+    completedAt?: boolean
     airing?: boolean
     broadcastDay?: boolean
     broadcastTime?: boolean
     broadcastTimezone?: boolean
     broadcastString?: boolean
+    airingStart?: boolean
     createdAt?: boolean
   }, ExtArgs["result"]["anime"]>
 
@@ -1197,11 +1213,13 @@ export namespace Prisma {
     originalOrder?: boolean
     watchOrder?: boolean
     droppedAt?: boolean
+    completedAt?: boolean
     airing?: boolean
     broadcastDay?: boolean
     broadcastTime?: boolean
     broadcastTimezone?: boolean
     broadcastString?: boolean
+    airingStart?: boolean
     createdAt?: boolean
   }, ExtArgs["result"]["anime"]>
 
@@ -1219,11 +1237,13 @@ export namespace Prisma {
     originalOrder?: boolean
     watchOrder?: boolean
     droppedAt?: boolean
+    completedAt?: boolean
     airing?: boolean
     broadcastDay?: boolean
     broadcastTime?: boolean
     broadcastTimezone?: boolean
     broadcastString?: boolean
+    airingStart?: boolean
     createdAt?: boolean
   }
 
@@ -1245,11 +1265,13 @@ export namespace Prisma {
       originalOrder: number | null
       watchOrder: number | null
       droppedAt: Date | null
+      completedAt: Date | null
       airing: boolean
       broadcastDay: string | null
       broadcastTime: string | null
       broadcastTimezone: string | null
       broadcastString: string | null
+      airingStart: string | null
       createdAt: Date
     }, ExtArgs["result"]["anime"]>
     composites: {}
@@ -1657,11 +1679,13 @@ export namespace Prisma {
     readonly originalOrder: FieldRef<"Anime", 'Int'>
     readonly watchOrder: FieldRef<"Anime", 'Int'>
     readonly droppedAt: FieldRef<"Anime", 'DateTime'>
+    readonly completedAt: FieldRef<"Anime", 'DateTime'>
     readonly airing: FieldRef<"Anime", 'Boolean'>
     readonly broadcastDay: FieldRef<"Anime", 'String'>
     readonly broadcastTime: FieldRef<"Anime", 'String'>
     readonly broadcastTimezone: FieldRef<"Anime", 'String'>
     readonly broadcastString: FieldRef<"Anime", 'String'>
+    readonly airingStart: FieldRef<"Anime", 'String'>
     readonly createdAt: FieldRef<"Anime", 'DateTime'>
   }
     
@@ -1979,11 +2003,13 @@ export namespace Prisma {
     originalOrder: 'originalOrder',
     watchOrder: 'watchOrder',
     droppedAt: 'droppedAt',
+    completedAt: 'completedAt',
     airing: 'airing',
     broadcastDay: 'broadcastDay',
     broadcastTime: 'broadcastTime',
     broadcastTimezone: 'broadcastTimezone',
     broadcastString: 'broadcastString',
+    airingStart: 'airingStart',
     createdAt: 'createdAt'
   };
 
@@ -2102,11 +2128,13 @@ export namespace Prisma {
     originalOrder?: IntNullableFilter<"Anime"> | number | null
     watchOrder?: IntNullableFilter<"Anime"> | number | null
     droppedAt?: DateTimeNullableFilter<"Anime"> | Date | string | null
+    completedAt?: DateTimeNullableFilter<"Anime"> | Date | string | null
     airing?: BoolFilter<"Anime"> | boolean
     broadcastDay?: StringNullableFilter<"Anime"> | string | null
     broadcastTime?: StringNullableFilter<"Anime"> | string | null
     broadcastTimezone?: StringNullableFilter<"Anime"> | string | null
     broadcastString?: StringNullableFilter<"Anime"> | string | null
+    airingStart?: StringNullableFilter<"Anime"> | string | null
     createdAt?: DateTimeFilter<"Anime"> | Date | string
   }
 
@@ -2124,11 +2152,13 @@ export namespace Prisma {
     originalOrder?: SortOrderInput | SortOrder
     watchOrder?: SortOrderInput | SortOrder
     droppedAt?: SortOrderInput | SortOrder
+    completedAt?: SortOrderInput | SortOrder
     airing?: SortOrder
     broadcastDay?: SortOrderInput | SortOrder
     broadcastTime?: SortOrderInput | SortOrder
     broadcastTimezone?: SortOrderInput | SortOrder
     broadcastString?: SortOrderInput | SortOrder
+    airingStart?: SortOrderInput | SortOrder
     createdAt?: SortOrder
   }
 
@@ -2150,11 +2180,13 @@ export namespace Prisma {
     originalOrder?: IntNullableFilter<"Anime"> | number | null
     watchOrder?: IntNullableFilter<"Anime"> | number | null
     droppedAt?: DateTimeNullableFilter<"Anime"> | Date | string | null
+    completedAt?: DateTimeNullableFilter<"Anime"> | Date | string | null
     airing?: BoolFilter<"Anime"> | boolean
     broadcastDay?: StringNullableFilter<"Anime"> | string | null
     broadcastTime?: StringNullableFilter<"Anime"> | string | null
     broadcastTimezone?: StringNullableFilter<"Anime"> | string | null
     broadcastString?: StringNullableFilter<"Anime"> | string | null
+    airingStart?: StringNullableFilter<"Anime"> | string | null
     createdAt?: DateTimeFilter<"Anime"> | Date | string
   }, "id" | "malId" | "normalizedName_season">
 
@@ -2172,11 +2204,13 @@ export namespace Prisma {
     originalOrder?: SortOrderInput | SortOrder
     watchOrder?: SortOrderInput | SortOrder
     droppedAt?: SortOrderInput | SortOrder
+    completedAt?: SortOrderInput | SortOrder
     airing?: SortOrder
     broadcastDay?: SortOrderInput | SortOrder
     broadcastTime?: SortOrderInput | SortOrder
     broadcastTimezone?: SortOrderInput | SortOrder
     broadcastString?: SortOrderInput | SortOrder
+    airingStart?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     _count?: AnimeCountOrderByAggregateInput
     _avg?: AnimeAvgOrderByAggregateInput
@@ -2202,11 +2236,13 @@ export namespace Prisma {
     originalOrder?: IntNullableWithAggregatesFilter<"Anime"> | number | null
     watchOrder?: IntNullableWithAggregatesFilter<"Anime"> | number | null
     droppedAt?: DateTimeNullableWithAggregatesFilter<"Anime"> | Date | string | null
+    completedAt?: DateTimeNullableWithAggregatesFilter<"Anime"> | Date | string | null
     airing?: BoolWithAggregatesFilter<"Anime"> | boolean
     broadcastDay?: StringNullableWithAggregatesFilter<"Anime"> | string | null
     broadcastTime?: StringNullableWithAggregatesFilter<"Anime"> | string | null
     broadcastTimezone?: StringNullableWithAggregatesFilter<"Anime"> | string | null
     broadcastString?: StringNullableWithAggregatesFilter<"Anime"> | string | null
+    airingStart?: StringNullableWithAggregatesFilter<"Anime"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"Anime"> | Date | string
   }
 
@@ -2223,11 +2259,13 @@ export namespace Prisma {
     originalOrder?: number | null
     watchOrder?: number | null
     droppedAt?: Date | string | null
+    completedAt?: Date | string | null
     airing?: boolean
     broadcastDay?: string | null
     broadcastTime?: string | null
     broadcastTimezone?: string | null
     broadcastString?: string | null
+    airingStart?: string | null
     createdAt?: Date | string
   }
 
@@ -2245,11 +2283,13 @@ export namespace Prisma {
     originalOrder?: number | null
     watchOrder?: number | null
     droppedAt?: Date | string | null
+    completedAt?: Date | string | null
     airing?: boolean
     broadcastDay?: string | null
     broadcastTime?: string | null
     broadcastTimezone?: string | null
     broadcastString?: string | null
+    airingStart?: string | null
     createdAt?: Date | string
   }
 
@@ -2266,11 +2306,13 @@ export namespace Prisma {
     originalOrder?: NullableIntFieldUpdateOperationsInput | number | null
     watchOrder?: NullableIntFieldUpdateOperationsInput | number | null
     droppedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     airing?: BoolFieldUpdateOperationsInput | boolean
     broadcastDay?: NullableStringFieldUpdateOperationsInput | string | null
     broadcastTime?: NullableStringFieldUpdateOperationsInput | string | null
     broadcastTimezone?: NullableStringFieldUpdateOperationsInput | string | null
     broadcastString?: NullableStringFieldUpdateOperationsInput | string | null
+    airingStart?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -2288,11 +2330,13 @@ export namespace Prisma {
     originalOrder?: NullableIntFieldUpdateOperationsInput | number | null
     watchOrder?: NullableIntFieldUpdateOperationsInput | number | null
     droppedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     airing?: BoolFieldUpdateOperationsInput | boolean
     broadcastDay?: NullableStringFieldUpdateOperationsInput | string | null
     broadcastTime?: NullableStringFieldUpdateOperationsInput | string | null
     broadcastTimezone?: NullableStringFieldUpdateOperationsInput | string | null
     broadcastString?: NullableStringFieldUpdateOperationsInput | string | null
+    airingStart?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -2310,11 +2354,13 @@ export namespace Prisma {
     originalOrder?: number | null
     watchOrder?: number | null
     droppedAt?: Date | string | null
+    completedAt?: Date | string | null
     airing?: boolean
     broadcastDay?: string | null
     broadcastTime?: string | null
     broadcastTimezone?: string | null
     broadcastString?: string | null
+    airingStart?: string | null
     createdAt?: Date | string
   }
 
@@ -2331,11 +2377,13 @@ export namespace Prisma {
     originalOrder?: NullableIntFieldUpdateOperationsInput | number | null
     watchOrder?: NullableIntFieldUpdateOperationsInput | number | null
     droppedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     airing?: BoolFieldUpdateOperationsInput | boolean
     broadcastDay?: NullableStringFieldUpdateOperationsInput | string | null
     broadcastTime?: NullableStringFieldUpdateOperationsInput | string | null
     broadcastTimezone?: NullableStringFieldUpdateOperationsInput | string | null
     broadcastString?: NullableStringFieldUpdateOperationsInput | string | null
+    airingStart?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -2353,11 +2401,13 @@ export namespace Prisma {
     originalOrder?: NullableIntFieldUpdateOperationsInput | number | null
     watchOrder?: NullableIntFieldUpdateOperationsInput | number | null
     droppedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     airing?: BoolFieldUpdateOperationsInput | boolean
     broadcastDay?: NullableStringFieldUpdateOperationsInput | string | null
     broadcastTime?: NullableStringFieldUpdateOperationsInput | string | null
     broadcastTimezone?: NullableStringFieldUpdateOperationsInput | string | null
     broadcastString?: NullableStringFieldUpdateOperationsInput | string | null
+    airingStart?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -2464,11 +2514,13 @@ export namespace Prisma {
     originalOrder?: SortOrder
     watchOrder?: SortOrder
     droppedAt?: SortOrder
+    completedAt?: SortOrder
     airing?: SortOrder
     broadcastDay?: SortOrder
     broadcastTime?: SortOrder
     broadcastTimezone?: SortOrder
     broadcastString?: SortOrder
+    airingStart?: SortOrder
     createdAt?: SortOrder
   }
 
@@ -2496,11 +2548,13 @@ export namespace Prisma {
     originalOrder?: SortOrder
     watchOrder?: SortOrder
     droppedAt?: SortOrder
+    completedAt?: SortOrder
     airing?: SortOrder
     broadcastDay?: SortOrder
     broadcastTime?: SortOrder
     broadcastTimezone?: SortOrder
     broadcastString?: SortOrder
+    airingStart?: SortOrder
     createdAt?: SortOrder
   }
 
@@ -2518,11 +2572,13 @@ export namespace Prisma {
     originalOrder?: SortOrder
     watchOrder?: SortOrder
     droppedAt?: SortOrder
+    completedAt?: SortOrder
     airing?: SortOrder
     broadcastDay?: SortOrder
     broadcastTime?: SortOrder
     broadcastTimezone?: SortOrder
     broadcastString?: SortOrder
+    airingStart?: SortOrder
     createdAt?: SortOrder
   }
 

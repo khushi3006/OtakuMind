@@ -17,7 +17,7 @@ import {
   ExternalLink,
   Sparkles
 } from 'lucide-react';
-import { calculateAiringCountdown, getLocalBroadcastDay } from '@/lib/airing-utils';
+import { calculateAiringCountdown, getLocalBroadcastDay, getUpcomingEpisodeNumber, getISTBroadcastDetails, getISTDate } from '@/lib/airing-utils';
 import Toast, { type ToastMessage } from '@/components/Toast';
 
 type Anime = {
@@ -34,6 +34,7 @@ type Anime = {
   broadcastTime: string | null;
   broadcastTimezone: string | null;
   broadcastString: string | null;
+  airingStart?: string | null;
   type?: string;
 };
 
@@ -56,6 +57,10 @@ type PopularShow = {
   type: string;
   score: number | null;
   synopsis: string | null;
+  episodes?: number | null;
+  aired?: {
+    from?: string | null;
+  } | null;
 };
 
 type TabKey = 'today' | 'week' | 'upcoming' | 'popular';
@@ -75,7 +80,7 @@ export default function AiringSchedulePage() {
   
   const currentLocalDay = (() => {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    return days[new Date().getDay()];
+    return days[getISTDate().getUTCDay()];
   })();
 
   const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -222,6 +227,8 @@ export default function AiringSchedulePage() {
         broadcastTimezone: show.broadcast?.timezone || null,
         broadcastString: show.broadcast?.string || null,
         type: show.type,
+        totalEpisodes: show.episodes || 0,
+        airingStart: show.aired?.from || null,
       };
       
       const res = await fetch('/api/anime', {
@@ -268,7 +275,10 @@ export default function AiringSchedulePage() {
 
   const renderAiringCard = (anime: Anime) => {
     const countdown = calculateAiringCountdown(anime.broadcastDay, anime.broadcastTime);
-    const localDay = getLocalBroadcastDay(anime.broadcastDay, anime.broadcastTime);
+    const istDetails = getISTBroadcastDetails(anime.broadcastDay, anime.broadcastTime);
+    
+    const upcomingEp = getUpcomingEpisodeNumber(anime.airingStart);
+    const badgeLabel = upcomingEp ? `Ep ${upcomingEp} ${countdown?.label}` : `Next episode ${countdown?.label}`;
     
     return (
       <div key={anime.id} className="airing-anime-card animate-fade-in">
@@ -284,7 +294,7 @@ export default function AiringSchedulePage() {
               {countdown.isAiringNow ? (
                 <span className="live-indicator"><span className="ping-dot"></span>LIVE Now</span>
               ) : (
-                `Ep ${anime.episodesWatched + 1} ${countdown.label}`
+                badgeLabel
               )}
             </div>
           )}
@@ -296,7 +306,7 @@ export default function AiringSchedulePage() {
           <div className="card-schedule-info">
             <div className="info-row">
               <Clock size={12} className="meta-icon" />
-              <span>Airs {localDay} at {anime.broadcastTime || 'N/A'} (JST)</span>
+              <span>Airs {istDetails ? istDetails.day : 'N/A'} at {istDetails ? istDetails.time : 'N/A'} (IST)</span>
             </div>
             {anime.broadcastString && (
               <p className="meta-broadcast-string">{anime.broadcastString}</p>
@@ -344,6 +354,10 @@ export default function AiringSchedulePage() {
     const broadcastDay = show.broadcast?.day || null;
     const broadcastTime = show.broadcast?.time || null;
     const countdown = calculateAiringCountdown(broadcastDay, broadcastTime);
+    const istDetails = getISTBroadcastDetails(broadcastDay, broadcastTime);
+    
+    const upcomingEp = getUpcomingEpisodeNumber(show.aired?.from);
+    const badgeLabel = upcomingEp ? `Ep ${upcomingEp} ${countdown?.label}` : `Next episode ${countdown?.label}`;
     
     return (
       <div key={show.mal_id} className="airing-anime-card discover animate-fade-in">
@@ -359,7 +373,7 @@ export default function AiringSchedulePage() {
               {countdown.isAiringNow ? (
                 <span className="live-indicator"><span className="ping-dot"></span>LIVE Now</span>
               ) : (
-                `Next Ep ${countdown.label}`
+                badgeLabel
               )}
             </div>
           )}
@@ -376,7 +390,7 @@ export default function AiringSchedulePage() {
           <div className="card-schedule-info">
             <div className="info-row">
               <Clock size={12} className="meta-icon" />
-              <span>Airs {show.broadcast?.day || 'N/A'}s at {show.broadcast?.time || 'N/A'} (JST)</span>
+              <span>Airs {istDetails ? `${istDetails.day}s` : 'N/A'} at {istDetails ? istDetails.time : 'N/A'} (IST)</span>
             </div>
             {show.synopsis && (
               <p className="meta-synopsis">{show.synopsis}</p>

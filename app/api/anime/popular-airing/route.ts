@@ -52,6 +52,8 @@ export async function GET() {
         type: anime.type || 'TV',
         score: anime.score || null,
         synopsis: anime.synopsis || null,
+        episodes: anime.episodes || 0,
+        aired: anime.aired || null,
       });
     }
 
