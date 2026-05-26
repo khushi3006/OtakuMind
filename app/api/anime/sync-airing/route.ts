@@ -1,13 +1,21 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { getSession } from '@/lib/auth';
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
-    // Find all incomplete anime with a linked malId
+    const session = await getSession(request);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const userId = session.userId;
+
+    // Find all incomplete anime with a linked malId belonging to this user
     const incompleteAnimes = await db.anime.findMany({
       where: {
+        userId,
         status: 'incomplete',
         malId: { not: null },
       },

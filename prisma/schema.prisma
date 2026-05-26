@@ -41,9 +41,9 @@ model Anime {
   airingStart      String?
   createdAt        DateTime @default(now())
 
-  // Owner relation (optional temporarily to allow migrating existing rows without owner)
-  userId           Int?
-  user             User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Owner relation
+  userId           Int
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Performance indexes and user-scoped uniqueness
   @@unique([userId, normalizedName, season])

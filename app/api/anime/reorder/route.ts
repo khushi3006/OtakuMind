@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { normalizeWatchingOrder, updateWatchOrderItems } from '@/lib/watch-order';
 import { withDeadlockRetry } from '@/lib/deadlock-retry';
 import { WATCH_ORDER_TRANSACTION_OPTIONS } from '@/lib/transaction-options';
+import { getSession } from '@/lib/auth';
 
 /**
  * PUT /api/anime/reorder
@@ -11,6 +12,12 @@ import { WATCH_ORDER_TRANSACTION_OPTIONS } from '@/lib/transaction-options';
  */
 export async function PUT(request: Request) {
   try {
+    const session = await getSession(request);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const userId = session.userId;
+
     const body = await request.json();
     const { items } = body;
 
@@ -18,11 +25,24 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'items array is required' }, { status: 400 });
     }
 
+    // Verify ownership of all items in the request
+    const ids = items.map((item: any) => item.id);
+    const dbCount = await db.anime.count({
+      where: {
+        id: { in: ids },
+        userId,
+      },
+    });
+
+    if (dbCount !== ids.length) {
+      return NextResponse.json({ error: 'Unauthorized or invalid item IDs' }, { status: 403 });
+    }
+
     // Batch update in a transaction for atomicity
     await withDeadlockRetry(() =>
       db.$transaction(async (tx) => {
         await updateWatchOrderItems(tx, items as { id: number; watchOrder: number }[]);
-        await normalizeWatchingOrder(tx);
+        await normalizeWatchingOrder(tx, userId);
       }, WATCH_ORDER_TRANSACTION_OPTIONS)
     );
 

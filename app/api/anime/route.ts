@@ -5,6 +5,7 @@ import type { Prisma } from '@/prisma/generated/client';
 import { normalizeWatchingOrder } from '@/lib/watch-order';
 import { withDeadlockRetry } from '@/lib/deadlock-retry';
 import { WATCH_ORDER_TRANSACTION_OPTIONS } from '@/lib/transaction-options';
+import { getSession } from '@/lib/auth';
 
 const ALLOWED_LIMITS = [20, 50, 100] as const;
 
@@ -17,6 +18,12 @@ function isSchemaValidationError(error: unknown) {
 
 export async function GET(request: Request) {
   try {
+    const session = await getSession(request);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const userId = session.userId;
+
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status') || undefined;
     const search = searchParams.get('search') || undefined;
@@ -25,7 +32,7 @@ export async function GET(request: Request) {
     const rawLimit = parseInt(searchParams.get('limit') || '20', 10);
     const limit = ALLOWED_LIMITS.includes(rawLimit as (typeof ALLOWED_LIMITS)[number]) ? rawLimit : 20;
 
-    const where: Prisma.AnimeWhereInput = {};
+    const where: Prisma.AnimeWhereInput = { userId };
     if (status) where.status = status;
     if (search) {
       where.OR = [
@@ -116,6 +123,12 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const session = await getSession(request);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const userId = session.userId;
+
     const body = await request.json();
     const {
       name,
@@ -139,9 +152,10 @@ export async function POST(request: Request) {
     const normalizedName = normalizeAnimeName(name);
     const season = extractSeasonNumber(name);
 
-    // Check for duplicates in ANY status
+    // Check for duplicates in ANY status for this user
     const existingAnime = await db.anime.findFirst({
       where: {
+        userId,
         OR: [
           malId ? { malId: Number(malId) } : { id: -1 },
           { 
@@ -196,6 +210,7 @@ export async function POST(request: Request) {
         broadcastTimezone: broadcastTimezone || null,
         broadcastString: broadcastString || null,
         airingStart: airingStart || null,
+        userId, // Assign to logged-in user
       };
 
       const newAnime = await withDeadlockRetry(() =>
@@ -221,7 +236,7 @@ export async function POST(request: Request) {
           }
 
           if (targetStatus === 'incomplete') {
-            await normalizeWatchingOrder(tx, { pinnedAnimeId: createdAnime.id });
+            await normalizeWatchingOrder(tx, userId, { pinnedAnimeId: createdAnime.id });
             return tx.anime.findUniqueOrThrow({ where: { id: createdAnime.id } });
           }
 

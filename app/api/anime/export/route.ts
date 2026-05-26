@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import ExcelJS from 'exceljs';
+import { getSession } from '@/lib/auth';
 
 const FONT_NAME = 'Segoe UI';
 const HEADER_BG = 'FFA3B18A'; // Soft Matcha Green
@@ -30,27 +31,34 @@ function isSchemaValidationError(error: unknown) {
   );
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const session = await getSession(request);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const userId = session.userId;
+
     // 1. Fetch data from DB
     const [watching, completedCountResult, watchingCount, droppedCount, totalEpisodesResult, uniqueCountResult] = await Promise.all([
       db.anime.findMany({
-        where: { status: 'incomplete' },
+        where: { status: 'incomplete', userId },
         orderBy: [
           { watchOrder: 'asc' },
           { createdAt: 'desc' }
         ]
       }),
-      db.anime.count({ where: { status: 'completed' } }),
-      db.anime.count({ where: { status: 'incomplete' } }),
-      db.anime.count({ where: { status: 'dropped' } }),
+      db.anime.count({ where: { status: 'completed', userId } }),
+      db.anime.count({ where: { status: 'incomplete', userId } }),
+      db.anime.count({ where: { status: 'dropped', userId } }),
       db.anime.aggregate({
+        where: { userId },
         _sum: { episodesWatched: true }
       }),
       db.$queryRaw<[{ count: bigint }]>`
         SELECT COUNT(DISTINCT "normalizedName") as count 
         FROM "Anime" 
-        WHERE status IN ('completed', 'incomplete')
+        WHERE status IN ('completed', 'incomplete') AND "userId" = ${userId}
       `
     ]);
 
@@ -58,7 +66,7 @@ export async function GET() {
     let dropped = [];
     try {
       dropped = await db.anime.findMany({
-        where: { status: 'dropped' },
+        where: { status: 'dropped', userId },
         orderBy: [
           { droppedAt: { sort: 'desc', nulls: 'last' } },
           { createdAt: 'desc' }
@@ -67,7 +75,7 @@ export async function GET() {
     } catch (error) {
       if (isSchemaValidationError(error)) {
         dropped = await db.anime.findMany({
-          where: { status: 'dropped' },
+          where: { status: 'dropped', userId },
           orderBy: { createdAt: 'desc' }
         });
       } else {
@@ -79,7 +87,7 @@ export async function GET() {
     let completed = [];
     try {
       completed = await db.anime.findMany({
-        where: { status: 'completed' },
+        where: { status: 'completed', userId },
         orderBy: [
           { completedAt: { sort: 'desc', nulls: 'last' } },
           { originalOrder: 'asc' }
@@ -88,7 +96,7 @@ export async function GET() {
     } catch (error) {
       if (isSchemaValidationError(error)) {
         completed = await db.anime.findMany({
-          where: { status: 'completed' },
+          where: { status: 'completed', userId },
           orderBy: { originalOrder: 'asc' }
         });
       } else {

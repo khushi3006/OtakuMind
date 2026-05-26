@@ -4,6 +4,7 @@ import { normalizeWatchingOrder } from '@/lib/watch-order';
 import { withDeadlockRetry } from '@/lib/deadlock-retry';
 import { WATCH_ORDER_TRANSACTION_OPTIONS } from '@/lib/transaction-options';
 import { normalizeAnimeName, extractSeasonNumber } from '@/lib/normalize';
+import { getSession } from '@/lib/auth';
 
 function isSchemaValidationError(error: unknown) {
   return error instanceof Error && (
@@ -17,13 +18,19 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getSession(request);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const userId = session.userId;
+
     const { id } = await params;
     const animeId = parseInt(id, 10);
     const body = await request.json();
     const { name, totalEpisodes, episodesWatched, status, watchOrder, season, normalizedName, type } = body;
     
-    const currentAnime = await db.anime.findUnique({
-      where: { id: animeId },
+    const currentAnime = await db.anime.findFirst({
+      where: { id: animeId, userId },
       select: { status: true, watchOrder: true, type: true, episodesWatched: true, totalEpisodes: true },
     });
 
@@ -121,6 +128,7 @@ export async function PUT(
         if (isStatusChanging) {
           await normalizeWatchingOrder(
             tx,
+            userId,
             status === 'incomplete' ? { pinnedAnimeId: animeId } : undefined
           );
           return tx.anime.findUniqueOrThrow({ where: { id: animeId } });
@@ -152,11 +160,17 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getSession(request);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const userId = session.userId;
+
     const { id } = await params;
     const animeId = parseInt(id, 10);
 
-    const existingAnime = await db.anime.findUnique({
-      where: { id: animeId },
+    const existingAnime = await db.anime.findFirst({
+      where: { id: animeId, userId },
       select: { status: true, watchOrder: true },
     });
 
@@ -173,6 +187,7 @@ export async function DELETE(
         if (existingAnime.status === 'incomplete' && existingAnime.watchOrder !== null) {
           await tx.anime.updateMany({
             where: {
+              userId,
               status: 'incomplete',
               watchOrder: {
                 gt: existingAnime.watchOrder

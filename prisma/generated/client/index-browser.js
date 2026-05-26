@@ -122,6 +122,14 @@ exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
   Serializable: 'Serializable'
 });
 
+exports.Prisma.UserScalarFieldEnum = {
+  id: 'id',
+  email: 'email',
+  password: 'password',
+  name: 'name',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.AnimeScalarFieldEnum = {
   id: 'id',
   name: 'name',
@@ -143,7 +151,8 @@ exports.Prisma.AnimeScalarFieldEnum = {
   broadcastTimezone: 'broadcastTimezone',
   broadcastString: 'broadcastString',
   airingStart: 'airingStart',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  userId: 'userId'
 };
 
 exports.Prisma.SortOrder = {
@@ -163,6 +172,7 @@ exports.Prisma.NullsOrder = {
 
 
 exports.Prisma.ModelName = {
+  User: 'User',
   Anime: 'Anime'
 };
 

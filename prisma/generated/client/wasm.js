@@ -90,6 +90,14 @@ exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
   Serializable: 'Serializable'
 });
 
+exports.Prisma.UserScalarFieldEnum = {
+  id: 'id',
+  email: 'email',
+  password: 'password',
+  name: 'name',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.AnimeScalarFieldEnum = {
   id: 'id',
   name: 'name',
@@ -111,7 +119,8 @@ exports.Prisma.AnimeScalarFieldEnum = {
   broadcastTimezone: 'broadcastTimezone',
   broadcastString: 'broadcastString',
   airingStart: 'airingStart',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  userId: 'userId'
 };
 
 exports.Prisma.SortOrder = {
@@ -131,6 +140,7 @@ exports.Prisma.NullsOrder = {
 
 
 exports.Prisma.ModelName = {
+  User: 'User',
   Anime: 'Anime'
 };
 /**
@@ -183,13 +193,13 @@ const config = {
       }
     }
   },
-  "inlineSchema": "generator client {\n  provider        = \"prisma-client-js\"\n  previewFeatures = [\"driverAdapters\"]\n  output          = \"./generated/client\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel Anime {\n  id                Int       @id @default(autoincrement())\n  name              String\n  normalizedName    String\n  season            Int\n  episodesWatched   Int       @default(0)\n  totalEpisodes     Int       @default(0)\n  status            String // \"completed\", \"incomplete\", \"dropped\"\n  imageUrl          String?\n  malId             Int?      @unique // For Jikan API linking\n  type              String    @default(\"TV\") // \"TV\", \"Movie\", \"OVA\", \"Special\"\n  originalOrder     Int? // Preserves the number from 1-601\n  watchOrder        Int? // Custom drag-and-drop ordering for \"Currently Watching\"\n  droppedAt         DateTime?\n  completedAt       DateTime?\n  airing            Boolean   @default(false)\n  broadcastDay      String?\n  broadcastTime     String?\n  broadcastTimezone String?\n  broadcastString   String?\n  airingStart       String?\n  createdAt         DateTime  @default(now())\n\n  // Performance indexes for common query patterns\n  @@unique([normalizedName, season])\n  @@index([status, createdAt])\n  @@index([status, droppedAt])\n  @@index([status, completedAt])\n  @@index([status, originalOrder])\n  @@index([status, watchOrder])\n  @@index([normalizedName])\n}\n",
-  "inlineSchemaHash": "4990594c1217b6f6bfa27dfa90f59bca1a1c07be0c27e2c29105d28e75098fa7",
+  "inlineSchema": "generator client {\n  provider        = \"prisma-client-js\"\n  previewFeatures = [\"driverAdapters\"]\n  output          = \"./generated/client\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel User {\n  id        Int      @id @default(autoincrement())\n  email     String   @unique\n  password  String\n  name      String?\n  createdAt DateTime @default(now())\n  animes    Anime[]\n}\n\nmodel Anime {\n  id                Int       @id @default(autoincrement())\n  name              String\n  normalizedName    String\n  season            Int\n  episodesWatched   Int       @default(0)\n  totalEpisodes     Int       @default(0)\n  status            String // \"completed\", \"incomplete\", \"dropped\"\n  imageUrl          String?\n  malId             Int? // For Jikan API linking (removed @unique for multi-user compatibility)\n  type              String    @default(\"TV\") // \"TV\", \"Movie\", \"OVA\", \"Special\"\n  originalOrder     Int? // Preserves the number from 1-601\n  watchOrder        Int? // Custom drag-and-drop ordering for \"Currently Watching\"\n  droppedAt         DateTime?\n  completedAt       DateTime?\n  airing            Boolean   @default(false)\n  broadcastDay      String?\n  broadcastTime     String?\n  broadcastTimezone String?\n  broadcastString   String?\n  airingStart       String?\n  createdAt         DateTime  @default(now())\n\n  // Owner relation\n  userId Int\n  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)\n\n  // Performance indexes and user-scoped uniqueness\n  @@unique([userId, normalizedName, season])\n  @@index([userId, status, createdAt])\n  @@index([userId, status, droppedAt])\n  @@index([userId, status, completedAt])\n  @@index([userId, status, originalOrder])\n  @@index([userId, status, watchOrder])\n  @@index([userId, normalizedName])\n}\n",
+  "inlineSchemaHash": "22bbd259f42c21883a49440da2528c5e4553fdaef8d67cf9201d3a825c80713d",
   "copyEngine": true
 }
 config.dirname = '/'
 
-config.runtimeDataModel = JSON.parse("{\"models\":{\"Anime\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"normalizedName\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"season\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"episodesWatched\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"totalEpisodes\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"status\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"imageUrl\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"malId\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"originalOrder\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"watchOrder\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"droppedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"completedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"airing\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"broadcastDay\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"broadcastTime\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"broadcastTimezone\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"broadcastString\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"airingStart\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":null}},\"enums\":{},\"types\":{}}")
+config.runtimeDataModel = JSON.parse("{\"models\":{\"User\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"password\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"animes\",\"kind\":\"object\",\"type\":\"Anime\",\"relationName\":\"AnimeToUser\"}],\"dbName\":null},\"Anime\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"normalizedName\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"season\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"episodesWatched\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"totalEpisodes\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"status\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"imageUrl\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"malId\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"originalOrder\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"watchOrder\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"droppedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"completedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"airing\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"broadcastDay\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"broadcastTime\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"broadcastTimezone\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"broadcastString\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"airingStart\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"AnimeToUser\"}],\"dbName\":null}},\"enums\":{},\"types\":{}}")
 defineDmmfProperty(exports.Prisma, config.runtimeDataModel)
 config.engineWasm = {
   getRuntime: () => require('./query_engine_bg.js'),

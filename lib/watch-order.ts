@@ -63,18 +63,19 @@ async function applyWatchOrderItems(
 
 export async function normalizeWatchingOrder(
   tx: Prisma.TransactionClient,
+  userId: number,
   options: NormalizeOptions = {}
 ) {
   await tx.$queryRaw`
     SELECT "id"
     FROM "Anime"
-    WHERE "status" = 'incomplete'
+    WHERE "status" = 'incomplete' AND "userId" = ${userId}
     ORDER BY "id"
     FOR UPDATE
   `;
 
   const watchingAnimes = await tx.anime.findMany({
-    where: { status: 'incomplete' },
+    where: { status: 'incomplete', userId },
     orderBy: [
       { watchOrder: { sort: 'asc', nulls: 'last' } },
       { createdAt: 'desc' },
