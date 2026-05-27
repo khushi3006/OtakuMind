@@ -215,6 +215,21 @@ export async function POST(request: Request) {
 
       const newAnime = await withDeadlockRetry(() =>
         db.$transaction(async (tx) => {
+          if (targetStatus === 'incomplete') {
+            // Increment watchOrder of all existing incomplete items by 1 to make room at the top
+            await tx.anime.updateMany({
+              where: {
+                userId,
+                status: 'incomplete',
+              },
+              data: {
+                watchOrder: {
+                  increment: 1,
+                },
+              },
+            });
+          }
+
           let createdAnime;
           try {
             createdAnime = await tx.anime.create({
@@ -233,11 +248,6 @@ export async function POST(request: Request) {
             createdAnime = await tx.anime.create({
               data: fallbackCreateData
             });
-          }
-
-          if (targetStatus === 'incomplete') {
-            await normalizeWatchingOrder(tx, userId, { pinnedAnimeId: createdAnime.id });
-            return tx.anime.findUniqueOrThrow({ where: { id: createdAnime.id } });
           }
 
           return createdAnime;

@@ -103,6 +103,41 @@ export async function PUT(
 
     const updatedAnime = await withDeadlockRetry(() =>
       db.$transaction(async (tx) => {
+        if (isStatusChanging) {
+          // 1. If moving OUT of incomplete, decrement watchOrder of all items that were after it
+          if (currentAnime.status === 'incomplete' && currentAnime.watchOrder !== null) {
+            await tx.anime.updateMany({
+              where: {
+                userId,
+                status: 'incomplete',
+                watchOrder: {
+                  gt: currentAnime.watchOrder,
+                },
+              },
+              data: {
+                watchOrder: {
+                  decrement: 1,
+                },
+              },
+            });
+          }
+
+          // 2. If moving INTO incomplete, increment watchOrder of all existing incomplete items
+          if (status === 'incomplete') {
+            await tx.anime.updateMany({
+              where: {
+                userId,
+                status: 'incomplete',
+              },
+              data: {
+                watchOrder: {
+                  increment: 1,
+                },
+              },
+            });
+          }
+        }
+
         let nextAnime;
         try {
           nextAnime = await tx.anime.update({
@@ -123,15 +158,6 @@ export async function PUT(
             where: { id: animeId },
             data: fallbackUpdateData,
           });
-        }
-
-        if (isStatusChanging) {
-          await normalizeWatchingOrder(
-            tx,
-            userId,
-            status === 'incomplete' ? { pinnedAnimeId: animeId } : undefined
-          );
-          return tx.anime.findUniqueOrThrow({ where: { id: animeId } });
         }
 
         return nextAnime;
@@ -180,6 +206,16 @@ export async function DELETE(
 
     const deletedAnime = await withDeadlockRetry(() =>
       db.$transaction(async (tx) => {
+        if (existingAnime.status === 'incomplete') {
+          await tx.$queryRaw`
+            SELECT "id"
+            FROM "Anime"
+            WHERE ("status" = 'incomplete' OR "id" = ${animeId}) AND "userId" = ${userId}
+            ORDER BY "id"
+            FOR UPDATE
+          `;
+        }
+
         const removedAnime = await tx.anime.delete({
           where: { id: animeId }
         });

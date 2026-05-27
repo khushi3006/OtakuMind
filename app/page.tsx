@@ -119,6 +119,7 @@ export default function Home() {
   });
 
   // UI state for toast & modals
+  const [updatingIds, setUpdatingIds] = useState<Record<number, boolean>>({});
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -220,6 +221,7 @@ export default function Home() {
     if (showLoader && !isRetry) {
       setLoading(true);
       setIsWakingUp(false);
+      setAnimes([]); // Clear the list to show beautiful shimmer skeletons immediately!
     }
     try {
       const status = STATUS_MAP[tab];
@@ -485,6 +487,10 @@ export default function Home() {
 
 
   const updateAnime = async (id: number, updates: Partial<Anime>) => {
+    if (updatingIds[id]) return;
+
+    setUpdatingIds(prev => ({ ...prev, [id]: true }));
+
     const backup = [...animes];
     const paginationBackup = pagination;
 
@@ -542,6 +548,12 @@ export default function Home() {
       setPagination(paginationBackup);
       pendingUpdatesRef.current.delete(id);
       throw e;
+    } finally {
+      setUpdatingIds(prev => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
     }
   };
 
@@ -679,6 +691,7 @@ export default function Home() {
   };
 
   const handleDropInitiate = async (anime: Anime) => {
+    if (updatingIds[anime.id]) return;
     try {
       addToast(`Moved ${anime.name} to Dropped`, 'info', 900);
       await updateAnime(anime.id, { status: 'dropped' });
@@ -899,13 +912,17 @@ export default function Home() {
                                 <small>eps</small>
                               </div>
                               <div className="ep-btns">
-                                <button onClick={() => updateAnime(anime.id, { episodesWatched: Math.max(0, anime.episodesWatched - 1) })} className="btn-mini">
+                                <button 
+                                  onClick={() => updateAnime(anime.id, { episodesWatched: Math.max(0, anime.episodesWatched - 1) })} 
+                                  className="btn-mini"
+                                  disabled={!!updatingIds[anime.id]}
+                                >
                                   <Minus size={14} />
                                 </button>
                                 <button 
                                   onClick={() => updateAnime(anime.id, { episodesWatched: anime.episodesWatched + 1 })} 
                                   className="btn-mini primary"
-                                  disabled={anime.totalEpisodes !== undefined && anime.totalEpisodes > 0 && anime.episodesWatched >= anime.totalEpisodes}
+                                  disabled={!!updatingIds[anime.id] || (anime.totalEpisodes !== undefined && anime.totalEpisodes > 0 && anime.episodesWatched >= anime.totalEpisodes)}
                                   title={anime.totalEpisodes !== undefined && anime.totalEpisodes > 0 && anime.episodesWatched >= anime.totalEpisodes ? "Progress reached total episodes" : "Increment episodes"}
                                 >
                                   <Plus size={14} />
@@ -916,18 +933,46 @@ export default function Home() {
                         </div>
                         
                         <div className="col-actions-group">
-                          <button onClick={() => updateAnime(anime.id, { status: 'completed' })} className="btn-row success" title="Complete">
-                            <Check size={16} />
-                          </button>
-                          <button onClick={() => handleDropInitiate(anime)} className="btn-row danger" title="Drop">
-                            <XCircle size={16} />
-                          </button>
-                          <button onClick={() => handleEditInitiate(anime)} className="btn-row ghost" title="Edit">
-                            <Edit2 size={16} />
-                          </button>
-                          <button onClick={() => handleDeleteInitiate(anime)} className="btn-row ghost" title="Delete">
-                            <Trash2 size={16} />
-                          </button>
+                          {updatingIds[anime.id] ? (
+                            <div className="row-loader" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '92px' }}>
+                              <RefreshCw className="spin text-muted" size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                            </div>
+                          ) : (
+                            <>
+                              <button 
+                                onClick={() => updateAnime(anime.id, { status: 'completed' })} 
+                                className="btn-row success" 
+                                title="Complete"
+                                disabled={!!updatingIds[anime.id]}
+                              >
+                                <Check size={16} />
+                              </button>
+                              <button 
+                                onClick={() => handleDropInitiate(anime)} 
+                                className="btn-row danger" 
+                                title="Drop"
+                                disabled={!!updatingIds[anime.id]}
+                              >
+                                <XCircle size={16} />
+                              </button>
+                              <button 
+                                onClick={() => handleEditInitiate(anime)} 
+                                className="btn-row ghost" 
+                                title="Edit"
+                                disabled={!!updatingIds[anime.id]}
+                              >
+                                <Edit2 size={16} />
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteInitiate(anime)} 
+                                className="btn-row ghost" 
+                                title="Delete"
+                                disabled={!!updatingIds[anime.id]}
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
                     )}
@@ -960,13 +1005,17 @@ export default function Home() {
                         <small>eps</small>
                       </div>
                       <div className="ep-btns">
-                        <button onClick={() => updateAnime(anime.id, { episodesWatched: Math.max(0, anime.episodesWatched - 1) })} className="btn-mini">
+                        <button 
+                          onClick={() => updateAnime(anime.id, { episodesWatched: Math.max(0, anime.episodesWatched - 1) })} 
+                          className="btn-mini"
+                          disabled={!!updatingIds[anime.id]}
+                        >
                           <Minus size={14} />
                         </button>
                         <button 
                           onClick={() => updateAnime(anime.id, { episodesWatched: anime.episodesWatched + 1 })} 
                           className="btn-mini primary"
-                          disabled={anime.totalEpisodes !== undefined && anime.totalEpisodes > 0 && anime.episodesWatched >= anime.totalEpisodes}
+                          disabled={!!updatingIds[anime.id] || (anime.totalEpisodes !== undefined && anime.totalEpisodes > 0 && anime.episodesWatched >= anime.totalEpisodes)}
                           title={anime.totalEpisodes !== undefined && anime.totalEpisodes > 0 && anime.episodesWatched >= anime.totalEpisodes ? "Progress reached total episodes" : "Increment episodes"}
                         >
                           <Plus size={14} />
@@ -977,27 +1026,60 @@ export default function Home() {
                 </div>
                 
                 <div className="col-actions-group">
-                  {activeTab !== 'completed' && (
-                    <button onClick={() => updateAnime(anime.id, { status: 'completed' })} className="btn-row success" title="Complete">
-                      <Check size={16} />
-                    </button>
+                  {updatingIds[anime.id] ? (
+                    <div className="row-loader" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '92px' }}>
+                      <RefreshCw className="spin text-muted" size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                    </div>
+                  ) : (
+                    <>
+                      {activeTab !== 'completed' && (
+                        <button 
+                          onClick={() => updateAnime(anime.id, { status: 'completed' })} 
+                          className="btn-row success" 
+                          title="Complete"
+                          disabled={!!updatingIds[anime.id]}
+                        >
+                          <Check size={16} />
+                        </button>
+                      )}
+                      {activeTab !== 'watching' as string && (
+                        <button 
+                          onClick={() => updateAnime(anime.id, { status: 'incomplete' })} 
+                          className="btn-row" 
+                          title="Watching"
+                          disabled={!!updatingIds[anime.id]}
+                        >
+                          <PlaySquare size={16} />
+                        </button>
+                      )}
+                      {activeTab !== 'dropped' && (
+                        <button 
+                          onClick={() => handleDropInitiate(anime)} 
+                          className="btn-row danger" 
+                          title="Drop"
+                          disabled={!!updatingIds[anime.id]}
+                        >
+                          <XCircle size={16} />
+                        </button>
+                      )}
+                      <button 
+                        onClick={() => handleEditInitiate(anime)} 
+                        className="btn-row ghost" 
+                        title="Edit"
+                        disabled={!!updatingIds[anime.id]}
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteInitiate(anime)} 
+                        className="btn-row ghost" 
+                        title="Delete"
+                        disabled={!!updatingIds[anime.id]}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </>
                   )}
-                  {activeTab !== 'watching' as string && (
-                    <button onClick={() => updateAnime(anime.id, { status: 'incomplete' })} className="btn-row" title="Watching">
-                      <PlaySquare size={16} />
-                    </button>
-                  )}
-                  {activeTab !== 'dropped' && (
-                    <button onClick={() => handleDropInitiate(anime)} className="btn-row danger" title="Drop">
-                      <XCircle size={16} />
-                    </button>
-                  )}
-                  <button onClick={() => handleEditInitiate(anime)} className="btn-row ghost" title="Edit">
-                    <Edit2 size={16} />
-                  </button>
-                  <button onClick={() => handleDeleteInitiate(anime)} className="btn-row ghost" title="Delete">
-                    <Trash2 size={16} />
-                  </button>
                 </div>
               </div>
             ))}
@@ -1150,10 +1232,10 @@ export default function Home() {
         </div>
       </div>
 
-      {loading || isWakingUp ? (
+      {isWakingUp ? (
         <div className="loader-wrapper">
           <RefreshCw className="spin" size={40} color="#a3b18a" />
-          {isWakingUp && <p style={{ marginTop: '1rem', color: 'var(--text-color)', opacity: 0.8 }}>Database is waking up, please wait...</p>}
+          <p style={{ marginTop: '1rem', color: 'var(--text-color)', opacity: 0.8 }}>Database is waking up, please wait...</p>
         </div>
       ) : (
         <DragDropContext onDragEnd={handleDragEnd}>
@@ -1165,8 +1247,41 @@ export default function Home() {
                   {activeTab === 'completed' && <><Check size={22} color="#a3b18a" /> Completed Anime</>}
                   {activeTab === 'dropped' && <><XCircle size={22} color="#d68c8c" /> Dropped Anime</>}
                 </h2>
-                {renderList()}
-                {renderPagination()}
+
+                {loading && animes.length === 0 ? (
+                  <div className={`compact-list ${activeTab === 'watching' ? 'has-drag' : ''}`}>
+                    <div className="compact-list-header">
+                      {activeTab === 'watching' && <span className="col-drag"></span>}
+                      <span className="col-title">Anime</span>
+                      <span className="col-ep">Progress</span>
+                      <span className="col-actions">Actions</span>
+                    </div>
+                    {[1, 2, 3, 4].map((idx) => (
+                      <div key={idx} className="compact-list-row skeleton-row" style={{ animationDelay: `${idx * 40}ms` }}>
+                        {activeTab === 'watching' && (
+                          <div className="col-drag-handle" style={{ opacity: 0.4 }}>
+                            <GripVertical size={16} />
+                          </div>
+                        )}
+                        <div className="col-title-info">
+                          <div className="skeleton-bar shimmer" style={{ width: '45%', height: '1.2rem', marginBottom: '0.4rem' }}></div>
+                          <div className="skeleton-bar shimmer" style={{ width: '25%', height: '0.85rem' }}></div>
+                        </div>
+                        <div className="col-ep-control">
+                          <div className="skeleton-bar shimmer" style={{ width: '60px', height: '1.5rem' }}></div>
+                        </div>
+                        <div className="col-actions-group">
+                          <div className="skeleton-bar shimmer" style={{ width: '100px', height: '2rem' }}></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <>
+                    {renderList()}
+                    {renderPagination()}
+                  </>
+                )}
               </section>
               
               <div className="dashboard-promo">

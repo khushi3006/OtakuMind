@@ -2,8 +2,10 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
-import { LayoutDashboard, CheckCircle2, PlayCircle, LogOut, User, Menu, X } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { LayoutDashboard, CheckCircle2, PlayCircle, LogOut, User, Menu, X, Lock, Loader2, Eye, EyeOff } from 'lucide-react';
+import Logo from './Logo';
+import Modal from './Modal';
 
 interface UserSession {
   id: number;
@@ -17,13 +19,31 @@ export default function Navbar() {
   const [user, setUser] = useState<UserSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  
+  // Custom Profile & Dropdown States
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+
+  // Change Password Form States
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Check if current page is an auth page
   const isAuthPage = pathname === '/login' || pathname === '/signup';
 
   useEffect(() => {
-    // Auto-close menu when navigating
+    // Auto-close menu/dropdown when navigating
     setIsMenuOpen(false);
+    setIsDropdownOpen(false);
     
     // Check session user on mount/pathname change
     const checkSession = async () => {
@@ -45,6 +65,24 @@ export default function Navbar() {
     checkSession();
   }, [pathname]);
 
+
+
+  // Handle outside clicks to close the profile dropdown on desktop
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    if (isDropdownOpen) {
+      document.addEventListener('click', handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener('click', handleOutsideClick);
+    };
+  }, [isDropdownOpen]);
+
   // Auto-close mobile menu when screen size becomes desktop size (> 768px)
   useEffect(() => {
     const handleResize = () => {
@@ -55,6 +93,8 @@ export default function Navbar() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+
 
   const handleLogout = async () => {
     try {
@@ -69,13 +109,66 @@ export default function Navbar() {
     }
   };
 
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage('');
+    setSuccessMessage('');
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setErrorMessage('All fields are required');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setErrorMessage('New password must be at least 6 characters long');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setErrorMessage('New passwords do not match');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setErrorMessage(data.error || 'Failed to change password');
+      } else {
+        setSuccessMessage('Password changed successfully!');
+        // Clear input fields and reset visibility states
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setShowCurrentPassword(false);
+        setShowNewPassword(false);
+        setShowConfirmPassword(false);
+        
+        // Auto-close modal after success message completes
+        setTimeout(() => {
+          setIsPasswordModalOpen(false);
+          setSuccessMessage('');
+        }, 1800);
+      }
+    } catch (err) {
+      setErrorMessage('An unexpected error occurred');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const links = [
     { href: '/', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
     { href: '/airing-schedule', label: 'Airing Schedule', icon: <PlayCircle size={18} /> },
     { href: '/original-list', label: 'Original History', icon: <CheckCircle2 size={18} /> },
   ];
 
-  // Helper to get user initials
   const getInitials = (name: string | null, email: string) => {
     if (name) {
       return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -88,7 +181,7 @@ export default function Navbar() {
       <nav className="navbar">
         <div className="navbar-inner">
           <Link href="/" className="nav-logo">
-            <span className="logo-dot"></span> OtakuMind
+            <Logo size={24} /> OtakuMind
           </Link>
 
           {!isAuthPage && !loading && user && (
@@ -109,60 +202,69 @@ export default function Navbar() {
                 })}
               </div>
 
-              <div className="nav-user-menu" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-                <div 
-                  className="user-profile-badge" 
-                  style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '0.5rem',
-                    background: '#fdfaf6',
-                    padding: '0.4rem 0.8rem',
-                    borderRadius: '20px',
-                    border: '1px solid #eae8e1',
-                    fontSize: '0.85rem',
-                    fontWeight: 500,
-                    color: 'var(--text-secondary)'
-                  }}
-                >
-                  <span 
-                    className="avatar-bubble" 
-                    style={{
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '50%',
-                      background: 'var(--accent-color)',
-                      color: 'white',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                    }}
+              {/* Desktop Profile Menu Dropdown */}
+              <div className="nav-user-menu" style={{ display: 'flex', alignItems: 'center' }}>
+                <div className="navbar-user-dropdown-container" ref={dropdownRef}>
+                  <button 
+                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    className="user-profile-badge-btn"
+                    aria-haspopup="true"
+                    aria-expanded={isDropdownOpen}
                   >
-                    {getInitials(user.name, user.email)}
-                  </span>
-                  <span>{user.name || user.email.split('@')[0]}</span>
-                </div>
+                    <span 
+                      className="avatar-bubble" 
+                      style={{
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '50%',
+                        background: 'var(--accent-color)',
+                        color: 'white',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {getInitials(user.name, user.email)}
+                    </span>
+                    <span>{user.name || user.email.split('@')[0]}</span>
+                  </button>
 
-                <button 
-                  onClick={handleLogout}
-                  className="btn-logout"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                    fontSize: '0.85rem',
-                    fontWeight: 500,
-                    color: 'var(--text-muted)',
-                    transition: 'color 0.2s',
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--danger-color)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
-                >
-                  <LogOut size={16} />
-                  <span>Sign Out</span>
-                </button>
+                  <div className={`profile-dropdown-menu ${isDropdownOpen ? 'open' : ''}`}>
+                    <div className="dropdown-user-header">
+                      <span className="avatar-bubble-large">
+                        {getInitials(user.name, user.email)}
+                      </span>
+                      <h4>{user.name || user.email.split('@')[0]}</h4>
+                      <p>{user.email}</p>
+                    </div>
+
+                    <div className="dropdown-divider"></div>
+
+                    <button 
+                      onClick={() => {
+                        setIsDropdownOpen(false);
+                        setIsPasswordModalOpen(true);
+                      }}
+                      className="dropdown-menu-item"
+                    >
+                      <Lock size={15} />
+                      <span>Reset Password</span>
+                    </button>
+
+                    <button 
+                      onClick={() => {
+                        setIsDropdownOpen(false);
+                        handleLogout();
+                      }}
+                      className="dropdown-menu-item danger-item"
+                    >
+                      <LogOut size={15} />
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <button 
@@ -197,7 +299,7 @@ export default function Navbar() {
           <div className="navbar-mobile-menu">
             <div className="mobile-drawer-header">
               <div className="mobile-drawer-logo">
-                <span className="logo-dot"></span> OtakuMind
+                <Logo size={24} /> OtakuMind
               </div>
               <button 
                 className="mobile-drawer-close"
@@ -216,6 +318,21 @@ export default function Navbar() {
                 <h4>{user.name || user.email.split('@')[0]}</h4>
                 <p>{user.email}</p>
               </div>
+            </div>
+
+            {/* Mobile Drawer Settings */}
+            <div className="mobile-drawer-settings" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '0 0.5rem' }}>
+              <button 
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  setIsPasswordModalOpen(true);
+                }}
+                className="dropdown-menu-item"
+                style={{ width: '100%', padding: '0.75rem 0.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-color)' }}
+              >
+                <Lock size={16} />
+                <span style={{ fontSize: '0.9rem' }}>Reset Password</span>
+              </button>
             </div>
 
             <div className="nav-links-mobile">
@@ -250,6 +367,142 @@ export default function Navbar() {
           </div>
         </>
       )}
+
+      {/* Change Password Modal */}
+      <Modal
+        isOpen={isPasswordModalOpen}
+        onClose={() => {
+          if (!isSubmitting) {
+            setIsPasswordModalOpen(false);
+            setErrorMessage('');
+            setSuccessMessage('');
+            setCurrentPassword('');
+            setNewPassword('');
+            setConfirmPassword('');
+            setShowCurrentPassword(false);
+            setShowNewPassword(false);
+            setShowConfirmPassword(false);
+          }
+        }}
+        title="Change Password"
+      >
+        <form onSubmit={handlePasswordSubmit} className="change-password-form">
+          {errorMessage && <div className="feedback-msg error">{errorMessage}</div>}
+          {successMessage && <div className="feedback-msg success">{successMessage}</div>}
+
+          <div className="form-group">
+            <label htmlFor="currentPassword">Current Password</label>
+            <div className="password-input-wrapper">
+              <input
+                type={showCurrentPassword ? "text" : "password"}
+                id="currentPassword"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Enter current password"
+                disabled={isSubmitting}
+                required
+              />
+              <button
+                type="button"
+                className="password-toggle-btn"
+                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                disabled={isSubmitting}
+                title={showCurrentPassword ? "Hide current password" : "Show current password"}
+                aria-label={showCurrentPassword ? "Hide current password" : "Show current password"}
+              >
+                {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="newPassword">New Password</label>
+            <div className="password-input-wrapper">
+              <input
+                type={showNewPassword ? "text" : "password"}
+                id="newPassword"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password (min. 6 chars)"
+                disabled={isSubmitting}
+                required
+              />
+              <button
+                type="button"
+                className="password-toggle-btn"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                disabled={isSubmitting}
+                title={showNewPassword ? "Hide new password" : "Show new password"}
+                aria-label={showNewPassword ? "Hide new password" : "Show new password"}
+              >
+                {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="confirmPassword">Confirm New Password</label>
+            <div className="password-input-wrapper">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                id="confirmPassword"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm new password"
+                disabled={isSubmitting}
+                required
+              />
+              <button
+                type="button"
+                className="password-toggle-btn"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                disabled={isSubmitting}
+                title={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+              >
+                {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+
+          <div className="modal-actions" style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem' }}>
+            <button
+              type="button"
+              className="modal-btn secondary"
+              onClick={() => {
+                setIsPasswordModalOpen(false);
+                setErrorMessage('');
+                setSuccessMessage('');
+                setCurrentPassword('');
+                setNewPassword('');
+                setConfirmPassword('');
+                setShowCurrentPassword(false);
+                setShowNewPassword(false);
+                setShowConfirmPassword(false);
+              }}
+              disabled={isSubmitting}
+              style={{ flex: 1 }}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="modal-btn primary"
+              disabled={isSubmitting}
+              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 size={16} className="spin" />
+                  <span>Changing...</span>
+                </>
+              ) : (
+                <span>Change Password</span>
+              )}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </>
   );
 }

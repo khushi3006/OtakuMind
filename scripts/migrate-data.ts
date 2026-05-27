@@ -28,21 +28,19 @@ async function main() {
   }
 
   // 2. Count orphaned anime records
-  const orphanCount = await db.anime.count({
-    where: { userId: null },
-  });
+  const orphanRows = await db.$queryRaw<{ count: number }[]>`
+    SELECT COUNT(*)::integer as count FROM "Anime" WHERE "userId" IS NULL
+  `;
+  const orphanCount = orphanRows[0]?.count ?? 0;
 
   console.log(`Found ${orphanCount} anime records without an owner.`);
 
   if (orphanCount > 0) {
     // 3. Update all orphaned records to have defaultUser.id as userId
-    const updateResult = await db.anime.updateMany({
-      where: { userId: null },
-      data: {
-        userId: defaultUser.id,
-      },
-    });
-    console.log(`Successfully migrated ${updateResult.count} anime records to user ID ${defaultUser.id}!`);
+    const updatedCount = await db.$executeRaw`
+      UPDATE "Anime" SET "userId" = ${defaultUser.id} WHERE "userId" IS NULL
+    `;
+    console.log(`Successfully migrated ${updatedCount} anime records to user ID ${defaultUser.id}!`);
   } else {
     console.log('No anime records needed migration.');
   }

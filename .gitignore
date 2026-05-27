@@ -42,3 +42,7 @@ next-env.d.ts
 
 .agents
 .codex-temp/
+
+# scratch and temp files
+scratch/
+*.tmp*
