@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
-import { LayoutDashboard, CheckCircle2, PlayCircle, LogOut, User, Menu, X, Lock, Loader2, Eye, EyeOff } from 'lucide-react';
+import { LayoutDashboard, CheckCircle2, PlayCircle, LogOut, User, Menu, X, Lock, Loader2, Eye, EyeOff, Users } from 'lucide-react';
 import Logo from './Logo';
 import Modal from './Modal';
 
@@ -11,6 +11,7 @@ interface UserSession {
   id: number;
   email: string;
   name: string | null;
+  username?: string | null;
 }
 
 export default function Navbar() {
@@ -167,6 +168,7 @@ export default function Navbar() {
     { href: '/', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
     { href: '/airing-schedule', label: 'Airing Schedule', icon: <PlayCircle size={18} /> },
     { href: '/original-list', label: 'Original History', icon: <CheckCircle2 size={18} /> },
+    { href: '/users', label: 'Discover', icon: <Users size={18} /> },
   ];
 
   const getInitials = (name: string | null, email: string) => {
@@ -242,7 +244,18 @@ export default function Navbar() {
 
                     <div className="dropdown-divider"></div>
 
-                    <button 
+                    {user.username && (
+                      <Link
+                        href={`/users/${user.username}`}
+                        className="dropdown-menu-item"
+                        onClick={() => setIsDropdownOpen(false)}
+                      >
+                        <User size={15} />
+                        <span>My Profile</span>
+                      </Link>
+                    )}
+
+                    <button
                       onClick={() => {
                         setIsDropdownOpen(false);
                         setIsPasswordModalOpen(true);
@@ -322,7 +335,18 @@ export default function Navbar() {
 
             {/* Mobile Drawer Settings */}
             <div className="mobile-drawer-settings" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '0 0.5rem' }}>
-              <button 
+              {user.username && (
+                <Link
+                  href={`/users/${user.username}`}
+                  className="dropdown-menu-item"
+                  onClick={() => setIsMenuOpen(false)}
+                  style={{ width: '100%', padding: '0.75rem 0.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-color)' }}
+                >
+                  <User size={16} />
+                  <span style={{ fontSize: '0.9rem' }}>My Profile</span>
+                </Link>
+              )}
+              <button
                 onClick={() => {
                   setIsMenuOpen(false);
                   setIsPasswordModalOpen(true);

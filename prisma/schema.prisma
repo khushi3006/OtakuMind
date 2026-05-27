@@ -12,10 +12,33 @@ datasource db {
 model User {
   id        Int      @id @default(autoincrement())
   email     String   @unique
+  username  String   @unique
   password  String
   name      String?
+  bio       String?
+  isPublic  Boolean  @default(true)
   createdAt DateTime @default(now())
   animes    Anime[]
+
+  // Social graph (self-referential many-to-many through Follow)
+  following Follow[]  @relation("Follower")
+  followers Follow[]  @relation("Following")
+
+  @@index([username])
+}
+
+model Follow {
+  id          Int      @id @default(autoincrement())
+  followerId  Int
+  followingId Int
+  createdAt   DateTime @default(now())
+
+  follower  User @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
 }
 
 model Anime {

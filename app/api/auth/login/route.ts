@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     }
 
     // Create session cookie
-    const sessionPayload = { userId: user.id, email: user.email, name: user.name };
+    const sessionPayload = { userId: user.id, email: user.email, name: user.name, username: user.username };
     await setSessionCookie(sessionPayload);
 
     return NextResponse.json({
@@ -38,6 +38,7 @@ export async function POST(request: Request) {
         id: user.id,
         email: user.email,
         name: user.name,
+        username: user.username,
       },
     });
   } catch (error: any) {

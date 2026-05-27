@@ -5,7 +5,7 @@ import { verifyJWT } from './lib/jwt';
 const COOKIE_NAME = 'session';
 
 // Define public and protected route lists
-const PROTECTED_PAGES = ['/', '/airing-schedule', '/original-list'];
+const PROTECTED_PAGES = ['/', '/airing-schedule', '/original-list', '/users'];
 const AUTH_PAGES = ['/login', '/signup'];
 
 export async function proxy(request: NextRequest) {

@@ -19,6 +19,11 @@ export type PrismaPromise<T> = $Public.PrismaPromise<T>
  */
 export type User = $Result.DefaultSelection<Prisma.$UserPayload>
 /**
+ * Model Follow
+ * 
+ */
+export type Follow = $Result.DefaultSelection<Prisma.$FollowPayload>
+/**
  * Model Anime
  * 
  */
@@ -156,6 +161,16 @@ export class PrismaClient<
     * ```
     */
   get user(): Prisma.UserDelegate<ExtArgs>;
+
+  /**
+   * `prisma.follow`: Exposes CRUD operations for the **Follow** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more Follows
+    * const follows = await prisma.follow.findMany()
+    * ```
+    */
+  get follow(): Prisma.FollowDelegate<ExtArgs>;
 
   /**
    * `prisma.anime`: Exposes CRUD operations for the **Anime** model.
@@ -608,6 +623,7 @@ export namespace Prisma {
 
   export const ModelName: {
     User: 'User',
+    Follow: 'Follow',
     Anime: 'Anime'
   };
 
@@ -624,7 +640,7 @@ export namespace Prisma {
 
   export type TypeMap<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, ClientOptions = {}> = {
     meta: {
-      modelProps: "user" | "anime"
+      modelProps: "user" | "follow" | "anime"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -695,6 +711,76 @@ export namespace Prisma {
           count: {
             args: Prisma.UserCountArgs<ExtArgs>
             result: $Utils.Optional<UserCountAggregateOutputType> | number
+          }
+        }
+      }
+      Follow: {
+        payload: Prisma.$FollowPayload<ExtArgs>
+        fields: Prisma.FollowFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.FollowFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FollowPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.FollowFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FollowPayload>
+          }
+          findFirst: {
+            args: Prisma.FollowFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FollowPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.FollowFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FollowPayload>
+          }
+          findMany: {
+            args: Prisma.FollowFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FollowPayload>[]
+          }
+          create: {
+            args: Prisma.FollowCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FollowPayload>
+          }
+          createMany: {
+            args: Prisma.FollowCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.FollowCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FollowPayload>[]
+          }
+          delete: {
+            args: Prisma.FollowDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FollowPayload>
+          }
+          update: {
+            args: Prisma.FollowUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FollowPayload>
+          }
+          deleteMany: {
+            args: Prisma.FollowDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.FollowUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.FollowUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FollowPayload>
+          }
+          aggregate: {
+            args: Prisma.FollowAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateFollow>
+          }
+          groupBy: {
+            args: Prisma.FollowGroupByArgs<ExtArgs>
+            result: $Utils.Optional<FollowGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.FollowCountArgs<ExtArgs>
+            result: $Utils.Optional<FollowCountAggregateOutputType> | number
           }
         }
       }
@@ -934,10 +1020,14 @@ export namespace Prisma {
 
   export type UserCountOutputType = {
     animes: number
+    following: number
+    followers: number
   }
 
   export type UserCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     animes?: boolean | UserCountOutputTypeCountAnimesArgs
+    following?: boolean | UserCountOutputTypeCountFollowingArgs
+    followers?: boolean | UserCountOutputTypeCountFollowersArgs
   }
 
   // Custom InputTypes
@@ -956,6 +1046,20 @@ export namespace Prisma {
    */
   export type UserCountOutputTypeCountAnimesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: AnimeWhereInput
+  }
+
+  /**
+   * UserCountOutputType without action
+   */
+  export type UserCountOutputTypeCountFollowingArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: FollowWhereInput
+  }
+
+  /**
+   * UserCountOutputType without action
+   */
+  export type UserCountOutputTypeCountFollowersArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: FollowWhereInput
   }
 
 
@@ -986,27 +1090,33 @@ export namespace Prisma {
   export type UserMinAggregateOutputType = {
     id: number | null
     email: string | null
+    username: string | null
     password: string | null
     name: string | null
-    avatarUrl: string | null
+    bio: string | null
+    isPublic: boolean | null
     createdAt: Date | null
   }
 
   export type UserMaxAggregateOutputType = {
     id: number | null
     email: string | null
+    username: string | null
     password: string | null
     name: string | null
-    avatarUrl: string | null
+    bio: string | null
+    isPublic: boolean | null
     createdAt: Date | null
   }
 
   export type UserCountAggregateOutputType = {
     id: number
     email: number
+    username: number
     password: number
     name: number
-    avatarUrl: number
+    bio: number
+    isPublic: number
     createdAt: number
     _all: number
   }
@@ -1023,27 +1133,33 @@ export namespace Prisma {
   export type UserMinAggregateInputType = {
     id?: true
     email?: true
+    username?: true
     password?: true
     name?: true
-    avatarUrl?: true
+    bio?: true
+    isPublic?: true
     createdAt?: true
   }
 
   export type UserMaxAggregateInputType = {
     id?: true
     email?: true
+    username?: true
     password?: true
     name?: true
-    avatarUrl?: true
+    bio?: true
+    isPublic?: true
     createdAt?: true
   }
 
   export type UserCountAggregateInputType = {
     id?: true
     email?: true
+    username?: true
     password?: true
     name?: true
-    avatarUrl?: true
+    bio?: true
+    isPublic?: true
     createdAt?: true
     _all?: true
   }
@@ -1137,9 +1253,11 @@ export namespace Prisma {
   export type UserGroupByOutputType = {
     id: number
     email: string
+    username: string
     password: string
     name: string | null
-    avatarUrl: string | null
+    bio: string | null
+    isPublic: boolean
     createdAt: Date
     _count: UserCountAggregateOutputType | null
     _avg: UserAvgAggregateOutputType | null
@@ -1165,34 +1283,44 @@ export namespace Prisma {
   export type UserSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
     email?: boolean
+    username?: boolean
     password?: boolean
     name?: boolean
-    avatarUrl?: boolean
+    bio?: boolean
+    isPublic?: boolean
     createdAt?: boolean
     animes?: boolean | User$animesArgs<ExtArgs>
+    following?: boolean | User$followingArgs<ExtArgs>
+    followers?: boolean | User$followersArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["user"]>
 
   export type UserSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
     email?: boolean
+    username?: boolean
     password?: boolean
     name?: boolean
-    avatarUrl?: boolean
+    bio?: boolean
+    isPublic?: boolean
     createdAt?: boolean
   }, ExtArgs["result"]["user"]>
 
   export type UserSelectScalar = {
     id?: boolean
     email?: boolean
+    username?: boolean
     password?: boolean
     name?: boolean
-    avatarUrl?: boolean
+    bio?: boolean
+    isPublic?: boolean
     createdAt?: boolean
   }
 
   export type UserInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     animes?: boolean | User$animesArgs<ExtArgs>
+    following?: boolean | User$followingArgs<ExtArgs>
+    followers?: boolean | User$followersArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type UserIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
@@ -1201,13 +1329,17 @@ export namespace Prisma {
     name: "User"
     objects: {
       animes: Prisma.$AnimePayload<ExtArgs>[]
+      following: Prisma.$FollowPayload<ExtArgs>[]
+      followers: Prisma.$FollowPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: number
       email: string
+      username: string
       password: string
       name: string | null
-      avatarUrl: string | null
+      bio: string | null
+      isPublic: boolean
       createdAt: Date
     }, ExtArgs["result"]["user"]>
     composites: {}
@@ -1574,6 +1706,8 @@ export namespace Prisma {
   export interface Prisma__UserClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     animes<T extends User$animesArgs<ExtArgs> = {}>(args?: Subset<T, User$animesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AnimePayload<ExtArgs>, T, "findMany"> | Null>
+    following<T extends User$followingArgs<ExtArgs> = {}>(args?: Subset<T, User$followingArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$FollowPayload<ExtArgs>, T, "findMany"> | Null>
+    followers<T extends User$followersArgs<ExtArgs> = {}>(args?: Subset<T, User$followersArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$FollowPayload<ExtArgs>, T, "findMany"> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1605,9 +1739,11 @@ export namespace Prisma {
   interface UserFieldRefs {
     readonly id: FieldRef<"User", 'Int'>
     readonly email: FieldRef<"User", 'String'>
+    readonly username: FieldRef<"User", 'String'>
     readonly password: FieldRef<"User", 'String'>
     readonly name: FieldRef<"User", 'String'>
-    readonly avatarUrl: FieldRef<"User", 'String'>
+    readonly bio: FieldRef<"User", 'String'>
+    readonly isPublic: FieldRef<"User", 'Boolean'>
     readonly createdAt: FieldRef<"User", 'DateTime'>
   }
     
@@ -1943,6 +2079,46 @@ export namespace Prisma {
   }
 
   /**
+   * User.following
+   */
+  export type User$followingArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Follow
+     */
+    select?: FollowSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FollowInclude<ExtArgs> | null
+    where?: FollowWhereInput
+    orderBy?: FollowOrderByWithRelationInput | FollowOrderByWithRelationInput[]
+    cursor?: FollowWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: FollowScalarFieldEnum | FollowScalarFieldEnum[]
+  }
+
+  /**
+   * User.followers
+   */
+  export type User$followersArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Follow
+     */
+    select?: FollowSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FollowInclude<ExtArgs> | null
+    where?: FollowWhereInput
+    orderBy?: FollowOrderByWithRelationInput | FollowOrderByWithRelationInput[]
+    cursor?: FollowWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: FollowScalarFieldEnum | FollowScalarFieldEnum[]
+  }
+
+  /**
    * User without action
    */
   export type UserDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -1954,6 +2130,975 @@ export namespace Prisma {
      * Choose, which related nodes to fetch as well
      */
     include?: UserInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model Follow
+   */
+
+  export type AggregateFollow = {
+    _count: FollowCountAggregateOutputType | null
+    _avg: FollowAvgAggregateOutputType | null
+    _sum: FollowSumAggregateOutputType | null
+    _min: FollowMinAggregateOutputType | null
+    _max: FollowMaxAggregateOutputType | null
+  }
+
+  export type FollowAvgAggregateOutputType = {
+    id: number | null
+    followerId: number | null
+    followingId: number | null
+  }
+
+  export type FollowSumAggregateOutputType = {
+    id: number | null
+    followerId: number | null
+    followingId: number | null
+  }
+
+  export type FollowMinAggregateOutputType = {
+    id: number | null
+    followerId: number | null
+    followingId: number | null
+    createdAt: Date | null
+  }
+
+  export type FollowMaxAggregateOutputType = {
+    id: number | null
+    followerId: number | null
+    followingId: number | null
+    createdAt: Date | null
+  }
+
+  export type FollowCountAggregateOutputType = {
+    id: number
+    followerId: number
+    followingId: number
+    createdAt: number
+    _all: number
+  }
+
+
+  export type FollowAvgAggregateInputType = {
+    id?: true
+    followerId?: true
+    followingId?: true
+  }
+
+  export type FollowSumAggregateInputType = {
+    id?: true
+    followerId?: true
+    followingId?: true
+  }
+
+  export type FollowMinAggregateInputType = {
+    id?: true
+    followerId?: true
+    followingId?: true
+    createdAt?: true
+  }
+
+  export type FollowMaxAggregateInputType = {
+    id?: true
+    followerId?: true
+    followingId?: true
+    createdAt?: true
+  }
+
+  export type FollowCountAggregateInputType = {
+    id?: true
+    followerId?: true
+    followingId?: true
+    createdAt?: true
+    _all?: true
+  }
+
+  export type FollowAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which Follow to aggregate.
+     */
+    where?: FollowWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Follows to fetch.
+     */
+    orderBy?: FollowOrderByWithRelationInput | FollowOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: FollowWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Follows from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Follows.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned Follows
+    **/
+    _count?: true | FollowCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: FollowAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: FollowSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: FollowMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: FollowMaxAggregateInputType
+  }
+
+  export type GetFollowAggregateType<T extends FollowAggregateArgs> = {
+        [P in keyof T & keyof AggregateFollow]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateFollow[P]>
+      : GetScalarType<T[P], AggregateFollow[P]>
+  }
+
+
+
+
+  export type FollowGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: FollowWhereInput
+    orderBy?: FollowOrderByWithAggregationInput | FollowOrderByWithAggregationInput[]
+    by: FollowScalarFieldEnum[] | FollowScalarFieldEnum
+    having?: FollowScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: FollowCountAggregateInputType | true
+    _avg?: FollowAvgAggregateInputType
+    _sum?: FollowSumAggregateInputType
+    _min?: FollowMinAggregateInputType
+    _max?: FollowMaxAggregateInputType
+  }
+
+  export type FollowGroupByOutputType = {
+    id: number
+    followerId: number
+    followingId: number
+    createdAt: Date
+    _count: FollowCountAggregateOutputType | null
+    _avg: FollowAvgAggregateOutputType | null
+    _sum: FollowSumAggregateOutputType | null
+    _min: FollowMinAggregateOutputType | null
+    _max: FollowMaxAggregateOutputType | null
+  }
+
+  type GetFollowGroupByPayload<T extends FollowGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<FollowGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof FollowGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], FollowGroupByOutputType[P]>
+            : GetScalarType<T[P], FollowGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type FollowSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    followerId?: boolean
+    followingId?: boolean
+    createdAt?: boolean
+    follower?: boolean | UserDefaultArgs<ExtArgs>
+    following?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["follow"]>
+
+  export type FollowSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    followerId?: boolean
+    followingId?: boolean
+    createdAt?: boolean
+    follower?: boolean | UserDefaultArgs<ExtArgs>
+    following?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["follow"]>
+
+  export type FollowSelectScalar = {
+    id?: boolean
+    followerId?: boolean
+    followingId?: boolean
+    createdAt?: boolean
+  }
+
+  export type FollowInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    follower?: boolean | UserDefaultArgs<ExtArgs>
+    following?: boolean | UserDefaultArgs<ExtArgs>
+  }
+  export type FollowIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    follower?: boolean | UserDefaultArgs<ExtArgs>
+    following?: boolean | UserDefaultArgs<ExtArgs>
+  }
+
+  export type $FollowPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "Follow"
+    objects: {
+      follower: Prisma.$UserPayload<ExtArgs>
+      following: Prisma.$UserPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: number
+      followerId: number
+      followingId: number
+      createdAt: Date
+    }, ExtArgs["result"]["follow"]>
+    composites: {}
+  }
+
+  type FollowGetPayload<S extends boolean | null | undefined | FollowDefaultArgs> = $Result.GetResult<Prisma.$FollowPayload, S>
+
+  type FollowCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<FollowFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: FollowCountAggregateInputType | true
+    }
+
+  export interface FollowDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['Follow'], meta: { name: 'Follow' } }
+    /**
+     * Find zero or one Follow that matches the filter.
+     * @param {FollowFindUniqueArgs} args - Arguments to find a Follow
+     * @example
+     * // Get one Follow
+     * const follow = await prisma.follow.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends FollowFindUniqueArgs>(args: SelectSubset<T, FollowFindUniqueArgs<ExtArgs>>): Prisma__FollowClient<$Result.GetResult<Prisma.$FollowPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one Follow that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {FollowFindUniqueOrThrowArgs} args - Arguments to find a Follow
+     * @example
+     * // Get one Follow
+     * const follow = await prisma.follow.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends FollowFindUniqueOrThrowArgs>(args: SelectSubset<T, FollowFindUniqueOrThrowArgs<ExtArgs>>): Prisma__FollowClient<$Result.GetResult<Prisma.$FollowPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first Follow that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FollowFindFirstArgs} args - Arguments to find a Follow
+     * @example
+     * // Get one Follow
+     * const follow = await prisma.follow.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends FollowFindFirstArgs>(args?: SelectSubset<T, FollowFindFirstArgs<ExtArgs>>): Prisma__FollowClient<$Result.GetResult<Prisma.$FollowPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first Follow that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FollowFindFirstOrThrowArgs} args - Arguments to find a Follow
+     * @example
+     * // Get one Follow
+     * const follow = await prisma.follow.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends FollowFindFirstOrThrowArgs>(args?: SelectSubset<T, FollowFindFirstOrThrowArgs<ExtArgs>>): Prisma__FollowClient<$Result.GetResult<Prisma.$FollowPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more Follows that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FollowFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all Follows
+     * const follows = await prisma.follow.findMany()
+     * 
+     * // Get first 10 Follows
+     * const follows = await prisma.follow.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const followWithIdOnly = await prisma.follow.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends FollowFindManyArgs>(args?: SelectSubset<T, FollowFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$FollowPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a Follow.
+     * @param {FollowCreateArgs} args - Arguments to create a Follow.
+     * @example
+     * // Create one Follow
+     * const Follow = await prisma.follow.create({
+     *   data: {
+     *     // ... data to create a Follow
+     *   }
+     * })
+     * 
+     */
+    create<T extends FollowCreateArgs>(args: SelectSubset<T, FollowCreateArgs<ExtArgs>>): Prisma__FollowClient<$Result.GetResult<Prisma.$FollowPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many Follows.
+     * @param {FollowCreateManyArgs} args - Arguments to create many Follows.
+     * @example
+     * // Create many Follows
+     * const follow = await prisma.follow.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends FollowCreateManyArgs>(args?: SelectSubset<T, FollowCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many Follows and returns the data saved in the database.
+     * @param {FollowCreateManyAndReturnArgs} args - Arguments to create many Follows.
+     * @example
+     * // Create many Follows
+     * const follow = await prisma.follow.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many Follows and only return the `id`
+     * const followWithIdOnly = await prisma.follow.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends FollowCreateManyAndReturnArgs>(args?: SelectSubset<T, FollowCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$FollowPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a Follow.
+     * @param {FollowDeleteArgs} args - Arguments to delete one Follow.
+     * @example
+     * // Delete one Follow
+     * const Follow = await prisma.follow.delete({
+     *   where: {
+     *     // ... filter to delete one Follow
+     *   }
+     * })
+     * 
+     */
+    delete<T extends FollowDeleteArgs>(args: SelectSubset<T, FollowDeleteArgs<ExtArgs>>): Prisma__FollowClient<$Result.GetResult<Prisma.$FollowPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one Follow.
+     * @param {FollowUpdateArgs} args - Arguments to update one Follow.
+     * @example
+     * // Update one Follow
+     * const follow = await prisma.follow.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends FollowUpdateArgs>(args: SelectSubset<T, FollowUpdateArgs<ExtArgs>>): Prisma__FollowClient<$Result.GetResult<Prisma.$FollowPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more Follows.
+     * @param {FollowDeleteManyArgs} args - Arguments to filter Follows to delete.
+     * @example
+     * // Delete a few Follows
+     * const { count } = await prisma.follow.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends FollowDeleteManyArgs>(args?: SelectSubset<T, FollowDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more Follows.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FollowUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many Follows
+     * const follow = await prisma.follow.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends FollowUpdateManyArgs>(args: SelectSubset<T, FollowUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one Follow.
+     * @param {FollowUpsertArgs} args - Arguments to update or create a Follow.
+     * @example
+     * // Update or create a Follow
+     * const follow = await prisma.follow.upsert({
+     *   create: {
+     *     // ... data to create a Follow
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the Follow we want to update
+     *   }
+     * })
+     */
+    upsert<T extends FollowUpsertArgs>(args: SelectSubset<T, FollowUpsertArgs<ExtArgs>>): Prisma__FollowClient<$Result.GetResult<Prisma.$FollowPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of Follows.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FollowCountArgs} args - Arguments to filter Follows to count.
+     * @example
+     * // Count the number of Follows
+     * const count = await prisma.follow.count({
+     *   where: {
+     *     // ... the filter for the Follows we want to count
+     *   }
+     * })
+    **/
+    count<T extends FollowCountArgs>(
+      args?: Subset<T, FollowCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], FollowCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a Follow.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FollowAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends FollowAggregateArgs>(args: Subset<T, FollowAggregateArgs>): Prisma.PrismaPromise<GetFollowAggregateType<T>>
+
+    /**
+     * Group by Follow.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FollowGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends FollowGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: FollowGroupByArgs['orderBy'] }
+        : { orderBy?: FollowGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, FollowGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetFollowGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the Follow model
+   */
+  readonly fields: FollowFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for Follow.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__FollowClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    follower<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow"> | Null, Null, ExtArgs>
+    following<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow"> | Null, Null, ExtArgs>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the Follow model
+   */ 
+  interface FollowFieldRefs {
+    readonly id: FieldRef<"Follow", 'Int'>
+    readonly followerId: FieldRef<"Follow", 'Int'>
+    readonly followingId: FieldRef<"Follow", 'Int'>
+    readonly createdAt: FieldRef<"Follow", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * Follow findUnique
+   */
+  export type FollowFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Follow
+     */
+    select?: FollowSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FollowInclude<ExtArgs> | null
+    /**
+     * Filter, which Follow to fetch.
+     */
+    where: FollowWhereUniqueInput
+  }
+
+  /**
+   * Follow findUniqueOrThrow
+   */
+  export type FollowFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Follow
+     */
+    select?: FollowSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FollowInclude<ExtArgs> | null
+    /**
+     * Filter, which Follow to fetch.
+     */
+    where: FollowWhereUniqueInput
+  }
+
+  /**
+   * Follow findFirst
+   */
+  export type FollowFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Follow
+     */
+    select?: FollowSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FollowInclude<ExtArgs> | null
+    /**
+     * Filter, which Follow to fetch.
+     */
+    where?: FollowWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Follows to fetch.
+     */
+    orderBy?: FollowOrderByWithRelationInput | FollowOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for Follows.
+     */
+    cursor?: FollowWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Follows from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Follows.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of Follows.
+     */
+    distinct?: FollowScalarFieldEnum | FollowScalarFieldEnum[]
+  }
+
+  /**
+   * Follow findFirstOrThrow
+   */
+  export type FollowFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Follow
+     */
+    select?: FollowSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FollowInclude<ExtArgs> | null
+    /**
+     * Filter, which Follow to fetch.
+     */
+    where?: FollowWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Follows to fetch.
+     */
+    orderBy?: FollowOrderByWithRelationInput | FollowOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for Follows.
+     */
+    cursor?: FollowWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Follows from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Follows.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of Follows.
+     */
+    distinct?: FollowScalarFieldEnum | FollowScalarFieldEnum[]
+  }
+
+  /**
+   * Follow findMany
+   */
+  export type FollowFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Follow
+     */
+    select?: FollowSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FollowInclude<ExtArgs> | null
+    /**
+     * Filter, which Follows to fetch.
+     */
+    where?: FollowWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Follows to fetch.
+     */
+    orderBy?: FollowOrderByWithRelationInput | FollowOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing Follows.
+     */
+    cursor?: FollowWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Follows from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Follows.
+     */
+    skip?: number
+    distinct?: FollowScalarFieldEnum | FollowScalarFieldEnum[]
+  }
+
+  /**
+   * Follow create
+   */
+  export type FollowCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Follow
+     */
+    select?: FollowSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FollowInclude<ExtArgs> | null
+    /**
+     * The data needed to create a Follow.
+     */
+    data: XOR<FollowCreateInput, FollowUncheckedCreateInput>
+  }
+
+  /**
+   * Follow createMany
+   */
+  export type FollowCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many Follows.
+     */
+    data: FollowCreateManyInput | FollowCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * Follow createManyAndReturn
+   */
+  export type FollowCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Follow
+     */
+    select?: FollowSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many Follows.
+     */
+    data: FollowCreateManyInput | FollowCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FollowIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * Follow update
+   */
+  export type FollowUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Follow
+     */
+    select?: FollowSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FollowInclude<ExtArgs> | null
+    /**
+     * The data needed to update a Follow.
+     */
+    data: XOR<FollowUpdateInput, FollowUncheckedUpdateInput>
+    /**
+     * Choose, which Follow to update.
+     */
+    where: FollowWhereUniqueInput
+  }
+
+  /**
+   * Follow updateMany
+   */
+  export type FollowUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update Follows.
+     */
+    data: XOR<FollowUpdateManyMutationInput, FollowUncheckedUpdateManyInput>
+    /**
+     * Filter which Follows to update
+     */
+    where?: FollowWhereInput
+  }
+
+  /**
+   * Follow upsert
+   */
+  export type FollowUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Follow
+     */
+    select?: FollowSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FollowInclude<ExtArgs> | null
+    /**
+     * The filter to search for the Follow to update in case it exists.
+     */
+    where: FollowWhereUniqueInput
+    /**
+     * In case the Follow found by the `where` argument doesn't exist, create a new Follow with this data.
+     */
+    create: XOR<FollowCreateInput, FollowUncheckedCreateInput>
+    /**
+     * In case the Follow was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<FollowUpdateInput, FollowUncheckedUpdateInput>
+  }
+
+  /**
+   * Follow delete
+   */
+  export type FollowDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Follow
+     */
+    select?: FollowSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FollowInclude<ExtArgs> | null
+    /**
+     * Filter which Follow to delete.
+     */
+    where: FollowWhereUniqueInput
+  }
+
+  /**
+   * Follow deleteMany
+   */
+  export type FollowDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which Follows to delete
+     */
+    where?: FollowWhereInput
+  }
+
+  /**
+   * Follow without action
+   */
+  export type FollowDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Follow
+     */
+    select?: FollowSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FollowInclude<ExtArgs> | null
   }
 
 
@@ -3173,13 +4318,25 @@ export namespace Prisma {
   export const UserScalarFieldEnum: {
     id: 'id',
     email: 'email',
+    username: 'username',
     password: 'password',
     name: 'name',
-    avatarUrl: 'avatarUrl',
+    bio: 'bio',
+    isPublic: 'isPublic',
     createdAt: 'createdAt'
   };
 
   export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+  export const FollowScalarFieldEnum: {
+    id: 'id',
+    followerId: 'followerId',
+    followingId: 'followingId',
+    createdAt: 'createdAt'
+  };
+
+  export type FollowScalarFieldEnum = (typeof FollowScalarFieldEnum)[keyof typeof FollowScalarFieldEnum]
 
 
   export const AnimeScalarFieldEnum: {
@@ -3268,6 +4425,13 @@ export namespace Prisma {
 
 
   /**
+   * Reference to a field of type 'Boolean'
+   */
+  export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
+    
+
+
+  /**
    * Reference to a field of type 'DateTime'
    */
   export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime'>
@@ -3278,13 +4442,6 @@ export namespace Prisma {
    * Reference to a field of type 'DateTime[]'
    */
   export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime[]'>
-    
-
-
-  /**
-   * Reference to a field of type 'Boolean'
-   */
-  export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
     
 
 
@@ -3311,42 +4468,56 @@ export namespace Prisma {
     NOT?: UserWhereInput | UserWhereInput[]
     id?: IntFilter<"User"> | number
     email?: StringFilter<"User"> | string
+    username?: StringFilter<"User"> | string
     password?: StringFilter<"User"> | string
     name?: StringNullableFilter<"User"> | string | null
-    avatarUrl?: StringNullableFilter<"User"> | string | null
+    bio?: StringNullableFilter<"User"> | string | null
+    isPublic?: BoolFilter<"User"> | boolean
     createdAt?: DateTimeFilter<"User"> | Date | string
     animes?: AnimeListRelationFilter
+    following?: FollowListRelationFilter
+    followers?: FollowListRelationFilter
   }
 
   export type UserOrderByWithRelationInput = {
     id?: SortOrder
     email?: SortOrder
+    username?: SortOrder
     password?: SortOrder
     name?: SortOrderInput | SortOrder
-    avatarUrl?: SortOrderInput | SortOrder
+    bio?: SortOrderInput | SortOrder
+    isPublic?: SortOrder
     createdAt?: SortOrder
     animes?: AnimeOrderByRelationAggregateInput
+    following?: FollowOrderByRelationAggregateInput
+    followers?: FollowOrderByRelationAggregateInput
   }
 
   export type UserWhereUniqueInput = Prisma.AtLeast<{
     id?: number
     email?: string
+    username?: string
     AND?: UserWhereInput | UserWhereInput[]
     OR?: UserWhereInput[]
     NOT?: UserWhereInput | UserWhereInput[]
     password?: StringFilter<"User"> | string
     name?: StringNullableFilter<"User"> | string | null
-    avatarUrl?: StringNullableFilter<"User"> | string | null
+    bio?: StringNullableFilter<"User"> | string | null
+    isPublic?: BoolFilter<"User"> | boolean
     createdAt?: DateTimeFilter<"User"> | Date | string
     animes?: AnimeListRelationFilter
-  }, "id" | "email">
+    following?: FollowListRelationFilter
+    followers?: FollowListRelationFilter
+  }, "id" | "email" | "username">
 
   export type UserOrderByWithAggregationInput = {
     id?: SortOrder
     email?: SortOrder
+    username?: SortOrder
     password?: SortOrder
     name?: SortOrderInput | SortOrder
-    avatarUrl?: SortOrderInput | SortOrder
+    bio?: SortOrderInput | SortOrder
+    isPublic?: SortOrder
     createdAt?: SortOrder
     _count?: UserCountOrderByAggregateInput
     _avg?: UserAvgOrderByAggregateInput
@@ -3361,10 +4532,68 @@ export namespace Prisma {
     NOT?: UserScalarWhereWithAggregatesInput | UserScalarWhereWithAggregatesInput[]
     id?: IntWithAggregatesFilter<"User"> | number
     email?: StringWithAggregatesFilter<"User"> | string
+    username?: StringWithAggregatesFilter<"User"> | string
     password?: StringWithAggregatesFilter<"User"> | string
     name?: StringNullableWithAggregatesFilter<"User"> | string | null
-    avatarUrl?: StringNullableWithAggregatesFilter<"User"> | string | null
+    bio?: StringNullableWithAggregatesFilter<"User"> | string | null
+    isPublic?: BoolWithAggregatesFilter<"User"> | boolean
     createdAt?: DateTimeWithAggregatesFilter<"User"> | Date | string
+  }
+
+  export type FollowWhereInput = {
+    AND?: FollowWhereInput | FollowWhereInput[]
+    OR?: FollowWhereInput[]
+    NOT?: FollowWhereInput | FollowWhereInput[]
+    id?: IntFilter<"Follow"> | number
+    followerId?: IntFilter<"Follow"> | number
+    followingId?: IntFilter<"Follow"> | number
+    createdAt?: DateTimeFilter<"Follow"> | Date | string
+    follower?: XOR<UserRelationFilter, UserWhereInput>
+    following?: XOR<UserRelationFilter, UserWhereInput>
+  }
+
+  export type FollowOrderByWithRelationInput = {
+    id?: SortOrder
+    followerId?: SortOrder
+    followingId?: SortOrder
+    createdAt?: SortOrder
+    follower?: UserOrderByWithRelationInput
+    following?: UserOrderByWithRelationInput
+  }
+
+  export type FollowWhereUniqueInput = Prisma.AtLeast<{
+    id?: number
+    followerId_followingId?: FollowFollowerIdFollowingIdCompoundUniqueInput
+    AND?: FollowWhereInput | FollowWhereInput[]
+    OR?: FollowWhereInput[]
+    NOT?: FollowWhereInput | FollowWhereInput[]
+    followerId?: IntFilter<"Follow"> | number
+    followingId?: IntFilter<"Follow"> | number
+    createdAt?: DateTimeFilter<"Follow"> | Date | string
+    follower?: XOR<UserRelationFilter, UserWhereInput>
+    following?: XOR<UserRelationFilter, UserWhereInput>
+  }, "id" | "followerId_followingId">
+
+  export type FollowOrderByWithAggregationInput = {
+    id?: SortOrder
+    followerId?: SortOrder
+    followingId?: SortOrder
+    createdAt?: SortOrder
+    _count?: FollowCountOrderByAggregateInput
+    _avg?: FollowAvgOrderByAggregateInput
+    _max?: FollowMaxOrderByAggregateInput
+    _min?: FollowMinOrderByAggregateInput
+    _sum?: FollowSumOrderByAggregateInput
+  }
+
+  export type FollowScalarWhereWithAggregatesInput = {
+    AND?: FollowScalarWhereWithAggregatesInput | FollowScalarWhereWithAggregatesInput[]
+    OR?: FollowScalarWhereWithAggregatesInput[]
+    NOT?: FollowScalarWhereWithAggregatesInput | FollowScalarWhereWithAggregatesInput[]
+    id?: IntWithAggregatesFilter<"Follow"> | number
+    followerId?: IntWithAggregatesFilter<"Follow"> | number
+    followingId?: IntWithAggregatesFilter<"Follow"> | number
+    createdAt?: DateTimeWithAggregatesFilter<"Follow"> | Date | string
   }
 
   export type AnimeWhereInput = {
@@ -3512,65 +4741,131 @@ export namespace Prisma {
 
   export type UserCreateInput = {
     email: string
+    username: string
     password: string
     name?: string | null
-    avatarUrl?: string | null
+    bio?: string | null
+    isPublic?: boolean
     createdAt?: Date | string
     animes?: AnimeCreateNestedManyWithoutUserInput
+    following?: FollowCreateNestedManyWithoutFollowerInput
+    followers?: FollowCreateNestedManyWithoutFollowingInput
   }
 
   export type UserUncheckedCreateInput = {
     id?: number
     email: string
+    username: string
     password: string
     name?: string | null
-    avatarUrl?: string | null
+    bio?: string | null
+    isPublic?: boolean
     createdAt?: Date | string
     animes?: AnimeUncheckedCreateNestedManyWithoutUserInput
+    following?: FollowUncheckedCreateNestedManyWithoutFollowerInput
+    followers?: FollowUncheckedCreateNestedManyWithoutFollowingInput
   }
 
   export type UserUpdateInput = {
     email?: StringFieldUpdateOperationsInput | string
+    username?: StringFieldUpdateOperationsInput | string
     password?: StringFieldUpdateOperationsInput | string
     name?: NullableStringFieldUpdateOperationsInput | string | null
-    avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    bio?: NullableStringFieldUpdateOperationsInput | string | null
+    isPublic?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     animes?: AnimeUpdateManyWithoutUserNestedInput
+    following?: FollowUpdateManyWithoutFollowerNestedInput
+    followers?: FollowUpdateManyWithoutFollowingNestedInput
   }
 
   export type UserUncheckedUpdateInput = {
     id?: IntFieldUpdateOperationsInput | number
     email?: StringFieldUpdateOperationsInput | string
+    username?: StringFieldUpdateOperationsInput | string
     password?: StringFieldUpdateOperationsInput | string
     name?: NullableStringFieldUpdateOperationsInput | string | null
-    avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    bio?: NullableStringFieldUpdateOperationsInput | string | null
+    isPublic?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     animes?: AnimeUncheckedUpdateManyWithoutUserNestedInput
+    following?: FollowUncheckedUpdateManyWithoutFollowerNestedInput
+    followers?: FollowUncheckedUpdateManyWithoutFollowingNestedInput
   }
 
   export type UserCreateManyInput = {
     id?: number
     email: string
+    username: string
     password: string
     name?: string | null
-    avatarUrl?: string | null
+    bio?: string | null
+    isPublic?: boolean
     createdAt?: Date | string
   }
 
   export type UserUpdateManyMutationInput = {
     email?: StringFieldUpdateOperationsInput | string
+    username?: StringFieldUpdateOperationsInput | string
     password?: StringFieldUpdateOperationsInput | string
     name?: NullableStringFieldUpdateOperationsInput | string | null
-    avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    bio?: NullableStringFieldUpdateOperationsInput | string | null
+    isPublic?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type UserUncheckedUpdateManyInput = {
     id?: IntFieldUpdateOperationsInput | number
     email?: StringFieldUpdateOperationsInput | string
+    username?: StringFieldUpdateOperationsInput | string
     password?: StringFieldUpdateOperationsInput | string
     name?: NullableStringFieldUpdateOperationsInput | string | null
-    avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    bio?: NullableStringFieldUpdateOperationsInput | string | null
+    isPublic?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type FollowCreateInput = {
+    createdAt?: Date | string
+    follower: UserCreateNestedOneWithoutFollowingInput
+    following: UserCreateNestedOneWithoutFollowersInput
+  }
+
+  export type FollowUncheckedCreateInput = {
+    id?: number
+    followerId: number
+    followingId: number
+    createdAt?: Date | string
+  }
+
+  export type FollowUpdateInput = {
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    follower?: UserUpdateOneRequiredWithoutFollowingNestedInput
+    following?: UserUpdateOneRequiredWithoutFollowersNestedInput
+  }
+
+  export type FollowUncheckedUpdateInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    followerId?: IntFieldUpdateOperationsInput | number
+    followingId?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type FollowCreateManyInput = {
+    id?: number
+    followerId: number
+    followingId: number
+    createdAt?: Date | string
+  }
+
+  export type FollowUpdateManyMutationInput = {
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type FollowUncheckedUpdateManyInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    followerId?: IntFieldUpdateOperationsInput | number
+    followingId?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -3786,6 +5081,11 @@ export namespace Prisma {
     not?: NestedStringNullableFilter<$PrismaModel> | string | null
   }
 
+  export type BoolFilter<$PrismaModel = never> = {
+    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
+    not?: NestedBoolFilter<$PrismaModel> | boolean
+  }
+
   export type DateTimeFilter<$PrismaModel = never> = {
     equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
@@ -3803,6 +5103,12 @@ export namespace Prisma {
     none?: AnimeWhereInput
   }
 
+  export type FollowListRelationFilter = {
+    every?: FollowWhereInput
+    some?: FollowWhereInput
+    none?: FollowWhereInput
+  }
+
   export type SortOrderInput = {
     sort: SortOrder
     nulls?: NullsOrder
@@ -3812,12 +5118,18 @@ export namespace Prisma {
     _count?: SortOrder
   }
 
+  export type FollowOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
   export type UserCountOrderByAggregateInput = {
     id?: SortOrder
     email?: SortOrder
+    username?: SortOrder
     password?: SortOrder
     name?: SortOrder
-    avatarUrl?: SortOrder
+    bio?: SortOrder
+    isPublic?: SortOrder
     createdAt?: SortOrder
   }
 
@@ -3828,18 +5140,22 @@ export namespace Prisma {
   export type UserMaxOrderByAggregateInput = {
     id?: SortOrder
     email?: SortOrder
+    username?: SortOrder
     password?: SortOrder
     name?: SortOrder
-    avatarUrl?: SortOrder
+    bio?: SortOrder
+    isPublic?: SortOrder
     createdAt?: SortOrder
   }
 
   export type UserMinOrderByAggregateInput = {
     id?: SortOrder
     email?: SortOrder
+    username?: SortOrder
     password?: SortOrder
     name?: SortOrder
-    avatarUrl?: SortOrder
+    bio?: SortOrder
+    isPublic?: SortOrder
     createdAt?: SortOrder
   }
 
@@ -3899,6 +5215,14 @@ export namespace Prisma {
     _max?: NestedStringNullableFilter<$PrismaModel>
   }
 
+  export type BoolWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
+    not?: NestedBoolWithAggregatesFilter<$PrismaModel> | boolean
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedBoolFilter<$PrismaModel>
+    _max?: NestedBoolFilter<$PrismaModel>
+  }
+
   export type DateTimeWithAggregatesFilter<$PrismaModel = never> = {
     equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
@@ -3911,6 +5235,49 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedDateTimeFilter<$PrismaModel>
     _max?: NestedDateTimeFilter<$PrismaModel>
+  }
+
+  export type UserRelationFilter = {
+    is?: UserWhereInput
+    isNot?: UserWhereInput
+  }
+
+  export type FollowFollowerIdFollowingIdCompoundUniqueInput = {
+    followerId: number
+    followingId: number
+  }
+
+  export type FollowCountOrderByAggregateInput = {
+    id?: SortOrder
+    followerId?: SortOrder
+    followingId?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type FollowAvgOrderByAggregateInput = {
+    id?: SortOrder
+    followerId?: SortOrder
+    followingId?: SortOrder
+  }
+
+  export type FollowMaxOrderByAggregateInput = {
+    id?: SortOrder
+    followerId?: SortOrder
+    followingId?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type FollowMinOrderByAggregateInput = {
+    id?: SortOrder
+    followerId?: SortOrder
+    followingId?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type FollowSumOrderByAggregateInput = {
+    id?: SortOrder
+    followerId?: SortOrder
+    followingId?: SortOrder
   }
 
   export type IntNullableFilter<$PrismaModel = never> = {
@@ -3933,16 +5300,6 @@ export namespace Prisma {
     gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     not?: NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
-  }
-
-  export type BoolFilter<$PrismaModel = never> = {
-    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
-    not?: NestedBoolFilter<$PrismaModel> | boolean
-  }
-
-  export type UserRelationFilter = {
-    is?: UserWhereInput
-    isNot?: UserWhereInput
   }
 
   export type AnimeUserIdNormalizedNameSeasonCompoundUniqueInput = {
@@ -4078,19 +5435,25 @@ export namespace Prisma {
     _max?: NestedDateTimeNullableFilter<$PrismaModel>
   }
 
-  export type BoolWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
-    not?: NestedBoolWithAggregatesFilter<$PrismaModel> | boolean
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedBoolFilter<$PrismaModel>
-    _max?: NestedBoolFilter<$PrismaModel>
-  }
-
   export type AnimeCreateNestedManyWithoutUserInput = {
     create?: XOR<AnimeCreateWithoutUserInput, AnimeUncheckedCreateWithoutUserInput> | AnimeCreateWithoutUserInput[] | AnimeUncheckedCreateWithoutUserInput[]
     connectOrCreate?: AnimeCreateOrConnectWithoutUserInput | AnimeCreateOrConnectWithoutUserInput[]
     createMany?: AnimeCreateManyUserInputEnvelope
     connect?: AnimeWhereUniqueInput | AnimeWhereUniqueInput[]
+  }
+
+  export type FollowCreateNestedManyWithoutFollowerInput = {
+    create?: XOR<FollowCreateWithoutFollowerInput, FollowUncheckedCreateWithoutFollowerInput> | FollowCreateWithoutFollowerInput[] | FollowUncheckedCreateWithoutFollowerInput[]
+    connectOrCreate?: FollowCreateOrConnectWithoutFollowerInput | FollowCreateOrConnectWithoutFollowerInput[]
+    createMany?: FollowCreateManyFollowerInputEnvelope
+    connect?: FollowWhereUniqueInput | FollowWhereUniqueInput[]
+  }
+
+  export type FollowCreateNestedManyWithoutFollowingInput = {
+    create?: XOR<FollowCreateWithoutFollowingInput, FollowUncheckedCreateWithoutFollowingInput> | FollowCreateWithoutFollowingInput[] | FollowUncheckedCreateWithoutFollowingInput[]
+    connectOrCreate?: FollowCreateOrConnectWithoutFollowingInput | FollowCreateOrConnectWithoutFollowingInput[]
+    createMany?: FollowCreateManyFollowingInputEnvelope
+    connect?: FollowWhereUniqueInput | FollowWhereUniqueInput[]
   }
 
   export type AnimeUncheckedCreateNestedManyWithoutUserInput = {
@@ -4100,12 +5463,30 @@ export namespace Prisma {
     connect?: AnimeWhereUniqueInput | AnimeWhereUniqueInput[]
   }
 
+  export type FollowUncheckedCreateNestedManyWithoutFollowerInput = {
+    create?: XOR<FollowCreateWithoutFollowerInput, FollowUncheckedCreateWithoutFollowerInput> | FollowCreateWithoutFollowerInput[] | FollowUncheckedCreateWithoutFollowerInput[]
+    connectOrCreate?: FollowCreateOrConnectWithoutFollowerInput | FollowCreateOrConnectWithoutFollowerInput[]
+    createMany?: FollowCreateManyFollowerInputEnvelope
+    connect?: FollowWhereUniqueInput | FollowWhereUniqueInput[]
+  }
+
+  export type FollowUncheckedCreateNestedManyWithoutFollowingInput = {
+    create?: XOR<FollowCreateWithoutFollowingInput, FollowUncheckedCreateWithoutFollowingInput> | FollowCreateWithoutFollowingInput[] | FollowUncheckedCreateWithoutFollowingInput[]
+    connectOrCreate?: FollowCreateOrConnectWithoutFollowingInput | FollowCreateOrConnectWithoutFollowingInput[]
+    createMany?: FollowCreateManyFollowingInputEnvelope
+    connect?: FollowWhereUniqueInput | FollowWhereUniqueInput[]
+  }
+
   export type StringFieldUpdateOperationsInput = {
     set?: string
   }
 
   export type NullableStringFieldUpdateOperationsInput = {
     set?: string | null
+  }
+
+  export type BoolFieldUpdateOperationsInput = {
+    set?: boolean
   }
 
   export type DateTimeFieldUpdateOperationsInput = {
@@ -4124,6 +5505,34 @@ export namespace Prisma {
     update?: AnimeUpdateWithWhereUniqueWithoutUserInput | AnimeUpdateWithWhereUniqueWithoutUserInput[]
     updateMany?: AnimeUpdateManyWithWhereWithoutUserInput | AnimeUpdateManyWithWhereWithoutUserInput[]
     deleteMany?: AnimeScalarWhereInput | AnimeScalarWhereInput[]
+  }
+
+  export type FollowUpdateManyWithoutFollowerNestedInput = {
+    create?: XOR<FollowCreateWithoutFollowerInput, FollowUncheckedCreateWithoutFollowerInput> | FollowCreateWithoutFollowerInput[] | FollowUncheckedCreateWithoutFollowerInput[]
+    connectOrCreate?: FollowCreateOrConnectWithoutFollowerInput | FollowCreateOrConnectWithoutFollowerInput[]
+    upsert?: FollowUpsertWithWhereUniqueWithoutFollowerInput | FollowUpsertWithWhereUniqueWithoutFollowerInput[]
+    createMany?: FollowCreateManyFollowerInputEnvelope
+    set?: FollowWhereUniqueInput | FollowWhereUniqueInput[]
+    disconnect?: FollowWhereUniqueInput | FollowWhereUniqueInput[]
+    delete?: FollowWhereUniqueInput | FollowWhereUniqueInput[]
+    connect?: FollowWhereUniqueInput | FollowWhereUniqueInput[]
+    update?: FollowUpdateWithWhereUniqueWithoutFollowerInput | FollowUpdateWithWhereUniqueWithoutFollowerInput[]
+    updateMany?: FollowUpdateManyWithWhereWithoutFollowerInput | FollowUpdateManyWithWhereWithoutFollowerInput[]
+    deleteMany?: FollowScalarWhereInput | FollowScalarWhereInput[]
+  }
+
+  export type FollowUpdateManyWithoutFollowingNestedInput = {
+    create?: XOR<FollowCreateWithoutFollowingInput, FollowUncheckedCreateWithoutFollowingInput> | FollowCreateWithoutFollowingInput[] | FollowUncheckedCreateWithoutFollowingInput[]
+    connectOrCreate?: FollowCreateOrConnectWithoutFollowingInput | FollowCreateOrConnectWithoutFollowingInput[]
+    upsert?: FollowUpsertWithWhereUniqueWithoutFollowingInput | FollowUpsertWithWhereUniqueWithoutFollowingInput[]
+    createMany?: FollowCreateManyFollowingInputEnvelope
+    set?: FollowWhereUniqueInput | FollowWhereUniqueInput[]
+    disconnect?: FollowWhereUniqueInput | FollowWhereUniqueInput[]
+    delete?: FollowWhereUniqueInput | FollowWhereUniqueInput[]
+    connect?: FollowWhereUniqueInput | FollowWhereUniqueInput[]
+    update?: FollowUpdateWithWhereUniqueWithoutFollowingInput | FollowUpdateWithWhereUniqueWithoutFollowingInput[]
+    updateMany?: FollowUpdateManyWithWhereWithoutFollowingInput | FollowUpdateManyWithWhereWithoutFollowingInput[]
+    deleteMany?: FollowScalarWhereInput | FollowScalarWhereInput[]
   }
 
   export type IntFieldUpdateOperationsInput = {
@@ -4148,6 +5557,62 @@ export namespace Prisma {
     deleteMany?: AnimeScalarWhereInput | AnimeScalarWhereInput[]
   }
 
+  export type FollowUncheckedUpdateManyWithoutFollowerNestedInput = {
+    create?: XOR<FollowCreateWithoutFollowerInput, FollowUncheckedCreateWithoutFollowerInput> | FollowCreateWithoutFollowerInput[] | FollowUncheckedCreateWithoutFollowerInput[]
+    connectOrCreate?: FollowCreateOrConnectWithoutFollowerInput | FollowCreateOrConnectWithoutFollowerInput[]
+    upsert?: FollowUpsertWithWhereUniqueWithoutFollowerInput | FollowUpsertWithWhereUniqueWithoutFollowerInput[]
+    createMany?: FollowCreateManyFollowerInputEnvelope
+    set?: FollowWhereUniqueInput | FollowWhereUniqueInput[]
+    disconnect?: FollowWhereUniqueInput | FollowWhereUniqueInput[]
+    delete?: FollowWhereUniqueInput | FollowWhereUniqueInput[]
+    connect?: FollowWhereUniqueInput | FollowWhereUniqueInput[]
+    update?: FollowUpdateWithWhereUniqueWithoutFollowerInput | FollowUpdateWithWhereUniqueWithoutFollowerInput[]
+    updateMany?: FollowUpdateManyWithWhereWithoutFollowerInput | FollowUpdateManyWithWhereWithoutFollowerInput[]
+    deleteMany?: FollowScalarWhereInput | FollowScalarWhereInput[]
+  }
+
+  export type FollowUncheckedUpdateManyWithoutFollowingNestedInput = {
+    create?: XOR<FollowCreateWithoutFollowingInput, FollowUncheckedCreateWithoutFollowingInput> | FollowCreateWithoutFollowingInput[] | FollowUncheckedCreateWithoutFollowingInput[]
+    connectOrCreate?: FollowCreateOrConnectWithoutFollowingInput | FollowCreateOrConnectWithoutFollowingInput[]
+    upsert?: FollowUpsertWithWhereUniqueWithoutFollowingInput | FollowUpsertWithWhereUniqueWithoutFollowingInput[]
+    createMany?: FollowCreateManyFollowingInputEnvelope
+    set?: FollowWhereUniqueInput | FollowWhereUniqueInput[]
+    disconnect?: FollowWhereUniqueInput | FollowWhereUniqueInput[]
+    delete?: FollowWhereUniqueInput | FollowWhereUniqueInput[]
+    connect?: FollowWhereUniqueInput | FollowWhereUniqueInput[]
+    update?: FollowUpdateWithWhereUniqueWithoutFollowingInput | FollowUpdateWithWhereUniqueWithoutFollowingInput[]
+    updateMany?: FollowUpdateManyWithWhereWithoutFollowingInput | FollowUpdateManyWithWhereWithoutFollowingInput[]
+    deleteMany?: FollowScalarWhereInput | FollowScalarWhereInput[]
+  }
+
+  export type UserCreateNestedOneWithoutFollowingInput = {
+    create?: XOR<UserCreateWithoutFollowingInput, UserUncheckedCreateWithoutFollowingInput>
+    connectOrCreate?: UserCreateOrConnectWithoutFollowingInput
+    connect?: UserWhereUniqueInput
+  }
+
+  export type UserCreateNestedOneWithoutFollowersInput = {
+    create?: XOR<UserCreateWithoutFollowersInput, UserUncheckedCreateWithoutFollowersInput>
+    connectOrCreate?: UserCreateOrConnectWithoutFollowersInput
+    connect?: UserWhereUniqueInput
+  }
+
+  export type UserUpdateOneRequiredWithoutFollowingNestedInput = {
+    create?: XOR<UserCreateWithoutFollowingInput, UserUncheckedCreateWithoutFollowingInput>
+    connectOrCreate?: UserCreateOrConnectWithoutFollowingInput
+    upsert?: UserUpsertWithoutFollowingInput
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutFollowingInput, UserUpdateWithoutFollowingInput>, UserUncheckedUpdateWithoutFollowingInput>
+  }
+
+  export type UserUpdateOneRequiredWithoutFollowersNestedInput = {
+    create?: XOR<UserCreateWithoutFollowersInput, UserUncheckedCreateWithoutFollowersInput>
+    connectOrCreate?: UserCreateOrConnectWithoutFollowersInput
+    upsert?: UserUpsertWithoutFollowersInput
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutFollowersInput, UserUpdateWithoutFollowersInput>, UserUncheckedUpdateWithoutFollowersInput>
+  }
+
   export type UserCreateNestedOneWithoutAnimesInput = {
     create?: XOR<UserCreateWithoutAnimesInput, UserUncheckedCreateWithoutAnimesInput>
     connectOrCreate?: UserCreateOrConnectWithoutAnimesInput
@@ -4164,10 +5629,6 @@ export namespace Prisma {
 
   export type NullableDateTimeFieldUpdateOperationsInput = {
     set?: Date | string | null
-  }
-
-  export type BoolFieldUpdateOperationsInput = {
-    set?: boolean
   }
 
   export type UserUpdateOneRequiredWithoutAnimesNestedInput = {
@@ -4215,6 +5676,11 @@ export namespace Prisma {
     startsWith?: string | StringFieldRefInput<$PrismaModel>
     endsWith?: string | StringFieldRefInput<$PrismaModel>
     not?: NestedStringNullableFilter<$PrismaModel> | string | null
+  }
+
+  export type NestedBoolFilter<$PrismaModel = never> = {
+    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
+    not?: NestedBoolFilter<$PrismaModel> | boolean
   }
 
   export type NestedDateTimeFilter<$PrismaModel = never> = {
@@ -4300,6 +5766,14 @@ export namespace Prisma {
     not?: NestedIntNullableFilter<$PrismaModel> | number | null
   }
 
+  export type NestedBoolWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
+    not?: NestedBoolWithAggregatesFilter<$PrismaModel> | boolean
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedBoolFilter<$PrismaModel>
+    _max?: NestedBoolFilter<$PrismaModel>
+  }
+
   export type NestedDateTimeWithAggregatesFilter<$PrismaModel = never> = {
     equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
@@ -4323,11 +5797,6 @@ export namespace Prisma {
     gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     not?: NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
-  }
-
-  export type NestedBoolFilter<$PrismaModel = never> = {
-    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
-    not?: NestedBoolFilter<$PrismaModel> | boolean
   }
 
   export type NestedIntNullableWithAggregatesFilter<$PrismaModel = never> = {
@@ -4369,14 +5838,6 @@ export namespace Prisma {
     _count?: NestedIntNullableFilter<$PrismaModel>
     _min?: NestedDateTimeNullableFilter<$PrismaModel>
     _max?: NestedDateTimeNullableFilter<$PrismaModel>
-  }
-
-  export type NestedBoolWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
-    not?: NestedBoolWithAggregatesFilter<$PrismaModel> | boolean
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedBoolFilter<$PrismaModel>
-    _max?: NestedBoolFilter<$PrismaModel>
   }
 
   export type AnimeCreateWithoutUserInput = {
@@ -4436,6 +5897,48 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
+  export type FollowCreateWithoutFollowerInput = {
+    createdAt?: Date | string
+    following: UserCreateNestedOneWithoutFollowersInput
+  }
+
+  export type FollowUncheckedCreateWithoutFollowerInput = {
+    id?: number
+    followingId: number
+    createdAt?: Date | string
+  }
+
+  export type FollowCreateOrConnectWithoutFollowerInput = {
+    where: FollowWhereUniqueInput
+    create: XOR<FollowCreateWithoutFollowerInput, FollowUncheckedCreateWithoutFollowerInput>
+  }
+
+  export type FollowCreateManyFollowerInputEnvelope = {
+    data: FollowCreateManyFollowerInput | FollowCreateManyFollowerInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type FollowCreateWithoutFollowingInput = {
+    createdAt?: Date | string
+    follower: UserCreateNestedOneWithoutFollowingInput
+  }
+
+  export type FollowUncheckedCreateWithoutFollowingInput = {
+    id?: number
+    followerId: number
+    createdAt?: Date | string
+  }
+
+  export type FollowCreateOrConnectWithoutFollowingInput = {
+    where: FollowWhereUniqueInput
+    create: XOR<FollowCreateWithoutFollowingInput, FollowUncheckedCreateWithoutFollowingInput>
+  }
+
+  export type FollowCreateManyFollowingInputEnvelope = {
+    data: FollowCreateManyFollowingInput | FollowCreateManyFollowingInput[]
+    skipDuplicates?: boolean
+  }
+
   export type AnimeUpsertWithWhereUniqueWithoutUserInput = {
     where: AnimeWhereUniqueInput
     update: XOR<AnimeUpdateWithoutUserInput, AnimeUncheckedUpdateWithoutUserInput>
@@ -4480,21 +5983,203 @@ export namespace Prisma {
     userId?: IntFilter<"Anime"> | number
   }
 
-  export type UserCreateWithoutAnimesInput = {
+  export type FollowUpsertWithWhereUniqueWithoutFollowerInput = {
+    where: FollowWhereUniqueInput
+    update: XOR<FollowUpdateWithoutFollowerInput, FollowUncheckedUpdateWithoutFollowerInput>
+    create: XOR<FollowCreateWithoutFollowerInput, FollowUncheckedCreateWithoutFollowerInput>
+  }
+
+  export type FollowUpdateWithWhereUniqueWithoutFollowerInput = {
+    where: FollowWhereUniqueInput
+    data: XOR<FollowUpdateWithoutFollowerInput, FollowUncheckedUpdateWithoutFollowerInput>
+  }
+
+  export type FollowUpdateManyWithWhereWithoutFollowerInput = {
+    where: FollowScalarWhereInput
+    data: XOR<FollowUpdateManyMutationInput, FollowUncheckedUpdateManyWithoutFollowerInput>
+  }
+
+  export type FollowScalarWhereInput = {
+    AND?: FollowScalarWhereInput | FollowScalarWhereInput[]
+    OR?: FollowScalarWhereInput[]
+    NOT?: FollowScalarWhereInput | FollowScalarWhereInput[]
+    id?: IntFilter<"Follow"> | number
+    followerId?: IntFilter<"Follow"> | number
+    followingId?: IntFilter<"Follow"> | number
+    createdAt?: DateTimeFilter<"Follow"> | Date | string
+  }
+
+  export type FollowUpsertWithWhereUniqueWithoutFollowingInput = {
+    where: FollowWhereUniqueInput
+    update: XOR<FollowUpdateWithoutFollowingInput, FollowUncheckedUpdateWithoutFollowingInput>
+    create: XOR<FollowCreateWithoutFollowingInput, FollowUncheckedCreateWithoutFollowingInput>
+  }
+
+  export type FollowUpdateWithWhereUniqueWithoutFollowingInput = {
+    where: FollowWhereUniqueInput
+    data: XOR<FollowUpdateWithoutFollowingInput, FollowUncheckedUpdateWithoutFollowingInput>
+  }
+
+  export type FollowUpdateManyWithWhereWithoutFollowingInput = {
+    where: FollowScalarWhereInput
+    data: XOR<FollowUpdateManyMutationInput, FollowUncheckedUpdateManyWithoutFollowingInput>
+  }
+
+  export type UserCreateWithoutFollowingInput = {
     email: string
+    username: string
     password: string
     name?: string | null
-    avatarUrl?: string | null
+    bio?: string | null
+    isPublic?: boolean
     createdAt?: Date | string
+    animes?: AnimeCreateNestedManyWithoutUserInput
+    followers?: FollowCreateNestedManyWithoutFollowingInput
+  }
+
+  export type UserUncheckedCreateWithoutFollowingInput = {
+    id?: number
+    email: string
+    username: string
+    password: string
+    name?: string | null
+    bio?: string | null
+    isPublic?: boolean
+    createdAt?: Date | string
+    animes?: AnimeUncheckedCreateNestedManyWithoutUserInput
+    followers?: FollowUncheckedCreateNestedManyWithoutFollowingInput
+  }
+
+  export type UserCreateOrConnectWithoutFollowingInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutFollowingInput, UserUncheckedCreateWithoutFollowingInput>
+  }
+
+  export type UserCreateWithoutFollowersInput = {
+    email: string
+    username: string
+    password: string
+    name?: string | null
+    bio?: string | null
+    isPublic?: boolean
+    createdAt?: Date | string
+    animes?: AnimeCreateNestedManyWithoutUserInput
+    following?: FollowCreateNestedManyWithoutFollowerInput
+  }
+
+  export type UserUncheckedCreateWithoutFollowersInput = {
+    id?: number
+    email: string
+    username: string
+    password: string
+    name?: string | null
+    bio?: string | null
+    isPublic?: boolean
+    createdAt?: Date | string
+    animes?: AnimeUncheckedCreateNestedManyWithoutUserInput
+    following?: FollowUncheckedCreateNestedManyWithoutFollowerInput
+  }
+
+  export type UserCreateOrConnectWithoutFollowersInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutFollowersInput, UserUncheckedCreateWithoutFollowersInput>
+  }
+
+  export type UserUpsertWithoutFollowingInput = {
+    update: XOR<UserUpdateWithoutFollowingInput, UserUncheckedUpdateWithoutFollowingInput>
+    create: XOR<UserCreateWithoutFollowingInput, UserUncheckedCreateWithoutFollowingInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutFollowingInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutFollowingInput, UserUncheckedUpdateWithoutFollowingInput>
+  }
+
+  export type UserUpdateWithoutFollowingInput = {
+    email?: StringFieldUpdateOperationsInput | string
+    username?: StringFieldUpdateOperationsInput | string
+    password?: StringFieldUpdateOperationsInput | string
+    name?: NullableStringFieldUpdateOperationsInput | string | null
+    bio?: NullableStringFieldUpdateOperationsInput | string | null
+    isPublic?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    animes?: AnimeUpdateManyWithoutUserNestedInput
+    followers?: FollowUpdateManyWithoutFollowingNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutFollowingInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    email?: StringFieldUpdateOperationsInput | string
+    username?: StringFieldUpdateOperationsInput | string
+    password?: StringFieldUpdateOperationsInput | string
+    name?: NullableStringFieldUpdateOperationsInput | string | null
+    bio?: NullableStringFieldUpdateOperationsInput | string | null
+    isPublic?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    animes?: AnimeUncheckedUpdateManyWithoutUserNestedInput
+    followers?: FollowUncheckedUpdateManyWithoutFollowingNestedInput
+  }
+
+  export type UserUpsertWithoutFollowersInput = {
+    update: XOR<UserUpdateWithoutFollowersInput, UserUncheckedUpdateWithoutFollowersInput>
+    create: XOR<UserCreateWithoutFollowersInput, UserUncheckedCreateWithoutFollowersInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutFollowersInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutFollowersInput, UserUncheckedUpdateWithoutFollowersInput>
+  }
+
+  export type UserUpdateWithoutFollowersInput = {
+    email?: StringFieldUpdateOperationsInput | string
+    username?: StringFieldUpdateOperationsInput | string
+    password?: StringFieldUpdateOperationsInput | string
+    name?: NullableStringFieldUpdateOperationsInput | string | null
+    bio?: NullableStringFieldUpdateOperationsInput | string | null
+    isPublic?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    animes?: AnimeUpdateManyWithoutUserNestedInput
+    following?: FollowUpdateManyWithoutFollowerNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutFollowersInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    email?: StringFieldUpdateOperationsInput | string
+    username?: StringFieldUpdateOperationsInput | string
+    password?: StringFieldUpdateOperationsInput | string
+    name?: NullableStringFieldUpdateOperationsInput | string | null
+    bio?: NullableStringFieldUpdateOperationsInput | string | null
+    isPublic?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    animes?: AnimeUncheckedUpdateManyWithoutUserNestedInput
+    following?: FollowUncheckedUpdateManyWithoutFollowerNestedInput
+  }
+
+  export type UserCreateWithoutAnimesInput = {
+    email: string
+    username: string
+    password: string
+    name?: string | null
+    bio?: string | null
+    isPublic?: boolean
+    createdAt?: Date | string
+    following?: FollowCreateNestedManyWithoutFollowerInput
+    followers?: FollowCreateNestedManyWithoutFollowingInput
   }
 
   export type UserUncheckedCreateWithoutAnimesInput = {
     id?: number
     email: string
+    username: string
     password: string
     name?: string | null
-    avatarUrl?: string | null
+    bio?: string | null
+    isPublic?: boolean
     createdAt?: Date | string
+    following?: FollowUncheckedCreateNestedManyWithoutFollowerInput
+    followers?: FollowUncheckedCreateNestedManyWithoutFollowingInput
   }
 
   export type UserCreateOrConnectWithoutAnimesInput = {
@@ -4515,19 +6200,27 @@ export namespace Prisma {
 
   export type UserUpdateWithoutAnimesInput = {
     email?: StringFieldUpdateOperationsInput | string
+    username?: StringFieldUpdateOperationsInput | string
     password?: StringFieldUpdateOperationsInput | string
     name?: NullableStringFieldUpdateOperationsInput | string | null
-    avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    bio?: NullableStringFieldUpdateOperationsInput | string | null
+    isPublic?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    following?: FollowUpdateManyWithoutFollowerNestedInput
+    followers?: FollowUpdateManyWithoutFollowingNestedInput
   }
 
   export type UserUncheckedUpdateWithoutAnimesInput = {
     id?: IntFieldUpdateOperationsInput | number
     email?: StringFieldUpdateOperationsInput | string
+    username?: StringFieldUpdateOperationsInput | string
     password?: StringFieldUpdateOperationsInput | string
     name?: NullableStringFieldUpdateOperationsInput | string | null
-    avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    bio?: NullableStringFieldUpdateOperationsInput | string | null
+    isPublic?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    following?: FollowUncheckedUpdateManyWithoutFollowerNestedInput
+    followers?: FollowUncheckedUpdateManyWithoutFollowingNestedInput
   }
 
   export type AnimeCreateManyUserInput = {
@@ -4551,6 +6244,18 @@ export namespace Prisma {
     broadcastTimezone?: string | null
     broadcastString?: string | null
     airingStart?: string | null
+    createdAt?: Date | string
+  }
+
+  export type FollowCreateManyFollowerInput = {
+    id?: number
+    followingId: number
+    createdAt?: Date | string
+  }
+
+  export type FollowCreateManyFollowingInput = {
+    id?: number
+    followerId: number
     createdAt?: Date | string
   }
 
@@ -4625,6 +6330,40 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type FollowUpdateWithoutFollowerInput = {
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    following?: UserUpdateOneRequiredWithoutFollowersNestedInput
+  }
+
+  export type FollowUncheckedUpdateWithoutFollowerInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    followingId?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type FollowUncheckedUpdateManyWithoutFollowerInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    followingId?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type FollowUpdateWithoutFollowingInput = {
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    follower?: UserUpdateOneRequiredWithoutFollowingNestedInput
+  }
+
+  export type FollowUncheckedUpdateWithoutFollowingInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    followerId?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type FollowUncheckedUpdateManyWithoutFollowingInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    followerId?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
 
 
   /**
@@ -4638,6 +6377,10 @@ export namespace Prisma {
      * @deprecated Use UserDefaultArgs instead
      */
     export type UserArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = UserDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use FollowDefaultArgs instead
+     */
+    export type FollowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = FollowDefaultArgs<ExtArgs>
     /**
      * @deprecated Use AnimeDefaultArgs instead
      */

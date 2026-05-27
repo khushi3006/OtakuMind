@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+import { db } from '@/lib/db';
 import { getSession } from '@/lib/auth';
+import { errorMessage } from '@/lib/api-error';
 
 export async function GET(request: Request) {
   try {
@@ -9,14 +11,38 @@ export async function GET(request: Request) {
       return NextResponse.json({ user: null }, { status: 401 });
     }
 
-    return NextResponse.json({
-      user: {
-        id: session.userId,
-        email: session.email,
-        name: session.name,
+    // Read fresh from the DB so fields added after the session was issued
+    // (username, bio, isPublic) are always present and current.
+    const user = await db.user.findUnique({
+      where: { id: session.userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        username: true,
+        bio: true,
+        isPublic: true,
+        _count: { select: { followers: true, following: true } },
       },
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Server error' }, { status: 500 });
+
+    if (!user) {
+      return NextResponse.json({ user: null }, { status: 401 });
+    }
+
+    return NextResponse.json({
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        username: user.username,
+        bio: user.bio,
+        isPublic: user.isPublic,
+        followersCount: user._count.followers,
+        followingCount: user._count.following,
+      },
+    });
+  } catch (error) {
+    return NextResponse.json({ error: errorMessage(error) }, { status: 500 });
   }
 }

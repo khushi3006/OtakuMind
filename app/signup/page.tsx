@@ -10,6 +10,7 @@ export default function SignupPage() {
   const router = useRouter();
 
   const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +34,7 @@ export default function SignupPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, username, email, password }),
       });
 
       const data = await res.json();
@@ -45,8 +46,8 @@ export default function SignupPage() {
       // Success! Refresh router and redirect to home
       router.refresh();
       router.push('/');
-    } catch (err: any) {
-      setError(err.message || 'An error occurred. Please try again.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -82,6 +83,22 @@ export default function SignupPage() {
               onChange={(e) => setName(e.target.value)}
               placeholder="Your Name"
               required
+              disabled={isLoading}
+            />
+          </div>
+
+          <div className="auth-field">
+            <label className="auth-label" htmlFor="username">
+              USERNAME (OPTIONAL)
+            </label>
+            <input
+              id="username"
+              type="text"
+              className="auth-input"
+              value={username}
+              onChange={(e) => setUsername(e.target.value.toLowerCase())}
+              placeholder="your_handle (auto-generated if blank)"
+              maxLength={20}
               disabled={isLoading}
             />
           </div>
