@@ -1191,7 +1191,7 @@ export default function Home() {
           <button className={`tab-btn ${activeTab === 'dropped' ? 'active' : ''}`} onClick={() => handleTabChange('dropped')}>Dropped</button>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+        <div className="controls-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
           {activeTab === 'completed' && (
             <div className="sort-selector animate-fade-in">
               <label>Sort</label>

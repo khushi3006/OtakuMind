@@ -519,7 +519,7 @@ export default function AiringSchedulePage() {
               className={`filter-tab-btn ${activeTab === 'popular' ? 'active' : ''}`}
             >
               <Sparkles size={16} />
-              <span>Popular This Season</span>
+              <span>Popular<br className="mobile-only-br" /> This Season</span>
             </button>
           </div>
         </div>

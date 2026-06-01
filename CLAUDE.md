@@ -43,9 +43,10 @@ Prisma talks to Neon over WebSockets via `@prisma/adapter-neon` (the `driverAdap
 ### Auth (`lib/auth.ts`, `lib/jwt.ts`)
 
 Stateless JWT sessions stored in an httpOnly cookie named `session` (7-day expiry).
+
 - `lib/jwt.ts` uses only Web Crypto (HS256) — **no Node/Next imports** — so it stays Edge-runtime compatible. Keep it that way.
 - Passwords are pbkdf2 (`sha512`, 10k iterations), stored as `salt:hash`.
-- **Edge gating lives in `proxy.ts`** (Next 16's renamed middleware — the function is exported as `proxy`, not `middleware`). It redirects logged-in users away from `/login`/`/signup`, redirects anonymous users away from protected pages (`PROTECTED_PAGES`: `/`, `/airing-schedule`, `/original-list`, `/users`), and 401s any `/api/*` route except `/api/auth/*`. **This is defense-in-depth, not a substitute:** every protected API route must STILL call `getSession(request)` and enforce ownership itself (the proxy only checks that *a* session exists, not that the row belongs to the caller). Add new protected pages to `PROTECTED_PAGES`. Client-side, the `Navbar` polls `/api/auth/me` on each navigation to gate UI.
+- **Edge gating lives in `proxy.ts`** (Next 16's renamed middleware — the function is exported as `proxy`, not `middleware`). It redirects logged-in users away from `/login`/`/signup`, redirects anonymous users away from protected pages (`PROTECTED_PAGES`: `/`, `/airing-schedule`, `/original-list`, `/users`), and 401s any `/api/*` route except `/api/auth/*`. **This is defense-in-depth, not a substitute:** every protected API route must STILL call `getSession(request)` and enforce ownership itself (the proxy only checks that _a_ session exists, not that the row belongs to the caller). Add new protected pages to `PROTECTED_PAGES`. Client-side, the `Navbar` polls `/api/auth/me` on each navigation to gate UI.
 
 ### Anime model & "season grouping"
 
@@ -56,6 +57,7 @@ Status values are the strings `"incomplete"` (= "Currently Watching" in the UI),
 ### Watch-order concurrency (the trickiest part — `lib/watch-order.ts`)
 
 `watchOrder` is a **1-based contiguous integer ranking** maintained only for `incomplete` anime (the drag-and-drop "Currently Watching" list, powered by `@hello-pangea/dnd`). Any operation that touches it must keep the sequence dense and gap-free:
+
 - Creating an incomplete anime increments everyone else's `watchOrder` (insert at top).
 - Moving an anime out of `incomplete` decrements rows that were after it; moving in increments all existing rows.
 - Deleting an incomplete anime decrements rows after it.
@@ -82,6 +84,7 @@ The route handlers also defensively catch "Unknown argument `completedAt`/`dropp
 ### Migrations
 
 Two migration mechanisms coexist:
+
 1. Standard Prisma migrations in `prisma/migrations/`.
 2. Hand-written raw-SQL scripts (`scripts/migrate-db.ts`, `scripts/finalize-db.ts`, `scripts/migrate-data.ts`, `scripts/add-social-schema.ts`) run via `tsx`. They use the app's `lib/db` connection (so the Neon/DNS workaround applies — more reliable locally than the Prisma CLI). `add-social-schema.ts` added the username/bio/isPublic columns + `Follow` table and backfilled usernames; it is idempotent (`ADD COLUMN IF NOT EXISTS`, guarded constraints) and uses constraint/index names matching what Prisma generates. After applying such a script, mirror it with a formal migration folder under `prisma/migrations/` and run `npx prisma migrate resolve --applied <name>` so `prisma migrate` history stays consistent.
 
