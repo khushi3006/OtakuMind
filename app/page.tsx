@@ -6,6 +6,7 @@ import { Search, Plus, Minus, Check, Trash2, XCircle, PlaySquare, RefreshCw, Pla
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import Modal from '@/components/Modal';
 import Toast, { type ToastMessage } from '@/components/Toast';
+import Logo from '@/components/Logo';
 
 
 import { calculateAiringCountdown, getLocalBroadcastDay, getUpcomingEpisodeNumber } from '@/lib/airing-utils';
@@ -75,6 +76,8 @@ export default function Home() {
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 20, total: 0, totalPages: 0 });
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
   const [localSearchQuery, setLocalSearchQuery] = useState('');
   const [debouncedLocalSearchQuery, setDebouncedLocalSearchQuery] = useState('');
   const [searchPage, setSearchPage] = useState(1);
@@ -184,6 +187,10 @@ export default function Home() {
   useEffect(() => {
     pageSizeRef.current = pageSize;
   }, [pageSize]);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   const fetchAnimes = useCallback(async (
     tab: TabKey,
@@ -379,6 +386,9 @@ export default function Home() {
             const uniqueItems = Array.from(new Map(items.map((item: any) => [item.mal_id, item])).values()) as any[];
             setSuggestions(uniqueItems);
             setHasNextPage(data.pagination?.has_next_page || false);
+            if (uniqueItems.length > 0) {
+              setShowSuggestions(true);
+            }
           })
           .catch(e => {
             console.error(e);
@@ -387,10 +397,37 @@ export default function Home() {
           .finally(() => setIsSearching(false));
       } else {
         setSuggestions([]);
+        setShowSuggestions(false);
       }
     }, 400);
     return () => clearTimeout(delayDebounce);
   }, [searchQuery, parseApiResponse]);
+
+  // Click outside to close Jikan suggestions
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const handleInputFocus = () => {
+    if (searchQuery.length >= 3 && suggestions.length > 0) {
+      setShowSuggestions(true);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Escape') {
+      setShowSuggestions(false);
+      e.currentTarget.blur();
+    }
+  };
 
   const loadMoreSuggestions = async () => {
     const nextPage = searchPage + 1;
@@ -460,6 +497,7 @@ export default function Home() {
         }
         setSearchQuery('');
         setSuggestions([]);
+        setShowSuggestions(false);
         return;
       }
 
@@ -475,6 +513,7 @@ export default function Home() {
         void fetchStats();
         setSearchQuery('');
         setSuggestions([]);
+        setShowSuggestions(false);
       }
 
     } catch (e) {
@@ -1096,12 +1135,15 @@ export default function Home() {
   };
 
   return (
-    <main className="dashboard">
+    <main className="dashboard dashboard-home">
       <header className="header">
         <div className="header-inner">
-          <div className="brand">
-            <h1>OtakuMind</h1>
-            <p className="tagline">Your minimalist anime journey</p>
+          <div className="brand" style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+            <Logo size={38} />
+            <div>
+              <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>OtakuMind</h1>
+              <p className="tagline">Your minimalist anime journey</p>
+            </div>
           </div>
           
           <div className="stats-box">
@@ -1112,7 +1154,7 @@ export default function Home() {
       </header>
 
       {activeTab === 'watching' && (
-        <div className="search-section animate-fade-in">
+        <div className="search-section animate-fade-in" ref={searchContainerRef}>
           <div className="search-wrapper">
             <Search className="search-icon" size={20} />
             <input 
@@ -1120,11 +1162,27 @@ export default function Home() {
               placeholder="Search anime to add..." 
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
+              onFocus={handleInputFocus}
+              onKeyDown={handleKeyDown}
               className="search-input"
             />
+            {searchQuery && (
+              <button 
+                type="button" 
+                className="search-clear-btn" 
+                onClick={() => {
+                  setSearchQuery('');
+                  setSuggestions([]);
+                  setShowSuggestions(false);
+                }}
+                title="Clear search"
+              >
+                <XCircle size={18} />
+              </button>
+            )}
           </div>
           
-          {suggestions.length > 0 && (
+          {showSuggestions && suggestions.length > 0 && (
             <div className="search-suggestions animate-fade-in" onScroll={handleScroll}>
               {suggestions.map((sugg) => (
                 <div 
@@ -1180,6 +1238,19 @@ export default function Home() {
               onChange={e => setLocalSearchQuery(e.target.value)}
               className="search-input"
             />
+            {localSearchQuery && (
+              <button 
+                type="button" 
+                className="search-clear-btn" 
+                onClick={() => {
+                  setLocalSearchQuery('');
+                  setDebouncedLocalSearchQuery('');
+                }}
+                title="Clear search"
+              >
+                <XCircle size={18} />
+              </button>
+            )}
           </div>
         </div>
       )}

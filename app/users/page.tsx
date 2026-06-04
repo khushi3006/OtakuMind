@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Users } from 'lucide-react';
+import { Search, Users, XCircle } from 'lucide-react';
 import UserCard, { type UserCardData } from '@/components/UserCard';
 
 export default function DiscoverPeople() {
@@ -65,6 +65,16 @@ export default function DiscoverPeople() {
             className="search-input"
             autoFocus
           />
+          {query && (
+            <button 
+              type="button" 
+              className="search-clear-btn" 
+              onClick={() => setQuery('')}
+              title="Clear search"
+            >
+              <XCircle size={18} />
+            </button>
+          )}
         </div>
       </div>
 

@@ -57,6 +57,6 @@ export const config = {
      * - icon.png (app icons)
      * - images/ (public images if any)
      */
-    '/((?!_next/static|_next/image|favicon.ico|icon.png|images).*)',
+    '/((?!_next/static|_next/image|favicon.ico|icon.png|icon.svg|images).*)',
   ],
 };

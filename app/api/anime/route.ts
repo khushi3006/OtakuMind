@@ -150,38 +150,62 @@ export async function POST(request: Request) {
     if (!name) return NextResponse.json({ error: "Name is required" }, { status: 400 });
 
     const normalizedName = normalizeAnimeName(name);
-    const season = extractSeasonNumber(name);
+    let season = extractSeasonNumber(name);
 
-    // Check for duplicates in ANY status for this user
-    const existingAnime = await db.anime.findFirst({
+    // 1. Check for exact duplicate by malId in ANY status for this user
+    if (malId) {
+      const duplicateByMalId = await db.anime.findFirst({
+        where: {
+          userId,
+          malId: Number(malId)
+        }
+      });
+
+      if (duplicateByMalId) {
+        if (duplicateByMalId.status === 'incomplete') {
+          return NextResponse.json(
+            { error: "This anime is already in your watching list", type: "DUPLICATE_INCOMPLETE" },
+            { status: 409 }
+          );
+        } else {
+          return NextResponse.json(
+            { 
+              error: `This anime is in your ${duplicateByMalId.status} list`,
+              type: "DUPLICATE_OTHER_STATUS",
+              existingAnime: duplicateByMalId
+            },
+            { status: 409 }
+          );
+        }
+      }
+    }
+
+    // 2. Check for conflict on normalizedName + season
+    const duplicateByNormalized = await db.anime.findFirst({
       where: {
         userId,
-        OR: [
-          malId ? { malId: Number(malId) } : { id: -1 },
-          { 
-            normalizedName,
-            season,
-          }
-        ]
+        normalizedName,
+        season
       }
     });
 
-    if (existingAnime) {
-      if (existingAnime.status === 'incomplete') {
-        return NextResponse.json(
-          { error: "This anime is already in your watching list", type: "DUPLICATE_INCOMPLETE" },
-          { status: 409 }
-        );
-      } else {
-        return NextResponse.json(
-          { 
-            error: `This anime is in your ${existingAnime.status} list`,
-            type: "DUPLICATE_OTHER_STATUS",
-            existingAnime
-          },
-          { status: 409 }
-        );
-      }
+    if (duplicateByNormalized) {
+      // It has the same normalizedName and season, but different or no malId.
+      // E.g. Kaguya-sama: Love is War (malId: 37999, season: 1)
+      // and Kaguya-sama: Love is War? (malId: 40591, season: 1).
+      // Since they have different malIds, they are different seasons of the same franchise.
+      // Automatically increment the season count for this user to avoid database duplicate constraint.
+      const existingSeasons = await db.anime.findMany({
+        where: {
+          userId,
+          normalizedName
+        },
+        select: {
+          season: true
+        }
+      });
+      const maxSeason = existingSeasons.reduce((max, curr) => Math.max(max, curr.season), 0);
+      season = maxSeason + 1;
     }
 
     let finalType = type || "TV";

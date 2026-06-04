@@ -123,7 +123,7 @@ button {
   position: relative;
   margin-bottom: 3rem;
   max-width: 600px;
-  z-index: 50;
+  z-index: 98;
 }
 
 .search-wrapper {
@@ -140,7 +140,7 @@ button {
 
 .search-input {
   width: 100%;
-  padding: 1.2rem 1rem 1.2rem 3rem;
+  padding: 1.2rem 3rem;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   font-family: inherit;
@@ -156,6 +156,23 @@ button {
   box-shadow: 0 0 0 3px rgba(163, 177, 138, 0.2);
 }
 
+.search-clear-btn {
+  position: absolute;
+  right: 1rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.search-clear-btn:hover {
+  color: var(--text-primary);
+  background: rgba(0, 0, 0, 0.05);
+}
+
 .search-suggestions {
   position: absolute;
   top: calc(100% + 0.5rem);
@@ -164,19 +181,37 @@ button {
   background: var(--surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-hover);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.02);
   z-index: 10;
-  max-height: 300px;
+  max-height: 380px;
   overflow-y: auto;
+}
+
+/* Custom Scrollbar for Search Suggestions */
+.search-suggestions::-webkit-scrollbar {
+  width: 8px;
+}
+
+.search-suggestions::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.search-suggestions::-webkit-scrollbar-thumb {
+  background-color: var(--border-color);
+  border-radius: 4px;
+}
+
+.search-suggestions::-webkit-scrollbar-thumb:hover {
+  background-color: var(--text-muted);
 }
 
 .suggestion-item {
   display: flex;
   align-items: center;
-  padding: 0.75rem 1rem;
+  padding: 0.85rem 1.25rem;
   border-bottom: 1px solid var(--border-color);
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .suggestion-item:last-child {
@@ -184,7 +219,7 @@ button {
 }
 
 .suggestion-item:hover {
-  background: var(--bg-color);
+  background: rgba(163, 177, 138, 0.08);
 }
 
 .sugg-img {
@@ -1011,9 +1046,6 @@ button {
   border-bottom: 1px solid var(--border-color);
   padding-bottom: 0.5rem;
   gap: 1rem;
-  position: sticky;
-  top: 72px;
-  z-index: 90;
   background: var(--bg-color);
 }
 
@@ -2970,26 +3002,15 @@ button {
    ========================================================================== */
 @media (max-width: 1150px) {
   .tabs-row {
-    position: static;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 1.25rem;
-    border-bottom: none;
-    padding-bottom: 0;
-    margin-bottom: 1.5rem;
+    display: contents;
   }
 
   .tabs-row .tabs {
-    position: fixed;
-    top: 72px;
-    left: 0;
-    right: 0;
-    z-index: 95;
     background: var(--bg-color);
     padding: 0.5rem 1.5rem;
     border-bottom: 1px solid var(--border-color);
     width: 100%;
-    margin: 0;
+    margin: 0 0 1.25rem 0;
     display: flex;
     gap: 0;
     overflow-x: hidden;
@@ -3016,7 +3037,7 @@ button {
     align-items: center;
     width: 100%;
     gap: 1rem !important;
-    margin-top: 52px;
+    margin-top: 0;
   }
 }
 
@@ -3311,25 +3332,15 @@ button {
 
   /* 4. Tab Bars, Filter Rows & Export Button */
   .tabs-row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 1.25rem;
-    border-bottom: none;
-    padding-bottom: 0;
-    margin-bottom: 1.5rem;
+    display: contents;
   }
 
   .tabs-row .tabs {
-    position: fixed;
-    top: 57px;
-    left: 0;
-    right: 0;
-    z-index: 95;
     background: var(--bg-color);
     padding: 0.5rem 1rem;
     border-bottom: 1px solid var(--border-color);
     width: 100%;
-    margin: 0;
+    margin: 0 0 1.25rem 0;
     display: flex;
     gap: 0 !important;
     overflow-x: hidden !important;
@@ -3360,7 +3371,7 @@ button {
     gap: 0.5rem !important;
     width: 100%;
     align-items: center;
-    margin-top: 52px;
+    margin-top: 0;
   }
 
   .sort-selector {
@@ -4499,6 +4510,97 @@ textarea.form-input { resize: vertical; min-height: 70px; font-family: var(--fon
   .profile-action { align-self: stretch; }
   .profile-action .follow-btn, .btn-edit-profile { width: 100%; }
   .anime-poster-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.8rem; }
+}
+
+/* Custom Scrollable Layout for Dashboard to keep header/search/tabs fixed on all devices */
+html:has(.dashboard-home),
+body:has(.dashboard-home) {
+  overflow: hidden !important;
+  height: 100% !important;
+}
+
+.dashboard-home {
+  height: calc(100vh - 65px) !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Ensure padding matches responsiveness */
+@media (max-width: 767px) {
+  .dashboard-home {
+    padding: 1.25rem 1rem 0.5rem !important;
+  }
+}
+@media (min-width: 768px) {
+  .dashboard-home {
+    padding: 1.5rem 2rem 0.5rem !important;
+  }
+}
+
+.dashboard-home .header {
+  margin-bottom: 1.25rem !important;
+  padding-bottom: 0.75rem !important;
+  flex-shrink: 0 !important;
+}
+
+.dashboard-home .search-section {
+  margin-bottom: 1rem !important;
+  flex-shrink: 0 !important;
+}
+
+.dashboard-home .tabs-row {
+  margin-bottom: 1rem !important;
+  flex-shrink: 0 !important;
+  background: var(--bg-color) !important;
+}
+
+/* Make lists-container the ONLY scrollable container */
+.dashboard-home .lists-container {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  min-height: 0 !important;
+  padding-right: 0.25rem !important; /* spacing for scrollbar on mobile */
+}
+
+@media (min-width: 768px) {
+  .dashboard-home .lists-container {
+    padding-right: 0.5rem !important;
+  }
+}
+
+/* Remove height/overflow constraints from compact-list */
+.dashboard-home .compact-list {
+  max-height: none !important;
+  height: auto !important;
+  overflow: visible !important;
+}
+
+/* Sticky headers at the top of the scrollable lists-container */
+.dashboard-home .compact-list-header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 10 !important;
+  background: var(--surface) !important;
+}
+
+/* Scrollbar styles for the lists-container */
+.dashboard-home .lists-container::-webkit-scrollbar {
+  width: 6px !important;
+}
+
+.dashboard-home .lists-container::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.dashboard-home .lists-container::-webkit-scrollbar-thumb {
+  background: var(--border-color) !important;
+  border-radius: 3px !important;
+}
+
+.dashboard-home .lists-container::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted) !important;
 }
 
 
