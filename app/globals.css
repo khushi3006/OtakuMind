@@ -4606,5 +4606,45 @@ body:has(.dashboard-home) {
 
 
 
+/* Legal / policy pages (Privacy Policy) */
+.legal {
+  max-width: 760px;
+}
+
+.legal-section {
+  margin-bottom: 2rem;
+}
+
+.legal-section h2 {
+  font-size: 1.25rem;
+  letter-spacing: -0.01em;
+  margin-bottom: 0.75rem;
+}
+
+.legal-section p,
+.legal-section li {
+  color: var(--text-secondary);
+  line-height: 1.7;
+  font-size: 0.95rem;
+}
+
+.legal-section ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+  list-style: disc;
+}
+
+.legal-section li {
+  margin-bottom: 0.4rem;
+}
+
+.legal-link {
+  color: var(--accent-color);
+  font-weight: 600;
+}
+
+.legal-link:hover {
+  text-decoration: underline;
+}
 
 
