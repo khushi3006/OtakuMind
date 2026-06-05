@@ -46,6 +46,7 @@ model Anime {
   name             String
   normalizedName   String
   season           Int
+  part             Int?     // null = normal single season; 1,2,… = a split-cour part
   episodesWatched  Int      @default(0)
   totalEpisodes    Int      @default(0)
   status           String   // "completed", "incomplete", "dropped"
@@ -69,12 +70,12 @@ model Anime {
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Performance indexes and user-scoped uniqueness.
-  // Season uniqueness is a PARTIAL unique index covering TV rows only:
-  //   CREATE UNIQUE INDEX ... (userId, normalizedName, season) WHERE type = 'TV'
-  // Prisma can't model partial indexes, so it lives in the migration
-  // 20260605000000_partial_season_unique (mirror: scripts/migrate-partial-season.ts),
-  // not as an @@unique() here. Movies/OVAs/Specials are intentionally left
-  // unconstrained so they never consume TV season slots.
+  // Season uniqueness is a PARTIAL unique index covering TV rows only, now part-aware:
+  //   CREATE UNIQUE INDEX ... (userId, normalizedName, season, part)
+  //     NULLS NOT DISTINCT WHERE type = 'TV'
+  // Prisma can't model partial / NULLS NOT DISTINCT indexes, so it lives in the
+  // migration 20260605120000_add_season_part (mirror: scripts/migrate-add-season-part.ts),
+  // not as an @@unique() here. Movies/OVAs/Specials stay unconstrained.
   @@index([userId, status, createdAt])
   @@index([userId, status, droppedAt])
   @@index([userId, status, completedAt])
