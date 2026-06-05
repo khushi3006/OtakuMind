@@ -12,9 +12,6 @@ import type { GetRelations } from './mal-relations';
 /** Relation types that do NOT connect a franchise. Everything else is followed. */
 const EXCLUDED_RELATIONS = new Set(['character', 'other']);
 
-/** Relation types meaning "current entry comes AFTER the target" (origin edges). */
-const BACKWARD_RELATIONS = new Set(['prequel', 'parent story']);
-
 /**
  * Relations that form the main narrative timeline. We expand these FIRST so the
  * earliest entry of a long franchise is reached before the node/call budget runs
@@ -30,8 +27,6 @@ export type FranchiseNode = { malId: number; name: string };
 export type FranchiseComponent = {
   /** Every anime node in the connected franchise web. */
   nodes: FranchiseNode[];
-  /** Directed origin edges: `from` has `to` as its prequel/parent. */
-  backEdges: Array<{ from: number; to: number }>;
   /** True if a bound (maxNodes / maxApiCalls) cut the walk short. */
   truncated: boolean;
 };
@@ -45,7 +40,6 @@ export async function buildComponent(
   bounds: BuildBounds
 ): Promise<FranchiseComponent> {
   const nodes = new Map<number, string>([[seedMalId, seedName]]);
-  const backEdges: Array<{ from: number; to: number }> = [];
   const visited = new Set<number>();
   // Two-tier frontier: spine nodes (on the main timeline, reached from the seed
   // via spine edges) are expanded before side nodes, so the chain root is found
@@ -85,9 +79,6 @@ export async function buildComponent(
         nodes.set(rel.malId, rel.name);
       }
       if (childIsSpine) spine.add(rel.malId);
-      if (BACKWARD_RELATIONS.has(type)) {
-        backEdges.push({ from: current, to: rel.malId });
-      }
       if (!visited.has(rel.malId)) {
         (childIsSpine ? spineFrontier : sideFrontier).push(rel.malId);
       }
@@ -96,24 +87,26 @@ export async function buildComponent(
 
   return {
     nodes: Array.from(nodes, ([malId, name]) => ({ malId, name })),
-    backEdges,
     truncated,
   };
 }
 
 /**
- * Pick the deterministic canonical root of a franchise component.
- * Precondition: `component.nodes` is non-empty (buildComponent always returns
- * at least the seed node).
+ * Pick the deterministic canonical root of a franchise component: the entry with
+ * the smallest malId. On MAL the original/earliest work almost always has the
+ * lowest id, so its title is the most stable, recognizable franchise slug, and
+ * it's order-independent.
+ *
+ * (An "origin = node with no prequel/parent" heuristic was tried and removed: MAL
+ * labels chronological-prequel side movies — e.g. Re:Zero's "Frozen Bonds", a
+ * flashback OVA — as a Prequel of Season 1, which made the side movie the sole
+ * "origin" and a wrong root. Smallest-malId avoids that.)
+ *
+ * Precondition: `component.nodes` is non-empty (buildComponent always returns at
+ * least the seed node).
  */
 export function pickCanonicalRoot(component: FranchiseComponent): FranchiseNode {
-  const { nodes, backEdges } = component;
-  // A node with an outgoing origin edge (it HAS a prequel/parent) is not an origin.
-  const hasOrigin = new Set(backEdges.map((e) => e.from));
-  const origins = nodes.filter((n) => !hasOrigin.has(n.malId));
-  const pool = origins.length > 0 ? origins : nodes;
-  // Smallest malId = oldest on MAL ≈ the original work. Deterministic tiebreak.
-  return pool.reduce((best, n) => (n.malId < best.malId ? n : best));
+  return component.nodes.reduce((best, n) => (n.malId < best.malId ? n : best));
 }
 
 export function canonicalSlugFor(component: FranchiseComponent): string {
