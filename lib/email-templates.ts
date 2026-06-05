@@ -7,6 +7,16 @@ interface Template {
   text: string;
 }
 
+/** Escape user-controlled values before interpolating into email HTML. */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 /** Email-client-safe shell: cream bg, white card, logo header, muted footer. */
 function shell(bodyHtml: string): string {
   return `<!doctype html><html><body style="margin:0;padding:0;background:#faf9f6;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
@@ -52,13 +62,14 @@ export function signupOtpEmail(code: string): Template {
 }
 
 export function welcomeEmail(name: string | null): Template {
-  const who = name ? `, ${name}` : '';
+  const who = name ? `, ${escapeHtml(name)}` : '';
+  const whoText = name ? `, ${name}` : '';
   return {
     subject: 'Welcome to OtakuMind',
     html: shell(`${heading(`Welcome${who}!`)}
       <p style="margin:0 0 8px 0;">Your account is verified and ready. Start tracking what you're watching, build your list, and follow other fans.</p>
       ${button(`${APP_URL}/`, 'Open OtakuMind')}`),
-    text: `Welcome to OtakuMind${who}! Your account is verified. Open ${APP_URL}/ to get started.`,
+    text: `Welcome to OtakuMind${whoText}! Your account is verified. Open ${APP_URL}/ to get started.`,
   };
 }
 
