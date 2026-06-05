@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getSession } from '@/lib/auth';
+import { getSession, removeSessionCookie } from '@/lib/auth';
 import { isValidUsername } from '@/lib/username';
 import { errorCode, errorMessage } from '@/lib/api-error';
 
@@ -92,6 +92,29 @@ export async function PUT(request: Request) {
     if (errorCode(error) === 'P2002') {
       return NextResponse.json({ error: 'That username is already taken' }, { status: 409 });
     }
+    return NextResponse.json({ error: errorMessage(error) }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const session = await getSession(request);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    try {
+      // Cascade deletes the user's Anime and Follow rows (onDelete: Cascade).
+      await db.user.delete({ where: { id: session.userId } });
+    } catch (error) {
+      // P2025 = record already gone. Treat delete as idempotent and fall through
+      // so we still clear the cookie and return success.
+      if (errorCode(error) !== 'P2025') throw error;
+    }
+
+    await removeSessionCookie();
+    return NextResponse.json({ message: 'Account deleted' });
+  } catch (error) {
     return NextResponse.json({ error: errorMessage(error) }, { status: 500 });
   }
 }
