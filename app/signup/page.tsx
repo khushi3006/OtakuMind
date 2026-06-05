@@ -1,23 +1,35 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
+import { AlertCircle, Loader2, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import Logo from '@/components/Logo';
+
+const RESEND_SECONDS = 60;
 
 export default function SignupPage() {
   const router = useRouter();
 
+  const [step, setStep] = useState<'details' | 'otp'>('details');
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [resendIn, setResendIn] = useState(0);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Countdown for the "Resend code" button.
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const t = setTimeout(() => setResendIn((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendIn]);
+
+  const startSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -27,27 +39,67 @@ export default function SignupPage() {
     }
 
     setIsLoading(true);
-
     try {
-      const res = await fetch('/api/auth/signup', {
+      const res = await fetch('/api/auth/signup/start', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name, username, email, password }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, username: username || undefined, email, password }),
       });
-
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not send verification code');
 
-      if (!res.ok) {
-        throw new Error(data.error || 'Registration failed');
-      }
+      setStep('otp');
+      setResendIn(RESEND_SECONDS);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-      // Success! Refresh router and redirect to home
+  const verifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (code.trim().length !== 6) {
+      setError('Enter the 6-digit code from your email.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/auth/signup/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code: code.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Verification failed');
+
       router.refresh();
       router.push('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resendCode = async () => {
+    if (resendIn > 0 || isLoading) return;
+    setError(null);
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/auth/signup/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, username: username || undefined, email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not resend code');
+      setResendIn(RESEND_SECONDS);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not resend code.');
     } finally {
       setIsLoading(false);
     }
@@ -60,103 +112,170 @@ export default function SignupPage() {
           <h1 className="auth-title">
             <Logo size={32} /> OtakuMind
           </h1>
-          <p className="auth-subtitle">Create your personal anime tracker account.</p>
+          <p className="auth-subtitle">
+            {step === 'details'
+              ? 'Create your personal anime tracker account.'
+              : `Enter the 6-digit code sent to ${email}.`}
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="auth-form">
-          {error && (
-            <div className="auth-error">
-              <AlertCircle size={18} />
-              <span>{error}</span>
-            </div>
-          )}
+        {step === 'details' ? (
+          <form onSubmit={startSignup} className="auth-form">
+            {error && (
+              <div className="auth-error">
+                <AlertCircle size={18} />
+                <span>{error}</span>
+              </div>
+            )}
 
-          <div className="auth-field">
-            <label className="auth-label" htmlFor="name">
-              YOUR NAME
-            </label>
-            <input
-              id="name"
-              type="text"
-              className="auth-input"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Your Name"
-              required
-              disabled={isLoading}
-            />
-          </div>
-
-          <div className="auth-field">
-            <label className="auth-label" htmlFor="username">
-              USERNAME (OPTIONAL)
-            </label>
-            <input
-              id="username"
-              type="text"
-              className="auth-input"
-              value={username}
-              onChange={(e) => setUsername(e.target.value.toLowerCase())}
-              placeholder="your_handle (auto-generated if blank)"
-              maxLength={20}
-              disabled={isLoading}
-            />
-          </div>
-
-          <div className="auth-field">
-            <label className="auth-label" htmlFor="email">
-              EMAIL ADDRESS
-            </label>
-            <input
-              id="email"
-              type="email"
-              className="auth-input"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              required
-              disabled={isLoading}
-            />
-          </div>
-
-          <div className="auth-field">
-            <label className="auth-label" htmlFor="password">
-              PASSWORD (MIN 6 CHARS)
-            </label>
-            <div className="auth-input-wrapper">
+            <div className="auth-field">
+              <label className="auth-label" htmlFor="name">
+                YOUR NAME
+              </label>
               <input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                className="auth-input auth-input-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                id="name"
+                type="text"
+                className="auth-input"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Your Name"
                 required
                 disabled={isLoading}
               />
-              <button
-                type="button"
-                className="auth-password-toggle"
-                onClick={() => setShowPassword(!showPassword)}
-                disabled={isLoading}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
             </div>
-          </div>
 
-          <button type="submit" className="auth-button" disabled={isLoading}>
-            {isLoading ? (
-              <>
-                <Loader2 size={18} className="spin" />
-                Creating account...
-              </>
-            ) : (
-              'Create Account'
+            <div className="auth-field">
+              <label className="auth-label" htmlFor="username">
+                USERNAME (OPTIONAL)
+              </label>
+              <input
+                id="username"
+                type="text"
+                className="auth-input"
+                value={username}
+                onChange={(e) => setUsername(e.target.value.toLowerCase())}
+                placeholder="your_handle (auto-generated if blank)"
+                maxLength={20}
+                disabled={isLoading}
+              />
+            </div>
+
+            <div className="auth-field">
+              <label className="auth-label" htmlFor="email">
+                EMAIL ADDRESS
+              </label>
+              <input
+                id="email"
+                type="email"
+                className="auth-input"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                required
+                disabled={isLoading}
+              />
+            </div>
+
+            <div className="auth-field">
+              <label className="auth-label" htmlFor="password">
+                PASSWORD (MIN 6 CHARS)
+              </label>
+              <div className="auth-input-wrapper">
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  className="auth-input auth-input-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  disabled={isLoading}
+                />
+                <button
+                  type="button"
+                  className="auth-password-toggle"
+                  onClick={() => setShowPassword(!showPassword)}
+                  disabled={isLoading}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+
+            <button type="submit" className="auth-button" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 size={18} className="spin" />
+                  Sending code...
+                </>
+              ) : (
+                'Continue'
+              )}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={verifyOtp} className="auth-form">
+            {error && (
+              <div className="auth-error">
+                <AlertCircle size={18} />
+                <span>{error}</span>
+              </div>
             )}
-          </button>
-        </form>
+
+            <div className="auth-field">
+              <label className="auth-label" htmlFor="code">
+                VERIFICATION CODE
+              </label>
+              <input
+                id="code"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                className="auth-input"
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                placeholder="123456"
+                maxLength={6}
+                required
+                disabled={isLoading}
+                autoFocus
+              />
+            </div>
+
+            <button type="submit" className="auth-button" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 size={18} className="spin" />
+                  Verifying...
+                </>
+              ) : (
+                'Verify & Create Account'
+              )}
+            </button>
+
+            <button
+              type="button"
+              className="auth-forgot-back-link"
+              onClick={resendCode}
+              disabled={resendIn > 0 || isLoading}
+            >
+              {resendIn > 0 ? `Resend code in ${resendIn}s` : 'Resend code'}
+            </button>
+
+            <button
+              type="button"
+              className="auth-forgot-back-link"
+              onClick={() => {
+                setStep('details');
+                setCode('');
+                setError(null);
+              }}
+            >
+              <ArrowLeft size={16} /> Edit details
+            </button>
+          </form>
+        )}
 
         <div className="auth-footer">
           Already have an account?
