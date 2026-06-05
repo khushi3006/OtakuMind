@@ -71,6 +71,7 @@ export async function GET(
           name: true,
           normalizedName: true,
           season: true,
+          part: true,
           episodesWatched: true,
           totalEpisodes: true,
           status: true,
@@ -97,14 +98,14 @@ export async function GET(
             { normalizedName: { in: normalizedNames } },
           ].filter(Boolean) as Prisma.AnimeWhereInput[],
         },
-        select: { malId: true, normalizedName: true, season: true },
+        select: { malId: true, normalizedName: true, season: true, part: true },
       });
       const myMalIds = new Set(mine.map((m) => m.malId).filter((v) => v != null));
-      const myPairs = new Set(mine.map((m) => `${m.normalizedName}::${m.season}`));
+      const myPairs = new Set(mine.map((m) => `${m.normalizedName}::${m.season}::${m.part}`));
       for (const a of animes) {
         inMyList[a.id] =
           (a.malId != null && myMalIds.has(a.malId)) ||
-          myPairs.has(`${a.normalizedName}::${a.season}`);
+          myPairs.has(`${a.normalizedName}::${a.season}::${a.part}`);
       }
     }
 
