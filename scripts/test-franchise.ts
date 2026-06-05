@@ -4,6 +4,7 @@
  */
 import { buildComponent, pickCanonicalRoot, canonicalSlugFor } from '../lib/franchise';
 import type { GetRelations, RelationEntry } from '../lib/mal-relations';
+import { planSeasons } from '../lib/season-reassign';
 
 let passed = 0;
 let failed = 0;
@@ -87,6 +88,50 @@ const coteGraph: Record<number, RelationEntry[]> = {
   expect('standalone: 1 node', solo.nodes.length === 1, `got ${solo.nodes.length}`);
   expect('standalone: root is the seed', pickCanonicalRoot(solo).malId === 500);
   expect('standalone: not truncated', solo.truncated === false);
+
+  // --- planSeasons: merging two "Season 1" TV rows bumps the later id ---
+  const merge = planSeasons([
+    { id: 1, type: 'TV', season: 1 },
+    { id: 2, type: 'TV', season: 1 },
+  ]);
+  expect(
+    'two S1 rows -> id1=1, id2=2',
+    merge.find((a) => a.id === 1)?.season === 1 && merge.find((a) => a.id === 2)?.season === 2,
+    JSON.stringify(merge)
+  );
+
+  // --- explicit user season is preserved where free ---
+  const expl = planSeasons([
+    { id: 5, type: 'TV', season: 3, explicit: true },
+    { id: 6, type: 'TV', season: 1 },
+  ]);
+  expect(
+    'explicit S3 kept, auto S1 stays 1',
+    expl.find((a) => a.id === 5)?.season === 3 && expl.find((a) => a.id === 6)?.season === 1,
+    JSON.stringify(expl)
+  );
+
+  // --- movies are outside numbering: keep their season, never block a TV slot ---
+  const mv = planSeasons([
+    { id: 7, type: 'Movie', season: 1 },
+    { id: 8, type: 'TV', season: 1 },
+  ]);
+  expect(
+    'movie keeps S1 and TV keeps S1 independently',
+    mv.find((a) => a.id === 7)?.season === 1 && mv.find((a) => a.id === 8)?.season === 1,
+    JSON.stringify(mv)
+  );
+
+  // --- two explicit rows that collide: first id wins, second bumps ---
+  const clash = planSeasons([
+    { id: 1, type: 'TV', season: 1, explicit: true },
+    { id: 2, type: 'TV', season: 1, explicit: true },
+  ]);
+  expect(
+    'colliding explicit rows -> id1=1, id2=2',
+    clash.find((a) => a.id === 1)?.season === 1 && clash.find((a) => a.id === 2)?.season === 2,
+    JSON.stringify(clash)
+  );
 
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed === 0 ? 0 : 1);
