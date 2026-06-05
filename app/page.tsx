@@ -11,6 +11,7 @@ import Logo from '@/components/Logo';
 
 import { calculateAiringCountdown, getLocalBroadcastDay, getUpcomingEpisodeNumber } from '@/lib/airing-utils';
 import { errorMessage } from '@/lib/api-error';
+import { formatSeasonText, parseSeasonField } from '@/lib/season-format';
 
 /** Minimal shape of a Jikan search result used for the add-anime suggestions. */
 interface Suggestion {
@@ -31,6 +32,7 @@ type Anime = {
   name: string;
   normalizedName: string;
   season: number;
+  part: number | null;
   episodesWatched: number;
   totalEpisodes?: number;
   status: string;
@@ -60,31 +62,6 @@ const STATUS_MAP: Record<TabKey, string> = {
   completed: 'completed',
   dropped: 'dropped',
 };
-
-export function formatSeasonText(season: number, type: string): string {
-  if (type === 'Movie') return 'Movie';
-  if (type === 'OVA') return 'OVA';
-  if (season === 99) return 'Final Season';
-  return `Season ${season}`;
-}
-
-export function parseSeasonField(value: string): { season: number; type: string } {
-  const normalized = value.trim().toLowerCase();
-  if (normalized === 'movie') {
-    return { season: 1, type: 'Movie' };
-  }
-  if (normalized === 'ova') {
-    return { season: 1, type: 'OVA' };
-  }
-  if (normalized === 'final season' || normalized === 'the final season') {
-    return { season: 99, type: 'TV' };
-  }
-  const match = normalized.match(/(?:season|s)?\s*(\d+)/i);
-  if (match) {
-    return { season: parseInt(match[1], 10), type: 'TV' };
-  }
-  return { season: 1, type: 'TV' };
-}
 
 export default function Home() {
   const [animes, setAnimes] = useState<Anime[]>([]);
@@ -681,7 +658,7 @@ export default function Home() {
     setEditName(anime.name);
     setEditTotalEpisodes(anime.type === 'Movie' ? '0' : String(anime.totalEpisodes || 0));
     setEditEpisodesWatched(anime.type === 'Movie' ? '0' : String(anime.episodesWatched || 0));
-    setEditSeason(formatSeasonText(anime.season, anime.type));
+    setEditSeason(formatSeasonText(anime.season, anime.part, anime.type));
     setEditSlug(anime.normalizedName);
     setEditError(null);
     setShowEditModal(true);
@@ -690,7 +667,7 @@ export default function Home() {
   const handleEditConfirm = async () => {
     if (!pendingAnime) return;
 
-    const { season, type } = parseSeasonField(editSeason);
+    const { season, part, type } = parseSeasonField(editSeason);
     const isMovieSelected = type === 'Movie';
     
     // Frontend validation (for non-movies)
@@ -724,6 +701,7 @@ export default function Home() {
       const updates = {
         name: editName.trim(),
         season,
+        part,
         normalizedName: editSlug.trim().toLowerCase(),
         type,
         totalEpisodes: isMovieSelected ? 0 : parseInt(editTotalEpisodes, 10),
@@ -950,7 +928,7 @@ export default function Home() {
                               );
                             })()}
                           </div>
-                          <span className="anime-meta-mini">{formatSeasonText(anime.season, anime.type)} &middot; {anime.normalizedName}</span>
+                          <span className="anime-meta-mini">{formatSeasonText(anime.season, anime.part, anime.type)} &middot; {anime.normalizedName}</span>
                         </div>
                         
                         <div className="col-ep-control">
@@ -1043,7 +1021,7 @@ export default function Home() {
               <div key={anime.id} className="compact-list-row" style={{ animationDelay: `${i * 20}ms` }}>
                 <div className="col-title-info">
                   <span className="anime-title-main">{anime.name}</span>
-                  <span className="anime-meta-mini">{formatSeasonText(anime.season, anime.type)} &middot; {anime.normalizedName}</span>
+                  <span className="anime-meta-mini">{formatSeasonText(anime.season, anime.part, anime.type)} &middot; {anime.normalizedName}</span>
                 </div>
                 
                 <div className="col-ep-control">
@@ -1485,6 +1463,8 @@ export default function Home() {
               <option value="Season 3" />
               <option value="Season 4" />
               <option value="Season 5" />
+              <option value="Season 4 Part 1" />
+              <option value="Season 4 Part 2" />
               <option value="Final Season" />
               <option value="Movie" />
               <option value="OVA" />
