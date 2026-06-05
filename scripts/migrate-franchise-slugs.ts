@@ -18,6 +18,11 @@ import { getRelations } from '../lib/mal-relations';
 import { buildComponent, canonicalSlugFor } from '../lib/franchise';
 import { planSeasons } from '../lib/season-reassign';
 import { parkRows, applyFinalSeasons } from '../lib/franchise-resolve';
+import { withDeadlockRetry } from '../lib/deadlock-retry';
+
+// A franchise group can be large (many sequential row updates over Neon), so give
+// the transaction a generous timeout — the Prisma default of 5s is easily exceeded.
+const MIGRATION_TX_OPTIONS = { maxWait: 30000, timeout: 30000 } as const;
 
 const APPLY = process.argv.includes('--apply');
 const BOUNDS = { maxNodes: 60, maxApiCalls: 60 };
@@ -94,11 +99,13 @@ async function main() {
       }
 
       if (APPLY) {
-        await db.$transaction(async (tx) => {
-          await parkRows(tx, slug, rows.map((r) => ({ id: r.id, type: r.type })));
-          const tvIds = new Set(rows.filter((r) => r.type === 'TV').map((r) => r.id));
-          await applyFinalSeasons(tx, plan, tvIds);
-        });
+        await withDeadlockRetry(() =>
+          db.$transaction(async (tx) => {
+            await parkRows(tx, slug, rows.map((r) => ({ id: r.id, type: r.type })));
+            const tvIds = new Set(rows.filter((r) => r.type === 'TV').map((r) => r.id));
+            await applyFinalSeasons(tx, plan, tvIds);
+          }, MIGRATION_TX_OPTIONS)
+        );
       }
     }
   }
