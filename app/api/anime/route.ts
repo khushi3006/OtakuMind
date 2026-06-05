@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { normalizeAnimeName, extractSeasonNumber, extractPartNumber } from '@/lib/normalize';
-import { resolveSeason } from '@/lib/season-resolve';
+import { extractSeasonNumber, extractPartNumber } from '@/lib/normalize';
+import { resolveFranchise, findFranchiseRows, parkRows, applyFinalSeasons } from '@/lib/franchise-resolve';
+import { planSeasons } from '@/lib/season-reassign';
 import type { Prisma } from '@/prisma/generated/client';
 import { withDeadlockRetry } from '@/lib/deadlock-retry';
 import { WATCH_ORDER_TRANSACTION_OPTIONS } from '@/lib/transaction-options';
@@ -149,9 +150,8 @@ export async function POST(request: Request) {
     
     if (!name) return NextResponse.json({ error: "Name is required" }, { status: 400 });
 
-    const normalizedName = normalizeAnimeName(name);
-    let season = extractSeasonNumber(name);
-    let part = extractPartNumber(name);
+    const desiredSeason = extractSeasonNumber(name);
+    const desiredPart = extractPartNumber(name);
 
     // Determine the type up front: season numbering only applies to TV rows.
     let finalType = type || "TV";
@@ -188,34 +188,27 @@ export async function POST(request: Request) {
       }
     }
 
-    // 2. Resolve the season number against same-franchise TV siblings.
-    // Only TV rows are numbered (the partial unique index covers type = 'TV'),
-    // so movies/OVAs/specials keep their derived number and never collide.
-    // E.g. Kaguya-sama: Love is War (malId 37999) and Kaguya-sama: Love is War?
-    // (malId 40591) are different TV seasons of one franchise: the second is
-    // auto-bumped to the next free TV slot to satisfy the constraint.
-    if (finalType === 'TV') {
-      const tvSiblings = await db.anime.findMany({
-        where: { userId, normalizedName, type: 'TV' },
-        select: { season: true, part: true },
-      });
-      const resolution = resolveSeason({
-        type: 'TV',
-        season,
-        part,
-        explicit: false, // POST always auto-derives season/part from the title
-        tvSiblings: tvSiblings.map((s) => ({ season: s.season, part: s.part })),
-      });
-      season = resolution.season;
-      part = resolution.part;
-    }
+    // 2. Resolve the canonical franchise slug via MAL relations (or local
+    //    fallback). This runs BEFORE the transaction because it may call Jikan,
+    //    and we must never hold a DB transaction open across the network. Any
+    //    Jikan failure degrades to local string logic inside resolveFranchise,
+    //    so the write still succeeds. memberMalIds lets the merge pull in existing
+    //    franchise siblings even when their stored slug differs.
+    const existingSlugRows = await db.anime.findMany({
+      where: { userId },
+      select: { normalizedName: true },
+      distinct: ['normalizedName'],
+    });
+    const { slug, memberMalIds } = await resolveFranchise({
+      userId,
+      name,
+      malId: malId ? Number(malId) : null,
+      existingSlugs: existingSlugRows.map((r) => r.normalizedName),
+    });
 
     try {
       const createData = {
         name,
-        normalizedName,
-        season,
-        part: finalType === 'TV' ? part : null,
         totalEpisodes: finalType === 'Movie' ? 0 : (totalEpisodes || 0),
         episodesWatched: finalType === 'Movie' ? 0 : (episodesWatched || 0),
         status: targetStatus,
@@ -251,27 +244,51 @@ export async function POST(request: Request) {
             });
           }
 
+          // Phase A: pull existing franchise siblings under the canonical slug and
+          // park their TV (season, part) at unique negatives so nothing blocks the
+          // new row during the merge.
+          const siblings = await findFranchiseRows(tx, userId, slug, memberMalIds);
+          await parkRows(tx, slug, siblings);
+
+          // Create the new row under the canonical slug. TV rows are created at a
+          // parked sentinel season 0 (no other row holds 0 — existing TV are now
+          // negative), so the insert can't trip the unique index; the real season
+          // is assigned in Phase B.
+          const createBase = {
+            ...createData,
+            normalizedName: slug,
+            season: finalType === 'TV' ? 0 : desiredSeason,
+            part: finalType === 'TV' ? desiredPart : null,
+          };
           let createdAnime;
           try {
-            createdAnime = await tx.anime.create({
-              data: createData
-            });
+            createdAnime = await tx.anime.create({ data: createBase });
           } catch (error) {
             if (!isSchemaValidationError(error)) {
               throw error;
             }
-
-            const fallbackCreateData = {
-              ...createData,
-              droppedAt: undefined,
-              completedAt: undefined,
-            };
             createdAnime = await tx.anime.create({
-              data: fallbackCreateData
+              data: { ...createBase, droppedAt: undefined, completedAt: undefined },
             });
           }
 
-          return createdAnime;
+          // Phase B: assign collision-free final (season, part) across the whole
+          // franchise (existing siblings + the new row).
+          const rows = [
+            ...siblings.map((s) => ({ id: s.id, type: s.type, season: s.season, part: s.part })),
+            { id: createdAnime.id, type: finalType, season: desiredSeason, part: desiredPart },
+          ];
+          const tvIds = new Set(rows.filter((r) => r.type === 'TV').map((r) => r.id));
+          const plan = planSeasons(rows);
+          await applyFinalSeasons(tx, plan, tvIds);
+
+          const finalAssignment = plan.find((p) => p.id === createdAnime.id);
+          return {
+            ...createdAnime,
+            normalizedName: slug,
+            season: finalAssignment ? finalAssignment.season : desiredSeason,
+            part: finalType === 'TV' ? (finalAssignment ? finalAssignment.part : desiredPart) : null,
+          };
         }, WATCH_ORDER_TRANSACTION_OPTIONS)
       );
 
