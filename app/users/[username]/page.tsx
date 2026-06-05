@@ -51,6 +51,8 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
 function formatSeasonText(season: number, type: string): string {
   if (type === 'Movie') return 'Movie';
   if (type === 'OVA') return 'OVA';
+  if (type === 'ONA') return 'ONA';
+  if (type === 'Special') return 'Special';
   if (season === 99) return 'Final Season';
   return `Season ${season}`;
 }

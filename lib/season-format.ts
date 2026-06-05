@@ -9,6 +9,7 @@
 export function formatSeasonText(season: number, part: number | null, type: string): string {
   if (type === 'Movie') return 'Movie';
   if (type === 'OVA') return 'OVA';
+  if (type === 'ONA') return 'ONA';
   if (type === 'Special') return 'Special';
   const base = season === 99 ? 'Final Season' : `Season ${season}`;
   return part != null ? `${base} · Part ${part}` : base;
@@ -28,6 +29,7 @@ export function parseSeasonField(value: string): { season: number; part: number 
 
   if (normalized === 'movie') return { season: 1, part: null, type: 'Movie' };
   if (normalized === 'ova') return { season: 1, part: null, type: 'OVA' };
+  if (normalized === 'ona') return { season: 1, part: null, type: 'ONA' };
   if (normalized === 'special') return { season: 1, part: null, type: 'Special' };
   if (normalized === 'final season' || normalized === 'the final season') {
     return { season: 99, part, type: 'TV' };

@@ -1468,6 +1468,8 @@ export default function Home() {
               <option value="Final Season" />
               <option value="Movie" />
               <option value="OVA" />
+              <option value="ONA" />
+              <option value="Special" />
             </datalist>
           </div>
 

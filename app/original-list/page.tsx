@@ -29,6 +29,8 @@ const PAGE_SIZE_OPTIONS = [20, 50, 100] as const;
 export function formatSeasonText(season: number, type: string): string {
   if (type === 'Movie') return 'Movie';
   if (type === 'OVA') return 'OVA';
+  if (type === 'ONA') return 'ONA';
+  if (type === 'Special') return 'Special';
   if (season === 99) return 'Final Season';
   return `Season ${season}`;
 }
