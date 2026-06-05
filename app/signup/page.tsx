@@ -164,6 +164,11 @@ export default function SignupPage() {
             Sign In
           </Link>
         </div>
+        <p className="auth-legal">
+          <Link href="/privacy" className="auth-legal-link">
+            Privacy Policy
+          </Link>
+        </p>
       </div>
     </div>
   );

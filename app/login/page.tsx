@@ -143,6 +143,11 @@ function LoginForm() {
           Create account
         </Link>
       </div>
+      <p className="auth-legal">
+        <Link href="/privacy" className="auth-legal-link">
+          Privacy Policy
+        </Link>
+      </p>
     </div>
   );
 }

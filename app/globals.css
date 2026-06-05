@@ -4681,4 +4681,21 @@ body:has(.dashboard-home) {
   text-decoration: underline;
 }
 
+/* Privacy Policy link on auth cards */
+.auth-legal {
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 0.8rem;
+}
+
+.auth-legal-link {
+  color: var(--text-secondary);
+  transition: color 0.2s;
+}
+
+.auth-legal-link:hover {
+  color: var(--accent-color);
+  text-decoration: underline;
+}
+
 
