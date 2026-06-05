@@ -24,7 +24,37 @@ model User {
   following Follow[] @relation("Follower")
   followers Follow[] @relation("Following")
 
+  passwordResetTokens PasswordResetToken[]
+
   @@index([username])
+}
+
+// Holds signup details + hashed OTP until the email is verified. No User row
+// exists until verification succeeds (see /api/auth/signup/verify).
+model PendingSignup {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  name         String?
+  username     String?
+  passwordHash String
+  otpHash      String
+  attempts     Int      @default(0)
+  expiresAt    DateTime
+  lastSentAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
+}
+
+// Single-use, time-limited tokens for the password-reset link flow.
+model PasswordResetToken {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Follow {
