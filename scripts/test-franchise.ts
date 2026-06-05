@@ -74,6 +74,20 @@ const coteGraph: Record<number, RelationEntry[]> = {
     !excl.nodes.some((n) => n.malId === 999 || n.malId === 998)
   );
 
+  // --- truncation flags ---
+  const truncCalls = await buildComponent(100, 'Classroom of the Elite', fakeRelations(coteGraph), { maxNodes: 30, maxApiCalls: 1 });
+  expect('maxApiCalls=1 sets truncated', truncCalls.truncated === true);
+
+  const truncNodes = await buildComponent(100, 'Classroom of the Elite', fakeRelations(coteGraph), { maxNodes: 2, maxApiCalls: 30 });
+  expect('maxNodes=2 sets truncated', truncNodes.truncated === true);
+  expect('maxNodes=2 keeps only 2 nodes', truncNodes.nodes.length === 2, `got ${truncNodes.nodes.length}`);
+
+  // --- single-node (standalone) graph ---
+  const solo = await buildComponent(500, 'Cowboy Bebop', fakeRelations({}), BOUNDS);
+  expect('standalone: 1 node', solo.nodes.length === 1, `got ${solo.nodes.length}`);
+  expect('standalone: root is the seed', pickCanonicalRoot(solo).malId === 500);
+  expect('standalone: not truncated', solo.truncated === false);
+
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed === 0 ? 0 : 1);
 })();

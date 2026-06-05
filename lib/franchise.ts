@@ -42,7 +42,7 @@ export async function buildComponent(
   let truncated = false;
 
   while (frontier.length > 0) {
-    const current = frontier.shift() as number;
+    const current = frontier.shift()!;
     if (visited.has(current)) continue;
     if (apiCalls >= bounds.maxApiCalls) {
       truncated = true;
@@ -78,6 +78,11 @@ export async function buildComponent(
   };
 }
 
+/**
+ * Pick the deterministic canonical root of a franchise component.
+ * Precondition: `component.nodes` is non-empty (buildComponent always returns
+ * at least the seed node).
+ */
 export function pickCanonicalRoot(component: FranchiseComponent): FranchiseNode {
   const { nodes, backEdges } = component;
   // A node with an outgoing origin edge (it HAS a prequel/parent) is not an origin.
