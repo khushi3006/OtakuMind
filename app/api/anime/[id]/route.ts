@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { withDeadlockRetry } from '@/lib/deadlock-retry';
 import { WATCH_ORDER_TRANSACTION_OPTIONS } from '@/lib/transaction-options';
-import { normalizeAnimeName, extractSeasonNumber } from '@/lib/normalize';
-import { resolveSeason } from '@/lib/season-resolve';
+import { extractSeasonNumber, extractPartNumber } from '@/lib/normalize';
+import { resolveFranchise, findFranchiseRows, parkRows, applyFinalSeasons } from '@/lib/franchise-resolve';
+import { planSeasons } from '@/lib/season-reassign';
 import { getSession } from '@/lib/auth';
 
 function isSchemaValidationError(error: unknown) {
@@ -27,11 +28,11 @@ export async function PUT(
     const { id } = await params;
     const animeId = parseInt(id, 10);
     const body = await request.json();
-    const { name, totalEpisodes, episodesWatched, status, watchOrder, season, part, normalizedName, type } = body;
-    
+    const { name, totalEpisodes, episodesWatched, status, watchOrder, season, part, normalizedName, type, malId } = body;
+
     const currentAnime = await db.anime.findFirst({
       where: { id: animeId, userId },
-      select: { status: true, watchOrder: true, type: true, episodesWatched: true, totalEpisodes: true, normalizedName: true, season: true, part: true },
+      select: { status: true, watchOrder: true, type: true, episodesWatched: true, totalEpisodes: true, normalizedName: true, season: true, part: true, name: true, malId: true },
     });
 
     if (!currentAnime) {
@@ -78,65 +79,85 @@ export async function PUT(
       null;
 
     const seasonWasExplicit = season !== undefined;
-    let updatedNormalizedName = normalizedName !== undefined ? normalizedName : undefined;
-    let updatedSeason = season !== undefined ? season : undefined;
-    let updatedPart = part !== undefined ? part : undefined;
-    if (name !== undefined) {
-      if (updatedNormalizedName === undefined) {
-        updatedNormalizedName = normalizeAnimeName(name);
-      }
-      if (updatedSeason === undefined) {
-        updatedSeason = extractSeasonNumber(name);
-      }
+    const partWasExplicit = part !== undefined;
+    const explicitSlot = seasonWasExplicit || partWasExplicit;
+    const userGaveSlug = normalizedName !== undefined;
+    const nameOrMalChanged = name !== undefined || malId !== undefined;
+
+    // Resolve the franchise slug for this edit. An explicit slug edit is honoured
+    // verbatim; a name/malId change re-resolves via MAL relations (may hit Jikan,
+    // so do it before the transaction). Otherwise keep the row's current slug.
+    let targetSlug = currentAnime.normalizedName;
+    let memberMalIds: number[] = [];
+    if (userGaveSlug) {
+      targetSlug = normalizedName;
+    } else if (nameOrMalChanged) {
+      const effectiveName = name !== undefined ? name : currentAnime.name;
+      const effectiveMalId =
+        malId !== undefined ? (malId ? Number(malId) : null) : currentAnime.malId;
+      const existingSlugRows = await db.anime.findMany({
+        where: { userId },
+        select: { normalizedName: true },
+        distinct: ['normalizedName'],
+      });
+      const resolved = await resolveFranchise({
+        userId,
+        name: effectiveName,
+        malId: effectiveMalId,
+        existingSlugs: existingSlugRows.map((r) => r.normalizedName),
+      });
+      targetSlug = resolved.slug;
+      memberMalIds = resolved.memberMalIds;
     }
 
-    if (
-      targetType === 'TV' &&
-      (updatedNormalizedName !== undefined || updatedSeason !== undefined || updatedPart !== undefined || type !== undefined)
-    ) {
-      const effectiveNormalizedName = updatedNormalizedName ?? currentAnime.normalizedName;
-      const effectiveSeason = updatedSeason ?? currentAnime.season;
-      const effectivePart = updatedPart !== undefined ? updatedPart : currentAnime.part;
+    // The edited row's intended (season, part): explicit wins, else derived from a
+    // new name, else unchanged.
+    const intendedSeason =
+      season !== undefined ? season
+      : name !== undefined ? extractSeasonNumber(name)
+      : currentAnime.season;
+    const intendedPart =
+      part !== undefined ? part
+      : name !== undefined ? extractPartNumber(name)
+      : currentAnime.part;
 
-      const tvSiblings = await db.anime.findMany({
+    // Run the franchise/season merge when the slug changes or (for a TV row) the
+    // season/part/type changes. The merge converges the whole franchise on the
+    // canonical slug and re-packs collision-free (season, part).
+    const doMerge =
+      userGaveSlug || nameOrMalChanged ||
+      (targetType === 'TV' && (explicitSlot || type !== undefined));
+
+    // Preserve prior behaviour: an EXPLICIT user (season, part) that clashes with a
+    // genuine TV sibling under the target slug is reported, not silently renumbered.
+    if (doMerge && targetType === 'TV' && explicitSlot) {
+      const clash = await db.anime.findFirst({
         where: {
           userId,
-          normalizedName: effectiveNormalizedName,
+          normalizedName: targetSlug,
           type: 'TV',
+          season: intendedSeason,
+          part: intendedPart,
           id: { not: animeId },
         },
-        select: { season: true, part: true },
+        select: { id: true },
       });
-
-      const resolution = resolveSeason({
-        type: 'TV',
-        season: effectiveSeason,
-        part: effectivePart,
-        explicit: seasonWasExplicit,
-        tvSiblings: tvSiblings.map((s) => ({ season: s.season, part: s.part })),
-      });
-
-      if (resolution.kind === 'collision') {
+      if (clash) {
         const label =
-          resolution.part != null
-            ? `Season ${resolution.season} · Part ${resolution.part}`
-            : `Season ${resolution.season}`;
+          intendedPart != null
+            ? `Season ${intendedSeason} · Part ${intendedPart}`
+            : `Season ${intendedSeason}`;
         return NextResponse.json(
           { error: `${label} already exists for this franchise.` },
           { status: 409 }
         );
       }
-
-      updatedSeason = resolution.season;
-      updatedPart = resolution.part;
     }
 
     const updateData = {
       name: name !== undefined ? name : undefined,
-      normalizedName: updatedNormalizedName,
-      season: updatedSeason,
-      part: targetType !== 'TV' ? null : updatedPart,
       type: type !== undefined ? type : undefined,
+      malId: malId !== undefined ? (malId ? Number(malId) : null) : undefined,
       totalEpisodes: targetType === 'Movie' ? 0 : (totalEpisodes !== undefined ? totalEpisodes : undefined),
       episodesWatched: targetType === 'Movie' ? 0 : (episodesWatched !== undefined ? episodesWatched : undefined),
       status: status !== undefined ? status : undefined,
@@ -182,29 +203,58 @@ export async function PUT(
           }
         }
 
+        // Apply the non-slug/non-season field updates to the edited row first.
         let nextAnime;
         try {
-          nextAnime = await tx.anime.update({
-            where: { id: animeId },
-            data: updateData,
-          });
+          nextAnime = await tx.anime.update({ where: { id: animeId }, data: updateData });
         } catch (error) {
           if (!isSchemaValidationError(error)) {
             throw error;
           }
-
-          const fallbackUpdateData = {
-            ...updateData,
-            droppedAt: undefined,
-            completedAt: undefined,
-          };
           nextAnime = await tx.anime.update({
             where: { id: animeId },
-            data: fallbackUpdateData,
+            data: { ...updateData, droppedAt: undefined, completedAt: undefined },
           });
         }
 
-        return nextAnime;
+        if (doMerge) {
+          // Gather the franchise (always include the edited row), park every TV row
+          // to a unique negative season, then assign collision-free final slots.
+          const found = await findFranchiseRows(tx, userId, targetSlug, memberMalIds);
+          const byId = new Map(
+            found.map((r) => [r.id, { id: r.id, type: r.type, season: r.season, part: r.part }])
+          );
+          byId.set(animeId, { id: animeId, type: targetType, season: intendedSeason, part: intendedPart });
+          const rows = [...byId.values()];
+
+          await parkRows(tx, targetSlug, rows.map((r) => ({ id: r.id, type: r.type })));
+
+          const planRows = rows.map((r) =>
+            r.id === animeId ? { ...r, explicit: explicitSlot } : r
+          );
+          const tvIds = new Set(planRows.filter((r) => r.type === 'TV').map((r) => r.id));
+          const plan = planSeasons(planRows);
+          await applyFinalSeasons(tx, plan, tvIds);
+
+          const a = plan.find((p) => p.id === animeId);
+          return {
+            ...nextAnime,
+            normalizedName: targetSlug,
+            season: a ? a.season : intendedSeason,
+            part: targetType === 'TV' ? (a ? a.part : intendedPart) : null,
+          };
+        }
+
+        // No merge: set slug/season/part directly on the edited row (no franchise
+        // change — these resolve to the current values unless the row is non-TV).
+        return tx.anime.update({
+          where: { id: animeId },
+          data: {
+            normalizedName: targetSlug,
+            season: intendedSeason,
+            part: targetType === 'TV' ? intendedPart : null,
+          },
+        });
       }, WATCH_ORDER_TRANSACTION_OPTIONS)
     );
 
