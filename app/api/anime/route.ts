@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { normalizeAnimeName, extractSeasonNumber } from '@/lib/normalize';
+import { normalizeAnimeName, extractSeasonNumber, extractPartNumber } from '@/lib/normalize';
 import { resolveSeason } from '@/lib/season-resolve';
 import type { Prisma } from '@/prisma/generated/client';
 import { withDeadlockRetry } from '@/lib/deadlock-retry';
@@ -151,6 +151,7 @@ export async function POST(request: Request) {
 
     const normalizedName = normalizeAnimeName(name);
     let season = extractSeasonNumber(name);
+    let part = extractPartNumber(name);
 
     // Determine the type up front: season numbering only applies to TV rows.
     let finalType = type || "TV";
@@ -196,15 +197,17 @@ export async function POST(request: Request) {
     if (finalType === 'TV') {
       const tvSiblings = await db.anime.findMany({
         where: { userId, normalizedName, type: 'TV' },
-        select: { season: true },
+        select: { season: true, part: true },
       });
       const resolution = resolveSeason({
         type: 'TV',
         season,
-        explicit: false, // POST always auto-derives the season from the title
-        tvSiblingSeasons: tvSiblings.map((s) => s.season),
+        part,
+        explicit: false, // POST always auto-derives season/part from the title
+        tvSiblings: tvSiblings.map((s) => ({ season: s.season, part: s.part })),
       });
       season = resolution.season;
+      part = resolution.part;
     }
 
     try {
@@ -212,6 +215,7 @@ export async function POST(request: Request) {
         name,
         normalizedName,
         season,
+        part: finalType === 'TV' ? part : null,
         totalEpisodes: finalType === 'Movie' ? 0 : (totalEpisodes || 0),
         episodesWatched: finalType === 'Movie' ? 0 : (episodesWatched || 0),
         status: targetStatus,
