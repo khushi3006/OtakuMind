@@ -4653,7 +4653,6 @@ export namespace Prisma {
 
   export type AnimeWhereUniqueInput = Prisma.AtLeast<{
     id?: number
-    userId_normalizedName_season?: AnimeUserIdNormalizedNameSeasonCompoundUniqueInput
     AND?: AnimeWhereInput | AnimeWhereInput[]
     OR?: AnimeWhereInput[]
     NOT?: AnimeWhereInput | AnimeWhereInput[]
@@ -4679,7 +4678,7 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"Anime"> | Date | string
     userId?: IntFilter<"Anime"> | number
     user?: XOR<UserRelationFilter, UserWhereInput>
-  }, "id" | "userId_normalizedName_season">
+  }, "id">
 
   export type AnimeOrderByWithAggregationInput = {
     id?: SortOrder
@@ -5300,12 +5299,6 @@ export namespace Prisma {
     gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     not?: NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
-  }
-
-  export type AnimeUserIdNormalizedNameSeasonCompoundUniqueInput = {
-    userId: number
-    normalizedName: string
-    season: number
   }
 
   export type AnimeCountOrderByAggregateInput = {

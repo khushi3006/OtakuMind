@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Search, ExternalLink, CalendarDays, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
+import { errorMessage } from '@/lib/api-error';
 
 type Anime = {
   id: number;
@@ -60,9 +61,9 @@ export default function OriginalListPage() {
       setPagination(json.pagination || { page: pg, limit: pageSize, total: 0, totalPages: 0 });
       setIsWakingUp(false);
       setLoading(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      const msg = err.message || String(err);
+      const msg = errorMessage(err, String(err));
       if (msg.includes('SSL connection') || msg.includes('consuming input failed') || msg.includes('Database error')) {
         setIsWakingUp(true);
         setTimeout(() => {

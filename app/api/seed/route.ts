@@ -2,6 +2,18 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import * as fs from 'fs';
 import * as path from 'path';
+import { errorMessage } from '@/lib/api-error';
+import type { Prisma } from '@/prisma/generated/client';
+
+interface SeedAnime {
+  name: string;
+  normalizedName: string;
+  season: number;
+  episodesWatched: number;
+  status: string;
+  type?: string;
+  originalOrder?: number;
+}
 
 function normalizeEntry(name: string): { normalizedName: string; season: number } {
   const lowercaseMatch = name.toLowerCase();
@@ -60,9 +72,9 @@ export async function GET() {
     
     let processingCompleted = true; 
     
-    const completedAnime: any[] = [];
-    const currentlyWatching: any[] = [];
-    let seenRawNames = new Set();
+    const completedAnime: SeedAnime[] = [];
+    const currentlyWatching: SeedAnime[] = [];
+    const seenRawNames = new Set<string>();
     
     for (const line of lines) {
       if (line.includes('OP - 1155') || line.includes('This is the complete list')) {
@@ -129,15 +141,15 @@ export async function GET() {
       }
     }
 
-    const res1 = await db.anime.createMany({ data: completedAnime, skipDuplicates: true });
-    const res2 = await db.anime.createMany({ data: currentlyWatching, skipDuplicates: true });
+    const res1 = await db.anime.createMany({ data: completedAnime as Prisma.AnimeCreateManyInput[], skipDuplicates: true });
+    const res2 = await db.anime.createMany({ data: currentlyWatching as Prisma.AnimeCreateManyInput[], skipDuplicates: true });
     
     return NextResponse.json({ 
        success: true, 
        completedCount: res1.count, 
        watchingCount: res2.count 
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: errorMessage(error) }, { status: 500 });
   }
 }

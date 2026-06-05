@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { normalizeWatchingOrder } from '@/lib/watch-order';
 import { withDeadlockRetry } from '@/lib/deadlock-retry';
 import { WATCH_ORDER_TRANSACTION_OPTIONS } from '@/lib/transaction-options';
 import { normalizeAnimeName, extractSeasonNumber } from '@/lib/normalize';
+import { resolveSeason } from '@/lib/season-resolve';
 import { getSession } from '@/lib/auth';
 
 function isSchemaValidationError(error: unknown) {
@@ -77,6 +77,7 @@ export async function PUT(
       status === 'completed' ? new Date() :
       null;
 
+    const seasonWasExplicit = season !== undefined;
     let updatedNormalizedName = normalizedName !== undefined ? normalizedName : undefined;
     let updatedSeason = season !== undefined ? season : undefined;
     if (name !== undefined) {
@@ -88,39 +89,45 @@ export async function PUT(
       }
     }
 
-    // Resolve (normalizedName, season) collisions the same way POST /api/anime does.
-    // A franchise's movies (and re-slugged seasons) all normalize to season 1, so giving
-    // a movie the shared franchise slug collides with the existing season-1 row — or with
-    // another movie already filed under that slug. Keep the shared slug and bump this row to
-    // the next free season number; the UI renders "Movie" regardless of the number
-    // (see formatSeasonText), so this disambiguator stays invisible while still satisfying
-    // @@unique([userId, normalizedName, season]).
-    if (updatedNormalizedName !== undefined || updatedSeason !== undefined) {
+    // Resolve (normalizedName, season) collisions, scoped to TV rows only.
+    // The partial unique index covers type = 'TV', so movies/OVAs/specials are
+    // never numbered and skip this entirely (a movie can share a number with a
+    // TV season under the same slug). For TV rows: an explicit user edit is
+    // honoured — a genuine clash is reported with a 409 rather than silently
+    // renumbered — while an auto-derived season (from a name change or re-slug)
+    // bumps past the highest TV sibling to keep imports working.
+    if (
+      targetType === 'TV' &&
+      (updatedNormalizedName !== undefined || updatedSeason !== undefined || type !== undefined)
+    ) {
       const effectiveNormalizedName = updatedNormalizedName ?? currentAnime.normalizedName;
       const effectiveSeason = updatedSeason ?? currentAnime.season;
 
-      const collision = await db.anime.findFirst({
+      const tvSiblings = await db.anime.findMany({
         where: {
           userId,
           normalizedName: effectiveNormalizedName,
-          season: effectiveSeason,
+          type: 'TV',
           id: { not: animeId },
         },
-        select: { id: true },
+        select: { season: true },
       });
 
-      if (collision) {
-        const siblings = await db.anime.findMany({
-          where: {
-            userId,
-            normalizedName: effectiveNormalizedName,
-            id: { not: animeId },
-          },
-          select: { season: true },
-        });
-        const maxSeason = siblings.reduce((max, curr) => Math.max(max, curr.season), 0);
-        updatedSeason = maxSeason + 1;
+      const resolution = resolveSeason({
+        type: 'TV',
+        season: effectiveSeason,
+        explicit: seasonWasExplicit,
+        tvSiblingSeasons: tvSiblings.map((s) => s.season),
+      });
+
+      if (resolution.kind === 'collision') {
+        return NextResponse.json(
+          { error: `Season ${resolution.season} already exists for this franchise.` },
+          { status: 409 }
+        );
       }
+
+      updatedSeason = resolution.season;
     }
 
     const updateData = {

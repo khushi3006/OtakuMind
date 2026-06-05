@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
+import { errorMessage } from '@/lib/api-error';
 
 interface CacheEntry {
-  data: any;
+  data: unknown;
   timestamp: number;
 }
 
@@ -54,15 +55,15 @@ export async function GET(request: Request) {
       });
 
       return NextResponse.json(json);
-    } catch (fetchError: any) {
+    } catch (fetchError: unknown) {
       // Fetch failed (network timeout or offline). Serve expired cache if we have it
       if (cached) {
-        console.warn(`[Search Cache] Fetch failed (${fetchError.message}). Serving expired cache fallback.`);
+        console.warn(`[Search Cache] Fetch failed (${errorMessage(fetchError)}). Serving expired cache fallback.`);
         return NextResponse.json(cached.data);
       }
       throw fetchError;
     }
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: errorMessage(error, 'Internal Server Error') }, { status: 500 });
   }
 }

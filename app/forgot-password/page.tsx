@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { AlertCircle, Loader2, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import Logo from '@/components/Logo';
+import { errorMessage } from '@/lib/api-error';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -25,8 +26,8 @@ export default function ForgotPasswordPage() {
       }
       
       setIsSubmitted(true);
-    } catch (err: any) {
-      setError(err.message || 'An error occurred. Please try again.');
+    } catch (err: unknown) {
+      setError(errorMessage(err, 'An error occurred. Please try again.'));
     } finally {
       setIsLoading(false);
     }
@@ -49,7 +50,7 @@ export default function ForgotPasswordPage() {
             </div>
             <h3 className="success-title">Reset Link Sent!</h3>
             <p className="success-description">
-              We've sent a recovery email to <strong>{email}</strong>. 
+              We&apos;ve sent a recovery email to <strong>{email}</strong>.
               Please check your inbox and follow the instructions to restore your account.
             </p>
             <Link href="/login" className="auth-button auth-back-button">

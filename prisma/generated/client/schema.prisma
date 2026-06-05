@@ -68,8 +68,13 @@ model Anime {
   userId Int
   user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Performance indexes and user-scoped uniqueness
-  @@unique([userId, normalizedName, season])
+  // Performance indexes and user-scoped uniqueness.
+  // Season uniqueness is a PARTIAL unique index covering TV rows only:
+  //   CREATE UNIQUE INDEX ... (userId, normalizedName, season) WHERE type = 'TV'
+  // Prisma can't model partial indexes, so it lives in the migration
+  // 20260605000000_partial_season_unique (mirror: scripts/migrate-partial-season.ts),
+  // not as an @@unique() here. Movies/OVAs/Specials are intentionally left
+  // unconstrained so they never consume TV season slots.
   @@index([userId, status, createdAt])
   @@index([userId, status, droppedAt])
   @@index([userId, status, completedAt])

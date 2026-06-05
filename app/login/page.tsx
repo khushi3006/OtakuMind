@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
 import Logo from '@/components/Logo';
+import { errorMessage } from '@/lib/api-error';
 
 function LoginForm() {
   const router = useRouter();
@@ -41,8 +42,8 @@ function LoginForm() {
       // Success! Refresh router and redirect
       router.refresh();
       router.push(redirectPath);
-    } catch (err: any) {
-      setError(err.message || 'An error occurred. Please try again.');
+    } catch (err: unknown) {
+      setError(errorMessage(err, 'An error occurred. Please try again.'));
     } finally {
       setIsLoading(false);
     }
@@ -138,7 +139,7 @@ function LoginForm() {
       </form>
 
       <div className="auth-footer">
-        Don't have an account?
+        Don&apos;t have an account?
         <Link href="/signup" className="auth-footer-link">
           Create account
         </Link>

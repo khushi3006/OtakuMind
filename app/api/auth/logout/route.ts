@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { removeSessionCookie } from '@/lib/auth';
+import { errorMessage } from '@/lib/api-error';
 
 export async function POST() {
   try {
     await removeSessionCookie();
     return NextResponse.json({ message: 'Logged out successfully' });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Server error' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: errorMessage(error) }, { status: 500 });
   }
 }
 export async function GET() {

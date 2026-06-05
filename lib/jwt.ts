@@ -32,7 +32,16 @@ function base64UrlDecode(str: string): string {
   return atob(base64);
 }
 
-export async function signJWT(payload: any, expiresInDays = 7): Promise<string> {
+export interface SessionPayload {
+  /** Owner of the session. */
+  userId: number;
+  /** Unix-seconds expiry, stamped by signJWT. */
+  exp?: number;
+  /** Other claims carried in the token (email, name, username, …). */
+  [key: string]: unknown;
+}
+
+export async function signJWT(payload: SessionPayload, expiresInDays = 7): Promise<string> {
   const header = { alg: 'HS256', typ: 'JWT' };
   const exp = Math.floor(Date.now() / 1000) + expiresInDays * 24 * 60 * 60;
   const fullPayload = { ...payload, exp };
@@ -56,7 +65,7 @@ export async function signJWT(payload: any, expiresInDays = 7): Promise<string> 
   return `${data}.${signature}`;
 }
 
-export async function verifyJWT(token: string): Promise<any | null> {
+export async function verifyJWT(token: string): Promise<SessionPayload | null> {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
@@ -78,15 +87,15 @@ export async function verifyJWT(token: string): Promise<any | null> {
 
     if (!isValid) return null;
 
-    const decodedPayload = JSON.parse(base64UrlDecode(payload));
-    
+    const decodedPayload = JSON.parse(base64UrlDecode(payload)) as SessionPayload;
+
     // Check expiration
     if (decodedPayload.exp && Date.now() / 1000 > decodedPayload.exp) {
       return null;
     }
 
     return decodedPayload;
-  } catch (error) {
+  } catch {
     return null;
   }
 }

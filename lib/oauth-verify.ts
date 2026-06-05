@@ -70,7 +70,7 @@ async function verifyToken(token: string, opts: VerifyOptions): Promise<Verified
   const [headerB64, payloadB64, signatureB64] = parts;
 
   const header = JSON.parse(base64UrlToString(headerB64)) as { alg?: string; kid?: string };
-  const payload = JSON.parse(base64UrlToString(payloadB64)) as Record<string, any>;
+  const payload = JSON.parse(base64UrlToString(payloadB64)) as Record<string, unknown>;
 
   if (header.alg !== 'RS256') throw new Error(`Unsupported token algorithm: ${header.alg}`);
   if (!header.kid) throw new Error('Token is missing a key id');
@@ -103,12 +103,14 @@ async function verifyToken(token: string, opts: VerifyOptions): Promise<Verified
   if (typeof payload.iat === 'number' && payload.iat > now + 300) {
     throw new Error('Token issued in the future');
   }
-  if (!opts.issuers.includes(payload.iss)) throw new Error('Invalid token issuer');
+  if (typeof payload.iss !== 'string' || !opts.issuers.includes(payload.iss)) {
+    throw new Error('Invalid token issuer');
+  }
 
   const aud = payload.aud;
   const audienceOk = Array.isArray(aud)
     ? aud.some((a: string) => opts.audiences.includes(a))
-    : opts.audiences.includes(aud);
+    : typeof aud === 'string' && opts.audiences.includes(aud);
   if (!audienceOk) throw new Error('Invalid token audience');
 
   if (!payload.sub) throw new Error('Token is missing a subject');

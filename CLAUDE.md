@@ -50,7 +50,9 @@ Stateless JWT sessions stored in an httpOnly cookie named `session` (7-day expir
 
 ### Anime model & "season grouping"
 
-`lib/normalize.ts` derives `normalizedName` + `season` from a raw title (stripping "Season N", "Part N", roman numerals, OVA/movie markers, etc.) so different seasons of the same show collapse to one normalized name. Uniqueness is enforced per user via `@@unique([userId, normalizedName, season])`. Duplicate detection on create (`POST /api/anime`) checks both `malId` and `(normalizedName, season)`.
+`lib/normalize.ts` derives `normalizedName` + `season` from a raw title (stripping "Season N", "Part N", roman numerals, OVA/movie markers, etc.) so different seasons of the same show collapse to one normalized name. Duplicate detection on create (`POST /api/anime`) checks both `malId` and `(normalizedName, season)`.
+
+**Season uniqueness is TV-only.** `season` is both a display label ("Season 3") and a uniqueness key, so the constraint is a **partial unique index covering `type = 'TV'` rows only** — `CREATE UNIQUE INDEX (userId, normalizedName, season) WHERE type = 'TV'` (migration `20260605000000_partial_season_unique`, mirror `scripts/migrate-partial-season.ts`). Prisma can't model partial indexes, so it is **not** an `@@unique()` in `schema.prisma`. Movies/OVAs/Specials are deliberately unnumbered and unconstrained, so they never consume a TV season slot (a movie and a TV "Season 3" can coexist under one slug). `lib/season-resolve.ts` is the shared resolver both `POST` and `PUT /api/anime/[id]` call: non-TV passes through; an **auto-derived** TV season (import or name change) bumps past the highest TV sibling on collision; an **explicit** user-set season is never silently renumbered — a genuine TV clash returns a 409 instead.
 
 Status values are the strings `"incomplete"` (= "Currently Watching" in the UI), `"completed"`, and `"dropped"` — see `STATUS_MAP` in `app/page.tsx`. A `season` of `99` renders as "Final Season". `type` is `"TV" | "Movie" | "OVA" | "Special"`; movies force `episodesWatched`/`totalEpisodes` to 0.
 

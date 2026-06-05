@@ -1,6 +1,6 @@
 import { pbkdf2Sync, randomBytes } from 'crypto';
 import { cookies } from 'next/headers';
-import { signJWT, verifyJWT } from './jwt';
+import { signJWT, verifyJWT, type SessionPayload } from './jwt';
 
 const ITERATIONS = 10000;
 const KEY_LEN = 64;
@@ -30,17 +30,17 @@ export function verifyPassword(password: string, stored: string): boolean {
 // -------------------------------------------------------------
 // 2. Next.js Cookie Session Management Helpers
 // -------------------------------------------------------------
-export async function getSession(request?: Request): Promise<any | null> {
+export async function getSession(request?: Request): Promise<SessionPayload | null> {
   let token: string | undefined;
 
   if (request) {
     // If request is provided, read cookies header (useful in Middleware/API routes)
     const cookieHeader = request.headers.get('cookie') || '';
-    const cookiesList = cookieHeader.split(';').reduce((acc: any, c) => {
+    const cookiesList = cookieHeader.split(';').reduce((acc: Record<string, string | undefined>, c) => {
       const [key, val] = c.trim().split('=');
       if (key) acc[key] = val;
       return acc;
-    }, {});
+    }, {} as Record<string, string | undefined>);
     token = cookiesList[COOKIE_NAME];
   } else {
     // Else, use next/headers cookies() (for Server Components/Actions/API routes)
@@ -52,7 +52,7 @@ export async function getSession(request?: Request): Promise<any | null> {
   return verifyJWT(token);
 }
 
-export async function setSessionCookie(payload: any) {
+export async function setSessionCookie(payload: SessionPayload) {
   const token = await signJWT(payload);
   const cookieStore = await cookies();
   cookieStore.set(COOKIE_NAME, token, {

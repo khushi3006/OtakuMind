@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import ExcelJS from 'exceljs';
 import { getSession } from '@/lib/auth';
+import { errorMessage } from '@/lib/api-error';
 
 const FONT_NAME = 'Segoe UI';
 const HEADER_BG = 'FFA3B18A'; // Soft Matcha Green
@@ -400,10 +401,10 @@ export async function GET(request: Request) {
       }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to export anime:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to export anime to Excel' },
+      { error: errorMessage(error, 'Failed to export anime to Excel') },
       { status: 500 }
     );
   }

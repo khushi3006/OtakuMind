@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { calculateAiringCountdown, getLocalBroadcastDay, getUpcomingEpisodeNumber, getISTBroadcastDetails, getISTDate } from '@/lib/airing-utils';
 import Toast, { type ToastMessage } from '@/components/Toast';
+import { errorMessage } from '@/lib/api-error';
 
 type Anime = {
   id: number;
@@ -113,9 +114,9 @@ export default function AiringSchedulePage() {
       setTrackedAnime(json.data || []);
       setIsWakingUp(false);
       setLoadingTracked(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      const msg = err.message || String(err);
+      const msg = errorMessage(err, String(err));
       if (msg.includes('SSL connection') || msg.includes('consuming input failed') || msg.includes('Database error') || msg.includes('ENOTFOUND') || msg.includes('getaddrinfo')) {
         setIsWakingUp(true);
         setTimeout(() => {
@@ -596,7 +597,7 @@ export default function AiringSchedulePage() {
                   <div className="empty-schedule-state animate-fade-in">
                     <div className="empty-icon-wrap">📅</div>
                     <h3>Your schedule is empty</h3>
-                    <p>You aren't tracking any currently airing shows. Add active shows to your watchlist to map them out!</p>
+                    <p>You aren&apos;t tracking any currently airing shows. Add active shows to your watchlist to map them out!</p>
                     <button onClick={() => setActiveTab('popular')} className="empty-btn-discover">
                       Explore Seasonal Popular Shows <ChevronRight size={14} />
                     </button>

@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { normalizeAnimeName, extractSeasonNumber } from '@/lib/normalize';
+import { resolveSeason } from '@/lib/season-resolve';
 import type { Prisma } from '@/prisma/generated/client';
-import { normalizeWatchingOrder } from '@/lib/watch-order';
 import { withDeadlockRetry } from '@/lib/deadlock-retry';
 import { WATCH_ORDER_TRANSACTION_OPTIONS } from '@/lib/transaction-options';
 import { getSession } from '@/lib/auth';
@@ -41,7 +41,7 @@ export async function GET(request: Request) {
       ];
     }
 
-    let orderBy: any;
+    let orderBy: Prisma.AnimeOrderByWithRelationInput[];
     if (status === 'completed') {
       if (sort === 'completed_asc') {
         orderBy = [
@@ -152,6 +152,13 @@ export async function POST(request: Request) {
     const normalizedName = normalizeAnimeName(name);
     let season = extractSeasonNumber(name);
 
+    // Determine the type up front: season numbering only applies to TV rows.
+    let finalType = type || "TV";
+    if (!type) {
+      const isMovie = name.match(/\b(movie|film)\b/i) || (!name.match(/season/i) && !name.match(/episode/i) && !name.match(/s\d+/i) && !name.match(/part/i) && name.length > 0);
+      if (isMovie) finalType = "Movie";
+    }
+
     // 1. Check for exact duplicate by malId in ANY status for this user
     if (malId) {
       const duplicateByMalId = await db.anime.findFirst({
@@ -180,38 +187,24 @@ export async function POST(request: Request) {
       }
     }
 
-    // 2. Check for conflict on normalizedName + season
-    const duplicateByNormalized = await db.anime.findFirst({
-      where: {
-        userId,
-        normalizedName,
-        season
-      }
-    });
-
-    if (duplicateByNormalized) {
-      // It has the same normalizedName and season, but different or no malId.
-      // E.g. Kaguya-sama: Love is War (malId: 37999, season: 1)
-      // and Kaguya-sama: Love is War? (malId: 40591, season: 1).
-      // Since they have different malIds, they are different seasons of the same franchise.
-      // Automatically increment the season count for this user to avoid database duplicate constraint.
-      const existingSeasons = await db.anime.findMany({
-        where: {
-          userId,
-          normalizedName
-        },
-        select: {
-          season: true
-        }
+    // 2. Resolve the season number against same-franchise TV siblings.
+    // Only TV rows are numbered (the partial unique index covers type = 'TV'),
+    // so movies/OVAs/specials keep their derived number and never collide.
+    // E.g. Kaguya-sama: Love is War (malId 37999) and Kaguya-sama: Love is War?
+    // (malId 40591) are different TV seasons of one franchise: the second is
+    // auto-bumped to the next free TV slot to satisfy the constraint.
+    if (finalType === 'TV') {
+      const tvSiblings = await db.anime.findMany({
+        where: { userId, normalizedName, type: 'TV' },
+        select: { season: true },
       });
-      const maxSeason = existingSeasons.reduce((max, curr) => Math.max(max, curr.season), 0);
-      season = maxSeason + 1;
-    }
-
-    let finalType = type || "TV";
-    if (!type) {
-      const isMovie = name.match(/\b(movie|film)\b/i) || (!name.match(/season/i) && !name.match(/episode/i) && !name.match(/s\d+/i) && !name.match(/part/i) && name.length > 0);
-      if (isMovie) finalType = "Movie";
+      const resolution = resolveSeason({
+        type: 'TV',
+        season,
+        explicit: false, // POST always auto-derives the season from the title
+        tvSiblingSeasons: tvSiblings.map((s) => s.season),
+      });
+      season = resolution.season;
     }
 
     try {

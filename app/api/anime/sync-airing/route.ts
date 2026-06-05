@@ -1,8 +1,22 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getSession } from '@/lib/auth';
+import { errorMessage } from '@/lib/api-error';
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+
+interface JikanAiringData {
+  airing?: boolean;
+  broadcast?: {
+    day?: string | null;
+    time?: string | null;
+    timezone?: string | null;
+    string?: string | null;
+  };
+  aired?: {
+    from?: string | null;
+  };
+}
 
 export async function POST(request: Request) {
   try {
@@ -70,15 +84,15 @@ export async function POST(request: Request) {
       totalChecked: incompleteAnimes.length
     });
 
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: errorMessage(error) }, { status: 500 });
   }
 }
 
-async function updateAnimeAiringInfo(id: number, data: any) {
+async function updateAnimeAiringInfo(id: number, data: JikanAiringData | null | undefined) {
   if (!data) return;
 
-  const broadcast = data.broadcast || {};
+  const broadcast: NonNullable<JikanAiringData['broadcast']> = data.broadcast || {};
   await db.anime.update({
     where: { id },
     data: {

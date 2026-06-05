@@ -26,7 +26,7 @@ export async function PUT(request: Request) {
     }
 
     // Verify ownership of all items in the request
-    const ids = items.map((item: any) => item.id);
+    const ids = items.map((item: { id: number }) => item.id);
     const dbCount = await db.anime.count({
       where: {
         id: { in: ids },

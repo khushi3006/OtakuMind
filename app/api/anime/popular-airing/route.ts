@@ -1,7 +1,26 @@
 import { NextResponse } from 'next/server';
+import { errorMessage } from '@/lib/api-error';
+
+interface PopularAnime {
+  mal_id: number;
+  title: string;
+  title_english: string | null;
+  images: { jpg: { image_url: string | null } };
+  airing: boolean;
+  broadcast: Record<string, unknown>;
+  type: string;
+  score: number | null;
+  synopsis: string | null;
+  episodes: number;
+  aired: unknown;
+}
+
+interface PopularPayload {
+  data: PopularAnime[];
+}
 
 // Lightweight in-memory cache to prevent Jikan API rate limiting on user dashboard loads
-let popularCache: any = null;
+let popularCache: PopularPayload | null = null;
 let popularCacheTime = 0;
 const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
 
@@ -30,7 +49,7 @@ export async function GET() {
     
     // Deduplicate and format data to ensure unique entries
     const seenMalIds = new Set<number>();
-    const formattedData: any[] = [];
+    const formattedData: PopularAnime[] = [];
 
     for (const anime of (json.data || [])) {
       if (!anime.mal_id || seenMalIds.has(anime.mal_id)) {
@@ -62,7 +81,7 @@ export async function GET() {
     popularCacheTime = now;
 
     return NextResponse.json(responsePayload);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: errorMessage(error) }, { status: 500 });
   }
 }

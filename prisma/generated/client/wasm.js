@@ -165,7 +165,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "D:\\Projects\\OtakuMind\\prisma\\generated\\client",
+      "value": "/Users/ahmadfaraz/Codes/otakumind/OtakuMind/prisma/generated/client",
       "fromEnvVar": null
     },
     "config": {
@@ -174,14 +174,14 @@ const config = {
     "binaryTargets": [
       {
         "fromEnvVar": null,
-        "value": "windows",
+        "value": "darwin-arm64",
         "native": true
       }
     ],
     "previewFeatures": [
       "driverAdapters"
     ],
-    "sourceFilePath": "D:\\Projects\\OtakuMind\\prisma\\schema.prisma",
+    "sourceFilePath": "/Users/ahmadfaraz/Codes/otakumind/OtakuMind/prisma/schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
@@ -204,8 +204,8 @@ const config = {
       }
     }
   },
-  "inlineSchema": "generator client {\n  provider        = \"prisma-client-js\"\n  previewFeatures = [\"driverAdapters\"]\n  output          = \"./generated/client\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel User {\n  id        Int      @id @default(autoincrement())\n  email     String   @unique\n  username  String   @unique\n  password  String\n  name      String?\n  bio       String?\n  isPublic  Boolean  @default(true)\n  createdAt DateTime @default(now())\n  animes    Anime[]\n\n  // Social graph (self-referential many-to-many through Follow)\n  following Follow[] @relation(\"Follower\")\n  followers Follow[] @relation(\"Following\")\n\n  @@index([username])\n}\n\nmodel Follow {\n  id          Int      @id @default(autoincrement())\n  followerId  Int\n  followingId Int\n  createdAt   DateTime @default(now())\n\n  follower  User @relation(\"Follower\", fields: [followerId], references: [id], onDelete: Cascade)\n  following User @relation(\"Following\", fields: [followingId], references: [id], onDelete: Cascade)\n\n  @@unique([followerId, followingId])\n  @@index([followerId])\n  @@index([followingId])\n}\n\nmodel Anime {\n  id                Int       @id @default(autoincrement())\n  name              String\n  normalizedName    String\n  season            Int\n  episodesWatched   Int       @default(0)\n  totalEpisodes     Int       @default(0)\n  status            String // \"completed\", \"incomplete\", \"dropped\"\n  imageUrl          String?\n  malId             Int? // For Jikan API linking (removed @unique for multi-user compatibility)\n  type              String    @default(\"TV\") // \"TV\", \"Movie\", \"OVA\", \"Special\"\n  originalOrder     Int? // Preserves the number from 1-601\n  watchOrder        Int? // Custom drag-and-drop ordering for \"Currently Watching\"\n  droppedAt         DateTime?\n  completedAt       DateTime?\n  airing            Boolean   @default(false)\n  broadcastDay      String?\n  broadcastTime     String?\n  broadcastTimezone String?\n  broadcastString   String?\n  airingStart       String?\n  createdAt         DateTime  @default(now())\n\n  // Owner relation\n  userId Int\n  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)\n\n  // Performance indexes and user-scoped uniqueness\n  @@unique([userId, normalizedName, season])\n  @@index([userId, status, createdAt])\n  @@index([userId, status, droppedAt])\n  @@index([userId, status, completedAt])\n  @@index([userId, status, originalOrder])\n  @@index([userId, status, watchOrder])\n  @@index([userId, normalizedName])\n}\n",
-  "inlineSchemaHash": "7803651b79dbe38b3285c7eea74c6891051df2c08aa7ed7c0b7465bbdaa70a94",
+  "inlineSchema": "generator client {\n  provider        = \"prisma-client-js\"\n  previewFeatures = [\"driverAdapters\"]\n  output          = \"./generated/client\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel User {\n  id        Int      @id @default(autoincrement())\n  email     String   @unique\n  username  String   @unique\n  password  String\n  name      String?\n  bio       String?\n  isPublic  Boolean  @default(true)\n  createdAt DateTime @default(now())\n  animes    Anime[]\n\n  // Social graph (self-referential many-to-many through Follow)\n  following Follow[] @relation(\"Follower\")\n  followers Follow[] @relation(\"Following\")\n\n  @@index([username])\n}\n\nmodel Follow {\n  id          Int      @id @default(autoincrement())\n  followerId  Int\n  followingId Int\n  createdAt   DateTime @default(now())\n\n  follower  User @relation(\"Follower\", fields: [followerId], references: [id], onDelete: Cascade)\n  following User @relation(\"Following\", fields: [followingId], references: [id], onDelete: Cascade)\n\n  @@unique([followerId, followingId])\n  @@index([followerId])\n  @@index([followingId])\n}\n\nmodel Anime {\n  id                Int       @id @default(autoincrement())\n  name              String\n  normalizedName    String\n  season            Int\n  episodesWatched   Int       @default(0)\n  totalEpisodes     Int       @default(0)\n  status            String // \"completed\", \"incomplete\", \"dropped\"\n  imageUrl          String?\n  malId             Int? // For Jikan API linking (removed @unique for multi-user compatibility)\n  type              String    @default(\"TV\") // \"TV\", \"Movie\", \"OVA\", \"Special\"\n  originalOrder     Int? // Preserves the number from 1-601\n  watchOrder        Int? // Custom drag-and-drop ordering for \"Currently Watching\"\n  droppedAt         DateTime?\n  completedAt       DateTime?\n  airing            Boolean   @default(false)\n  broadcastDay      String?\n  broadcastTime     String?\n  broadcastTimezone String?\n  broadcastString   String?\n  airingStart       String?\n  createdAt         DateTime  @default(now())\n\n  // Owner relation\n  userId Int\n  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)\n\n  // Performance indexes and user-scoped uniqueness.\n  // Season uniqueness is a PARTIAL unique index covering TV rows only:\n  //   CREATE UNIQUE INDEX ... (userId, normalizedName, season) WHERE type = 'TV'\n  // Prisma can't model partial indexes, so it lives in the migration\n  // 20260605000000_partial_season_unique (mirror: scripts/migrate-partial-season.ts),\n  // not as an @@unique() here. Movies/OVAs/Specials are intentionally left\n  // unconstrained so they never consume TV season slots.\n  @@index([userId, status, createdAt])\n  @@index([userId, status, droppedAt])\n  @@index([userId, status, completedAt])\n  @@index([userId, status, originalOrder])\n  @@index([userId, status, watchOrder])\n  @@index([userId, normalizedName])\n}\n",
+  "inlineSchemaHash": "295a2ec525550aeae5e1f9cb84b37eaf0f36656b660002d255f3bb1a326709ca",
   "copyEngine": true
 }
 config.dirname = '/'

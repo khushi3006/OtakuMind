@@ -10,6 +10,21 @@ import Logo from '@/components/Logo';
 
 
 import { calculateAiringCountdown, getLocalBroadcastDay, getUpcomingEpisodeNumber } from '@/lib/airing-utils';
+import { errorMessage } from '@/lib/api-error';
+
+/** Minimal shape of a Jikan search result used for the add-anime suggestions. */
+interface Suggestion {
+  mal_id: number;
+  title: string;
+  title_english?: string | null;
+  type?: string;
+  year?: number | null;
+  episodes?: number | null;
+  airing?: boolean;
+  images?: { jpg?: { image_url?: string } };
+  broadcast?: { day?: string | null; time?: string | null; timezone?: string | null; string?: string | null };
+  aired?: { from?: string | null };
+}
 
 type Anime = {
   id: number;
@@ -75,7 +90,7 @@ export default function Home() {
   const [animes, setAnimes] = useState<Anime[]>([]);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 20, total: 0, totalPages: 0 });
   const [searchQuery, setSearchQuery] = useState('');
-  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const [localSearchQuery, setLocalSearchQuery] = useState('');
@@ -382,8 +397,8 @@ export default function Home() {
         fetch(`/api/search?q=${searchQuery}&page=1`)
           .then(parseApiResponse)
           .then(data => {
-            const items = data.data || [];
-            const uniqueItems = Array.from(new Map(items.map((item: any) => [item.mal_id, item])).values()) as any[];
+            const items: Suggestion[] = data.data || [];
+            const uniqueItems = Array.from(new Map(items.map((item) => [item.mal_id, item] as [number, Suggestion])).values());
             setSuggestions(uniqueItems);
             setHasNextPage(data.pagination?.has_next_page || false);
             if (uniqueItems.length > 0) {
@@ -436,15 +451,15 @@ export default function Home() {
       const res = await fetch(`/api/search?q=${searchQuery}&page=${nextPage}`);
       const data = await parseApiResponse(res);
       setSuggestions(prev => {
-        const newItems = data.data || [];
+        const newItems: Suggestion[] = data.data || [];
         const combined = [...prev, ...newItems];
-        return Array.from(new Map(combined.map((item: any) => [item.mal_id, item])).values()) as any[];
+        return Array.from(new Map(combined.map((item) => [item.mal_id, item] as [number, Suggestion])).values());
       });
       setHasNextPage(data.pagination?.has_next_page || false);
       setSearchPage(nextPage);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e);
-      addToast(e.message || "Failed to load more anime suggestions", "warning");
+      addToast(errorMessage(e, "Failed to load more anime suggestions"), "warning");
     } finally {
       setIsSearching(false);
     }
@@ -457,7 +472,7 @@ export default function Home() {
     }
   };
 
-  const handleAddAnime = async (sugg: any) => {
+  const handleAddAnime = async (sugg: Suggestion) => {
     if (isAdding) return;
     setIsAdding(String(sugg.mal_id));
     
@@ -545,7 +560,7 @@ export default function Home() {
       setAnimes(prev => prev.map(a => a.id === id ? { ...a, ...updates } : a));
     }
 
-    const doPut = async (retryCount = 0): Promise<any> => {
+    const doPut = async (retryCount = 0): Promise<Anime> => {
       try {
         const res = await fetch(`/api/anime/${id}`, {
           method: 'PUT',
@@ -553,8 +568,8 @@ export default function Home() {
           body: JSON.stringify(updates)
         });
         return await parseApiResponse(res);
-      } catch (e: any) {
-        const msg = e.message || String(e);
+      } catch (e: unknown) {
+        const msg = errorMessage(e, String(e));
         if ((msg.includes('SSL connection') || msg.includes('consuming input failed') || msg.includes('Database error') || msg.includes('ENOTFOUND') || msg.includes('getaddrinfo') || msg.includes("Can't reach database server")) && retryCount < 3) {
           await new Promise(r => setTimeout(r, 3000));
           return doPut(retryCount + 1);
@@ -722,8 +737,8 @@ export default function Home() {
       addToast(`Updated "${editName.trim()}" successfully!`, 'success');
       setShowEditModal(false);
       setPendingAnime(null);
-    } catch (e: any) {
-      setEditError(e.message || "Failed to save changes. Please try again.");
+    } catch (e: unknown) {
+      setEditError(errorMessage(e, "Failed to save changes. Please try again."));
     } finally {
       setIsSavingEdit(false);
     }

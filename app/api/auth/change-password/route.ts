@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getSession, verifyPassword, hashPassword } from '@/lib/auth';
+import { errorMessage } from '@/lib/api-error';
 
 export async function POST(request: Request) {
   try {
@@ -44,8 +45,8 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ message: 'Password changed successfully' });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Change password error:', error);
-    return NextResponse.json({ error: error.message || 'Server error' }, { status: 500 });
+    return NextResponse.json({ error: errorMessage(error) }, { status: 500 });
   }
 }
