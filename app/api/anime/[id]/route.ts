@@ -31,7 +31,7 @@ export async function PUT(
     
     const currentAnime = await db.anime.findFirst({
       where: { id: animeId, userId },
-      select: { status: true, watchOrder: true, type: true, episodesWatched: true, totalEpisodes: true },
+      select: { status: true, watchOrder: true, type: true, episodesWatched: true, totalEpisodes: true, normalizedName: true, season: true },
     });
 
     if (!currentAnime) {
@@ -85,6 +85,41 @@ export async function PUT(
       }
       if (updatedSeason === undefined) {
         updatedSeason = extractSeasonNumber(name);
+      }
+    }
+
+    // Resolve (normalizedName, season) collisions the same way POST /api/anime does.
+    // A franchise's movies (and re-slugged seasons) all normalize to season 1, so giving
+    // a movie the shared franchise slug collides with the existing season-1 row — or with
+    // another movie already filed under that slug. Keep the shared slug and bump this row to
+    // the next free season number; the UI renders "Movie" regardless of the number
+    // (see formatSeasonText), so this disambiguator stays invisible while still satisfying
+    // @@unique([userId, normalizedName, season]).
+    if (updatedNormalizedName !== undefined || updatedSeason !== undefined) {
+      const effectiveNormalizedName = updatedNormalizedName ?? currentAnime.normalizedName;
+      const effectiveSeason = updatedSeason ?? currentAnime.season;
+
+      const collision = await db.anime.findFirst({
+        where: {
+          userId,
+          normalizedName: effectiveNormalizedName,
+          season: effectiveSeason,
+          id: { not: animeId },
+        },
+        select: { id: true },
+      });
+
+      if (collision) {
+        const siblings = await db.anime.findMany({
+          where: {
+            userId,
+            normalizedName: effectiveNormalizedName,
+            id: { not: animeId },
+          },
+          select: { season: true },
+        });
+        const maxSeason = siblings.reduce((max, curr) => Math.max(max, curr.season), 0);
+        updatedSeason = maxSeason + 1;
       }
     }
 
