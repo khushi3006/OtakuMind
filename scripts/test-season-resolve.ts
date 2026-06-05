@@ -1,10 +1,6 @@
 /**
  * Standalone verification for lib/season-resolve.ts (the repo has no test runner).
  * Run with:  npx tsx scripts/test-season-resolve.ts
- *
- * Encodes the behaviour the season fix must guarantee, including the cases that
- * were broken before (manual edits getting silently renumbered; movies eating
- * TV season slots).
  */
 import { resolveSeason, type SeasonResolution } from '../lib/season-resolve';
 
@@ -13,7 +9,9 @@ let failed = 0;
 
 function expect(label: string, actual: SeasonResolution, expected: SeasonResolution) {
   const ok =
-    actual.kind === expected.kind && actual.season === expected.season;
+    actual.kind === expected.kind &&
+    actual.season === expected.season &&
+    (actual.part ?? null) === (expected.part ?? null);
   if (ok) {
     passed++;
     console.log(`  ok   ${label}`);
@@ -25,55 +23,70 @@ function expect(label: string, actual: SeasonResolution, expected: SeasonResolut
   }
 }
 
-// 1. A movie passes through even if its number clashes with a TV sibling —
-//    movies no longer consume / are blocked by TV season slots.
+// Non-TV rows pass through (outside the TV partial index).
 expect(
   'Movie passes through despite clash',
-  resolveSeason({ type: 'Movie', season: 1, explicit: false, tvSiblingSeasons: [1, 2] }),
-  { kind: 'ok', season: 1 }
+  resolveSeason({ type: 'Movie', season: 1, part: null, explicit: false, tvSiblings: [{ season: 1, part: null }, { season: 2, part: null }] }),
+  { kind: 'ok', season: 1, part: null }
 );
-
-// 2. OVA/Special are likewise outside numbering.
 expect(
   'OVA passes through',
-  resolveSeason({ type: 'OVA', season: 3, explicit: true, tvSiblingSeasons: [3] }),
-  { kind: 'ok', season: 3 }
+  resolveSeason({ type: 'OVA', season: 3, part: null, explicit: true, tvSiblings: [{ season: 3, part: null }] }),
+  { kind: 'ok', season: 3, part: null }
 );
 
-// 3. TV with a free season is unchanged.
+// TV, no part (existing behaviour preserved).
 expect(
   'TV free season',
-  resolveSeason({ type: 'TV', season: 3, explicit: false, tvSiblingSeasons: [1, 2] }),
-  { kind: 'ok', season: 3 }
+  resolveSeason({ type: 'TV', season: 3, part: null, explicit: false, tvSiblings: [{ season: 1, part: null }, { season: 2, part: null }] }),
+  { kind: 'ok', season: 3, part: null }
 );
-
-// 4. THE FIX: explicit user edit to a free slot sticks (Alicization -> Season 3
-//    with only TV siblings 1 & 2; the movies that used to occupy 3/4 are excluded).
 expect(
-  'Explicit edit to free TV slot sticks (SAO Alicization=3)',
-  resolveSeason({ type: 'TV', season: 3, explicit: true, tvSiblingSeasons: [1, 2] }),
-  { kind: 'ok', season: 3 }
+  'Explicit edit to free TV slot sticks',
+  resolveSeason({ type: 'TV', season: 3, part: null, explicit: true, tvSiblings: [{ season: 1, part: null }, { season: 2, part: null }] }),
+  { kind: 'ok', season: 3, part: null }
 );
-
-// 5. Explicit edit onto a real TV clash is reported (NOT silently bumped to 7).
 expect(
   'Explicit edit onto real TV clash -> collision',
-  resolveSeason({ type: 'TV', season: 2, explicit: true, tvSiblingSeasons: [1, 2] }),
-  { kind: 'collision', season: 2 }
+  resolveSeason({ type: 'TV', season: 2, part: null, explicit: true, tvSiblings: [{ season: 1, part: null }, { season: 2, part: null }] }),
+  { kind: 'collision', season: 2, part: null }
 );
-
-// 6. Auto-derived clash still bumps past the highest TV sibling (imports survive).
 expect(
   'Auto-derived clash bumps to max+1',
-  resolveSeason({ type: 'TV', season: 1, explicit: false, tvSiblingSeasons: [1, 2, 3] }),
-  { kind: 'ok', season: 4 }
+  resolveSeason({ type: 'TV', season: 1, part: null, explicit: false, tvSiblings: [{ season: 1, part: null }, { season: 2, part: null }, { season: 3, part: null }] }),
+  { kind: 'ok', season: 4, part: null }
 );
-
-// 7. First TV entry of a franchise (no siblings) keeps its season.
 expect(
   'First TV entry, no siblings',
-  resolveSeason({ type: 'TV', season: 1, explicit: false, tvSiblingSeasons: [] }),
-  { kind: 'ok', season: 1 }
+  resolveSeason({ type: 'TV', season: 1, part: null, explicit: false, tvSiblings: [] }),
+  { kind: 'ok', season: 1, part: null }
+);
+
+// NEW: split-cour parts.
+expect(
+  'Explicit Season 4 Part 2 alongside Part 1 is allowed',
+  resolveSeason({ type: 'TV', season: 4, part: 2, explicit: true, tvSiblings: [{ season: 4, part: 1 }] }),
+  { kind: 'ok', season: 4, part: 2 }
+);
+expect(
+  'Explicit Season 4 Part 2 onto an existing Part 2 -> collision',
+  resolveSeason({ type: 'TV', season: 4, part: 2, explicit: true, tvSiblings: [{ season: 4, part: 2 }] }),
+  { kind: 'collision', season: 4, part: 2 }
+);
+expect(
+  'Null part is distinct from a numbered part (Season 4 vs Season 4 Part 1)',
+  resolveSeason({ type: 'TV', season: 4, part: null, explicit: true, tvSiblings: [{ season: 4, part: 1 }] }),
+  { kind: 'ok', season: 4, part: null }
+);
+expect(
+  'Two null parts at the same season collide',
+  resolveSeason({ type: 'TV', season: 4, part: null, explicit: true, tvSiblings: [{ season: 4, part: null }] }),
+  { kind: 'collision', season: 4, part: null }
+);
+expect(
+  'Auto-derived part clash bumps season, keeps the part',
+  resolveSeason({ type: 'TV', season: 1, part: 2, explicit: false, tvSiblings: [{ season: 1, part: 2 }, { season: 2, part: null }] }),
+  { kind: 'ok', season: 3, part: 2 }
 );
 
 console.log(`\n${passed} passed, ${failed} failed`);
