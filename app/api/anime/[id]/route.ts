@@ -27,11 +27,11 @@ export async function PUT(
     const { id } = await params;
     const animeId = parseInt(id, 10);
     const body = await request.json();
-    const { name, totalEpisodes, episodesWatched, status, watchOrder, season, normalizedName, type } = body;
+    const { name, totalEpisodes, episodesWatched, status, watchOrder, season, part, normalizedName, type } = body;
     
     const currentAnime = await db.anime.findFirst({
       where: { id: animeId, userId },
-      select: { status: true, watchOrder: true, type: true, episodesWatched: true, totalEpisodes: true, normalizedName: true, season: true },
+      select: { status: true, watchOrder: true, type: true, episodesWatched: true, totalEpisodes: true, normalizedName: true, season: true, part: true },
     });
 
     if (!currentAnime) {
@@ -80,6 +80,7 @@ export async function PUT(
     const seasonWasExplicit = season !== undefined;
     let updatedNormalizedName = normalizedName !== undefined ? normalizedName : undefined;
     let updatedSeason = season !== undefined ? season : undefined;
+    let updatedPart = part !== undefined ? part : undefined;
     if (name !== undefined) {
       if (updatedNormalizedName === undefined) {
         updatedNormalizedName = normalizeAnimeName(name);
@@ -89,19 +90,13 @@ export async function PUT(
       }
     }
 
-    // Resolve (normalizedName, season) collisions, scoped to TV rows only.
-    // The partial unique index covers type = 'TV', so movies/OVAs/specials are
-    // never numbered and skip this entirely (a movie can share a number with a
-    // TV season under the same slug). For TV rows: an explicit user edit is
-    // honoured — a genuine clash is reported with a 409 rather than silently
-    // renumbered — while an auto-derived season (from a name change or re-slug)
-    // bumps past the highest TV sibling to keep imports working.
     if (
       targetType === 'TV' &&
-      (updatedNormalizedName !== undefined || updatedSeason !== undefined || type !== undefined)
+      (updatedNormalizedName !== undefined || updatedSeason !== undefined || updatedPart !== undefined || type !== undefined)
     ) {
       const effectiveNormalizedName = updatedNormalizedName ?? currentAnime.normalizedName;
       const effectiveSeason = updatedSeason ?? currentAnime.season;
+      const effectivePart = updatedPart !== undefined ? updatedPart : currentAnime.part;
 
       const tvSiblings = await db.anime.findMany({
         where: {
@@ -110,30 +105,37 @@ export async function PUT(
           type: 'TV',
           id: { not: animeId },
         },
-        select: { season: true },
+        select: { season: true, part: true },
       });
 
       const resolution = resolveSeason({
         type: 'TV',
         season: effectiveSeason,
+        part: effectivePart,
         explicit: seasonWasExplicit,
-        tvSiblingSeasons: tvSiblings.map((s) => s.season),
+        tvSiblings: tvSiblings.map((s) => ({ season: s.season, part: s.part })),
       });
 
       if (resolution.kind === 'collision') {
+        const label =
+          resolution.part != null
+            ? `Season ${resolution.season} · Part ${resolution.part}`
+            : `Season ${resolution.season}`;
         return NextResponse.json(
-          { error: `Season ${resolution.season} already exists for this franchise.` },
+          { error: `${label} already exists for this franchise.` },
           { status: 409 }
         );
       }
 
       updatedSeason = resolution.season;
+      updatedPart = resolution.part;
     }
 
     const updateData = {
       name: name !== undefined ? name : undefined,
       normalizedName: updatedNormalizedName,
       season: updatedSeason,
+      part: targetType !== 'TV' ? null : updatedPart,
       type: type !== undefined ? type : undefined,
       totalEpisodes: targetType === 'Movie' ? 0 : (totalEpisodes !== undefined ? totalEpisodes : undefined),
       episodesWatched: targetType === 'Movie' ? 0 : (episodesWatched !== undefined ? episodesWatched : undefined),
