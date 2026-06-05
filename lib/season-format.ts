@@ -21,7 +21,7 @@ export function parseSeasonField(value: string): { season: number; part: number 
   const partMatch = raw.match(/(?:part|cour)\s*(\d+)/i);
   const part = partMatch ? parseInt(partMatch[1], 10) : null;
   const normalized = raw
-    .replace(/(?:part|cour)\s*\d+/i, '')
+    .replace(/(?:part|cour)\s*\d+/gi, '')
     .replace(/·/g, ' ')
     .trim()
     .toLowerCase();

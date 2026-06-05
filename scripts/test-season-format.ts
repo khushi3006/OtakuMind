@@ -33,6 +33,8 @@ eq('parse "Season 4 Part 2"', parseSeasonField('Season 4 Part 2'), { season: 4, 
 eq('parse "Final Season Part 2"', parseSeasonField('Final Season Part 2'), { season: 99, part: 2, type: 'TV' });
 eq('parse "Movie"', parseSeasonField('Movie'), { season: 1, part: null, type: 'Movie' });
 eq('parse "OVA"', parseSeasonField('OVA'), { season: 1, part: null, type: 'OVA' });
+// Regression: a second part-keyword must be stripped too, so its digit never bleeds into season.
+eq('part digit does not bleed into season', parseSeasonField('Cour 1 Part 2'), { season: 1, part: 1, type: 'TV' });
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);
