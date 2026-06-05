@@ -4647,4 +4647,38 @@ body:has(.dashboard-home) {
   text-decoration: underline;
 }
 
+/* Site footer */
+.site-footer {
+  max-width: 1200px;
+  margin: 4rem auto 0;
+  padding: 1.5rem 2rem 2rem;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.site-footer-copy {
+  margin: 0;
+}
+
+.site-footer-nav {
+  display: flex;
+  gap: 1.25rem;
+}
+
+.site-footer-link {
+  color: var(--text-secondary);
+  transition: color 0.2s;
+}
+
+.site-footer-link:hover {
+  color: var(--accent-color);
+  text-decoration: underline;
+}
+
 
