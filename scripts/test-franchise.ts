@@ -77,6 +77,37 @@ const coteGraph: Record<number, RelationEntry[]> = {
     !excl.nodes.some((n) => n.malId === 999 || n.malId === 998)
   );
 
+  // --- spine-first traversal reaches the true root even under a tight budget ---
+  // Seeded from S3 whose side stories are listed BEFORE the prequel; a plain FIFO
+  // walk would spend the budget on side stories and miss S1 (the real root).
+  const spineGraph: Record<number, RelationEntry[]> = {
+    300: [
+      { relation: 'Side story', malId: 901, name: 'OVA A' },
+      { relation: 'Side story', malId: 902, name: 'OVA B' },
+      { relation: 'Side story', malId: 903, name: 'OVA C' },
+      { relation: 'Prequel', malId: 200, name: 'S2' },
+    ],
+    200: [
+      { relation: 'Sequel', malId: 300, name: 'S3' },
+      { relation: 'Prequel', malId: 100, name: 'S1' },
+    ],
+    100: [{ relation: 'Sequel', malId: 200, name: 'S2' }],
+    901: [],
+    902: [],
+    903: [],
+  };
+  const spineComp = await buildComponent(300, 'S3', fakeRelations(spineGraph), { maxNodes: 30, maxApiCalls: 2 });
+  expect(
+    'spine-first reaches the true root (100) under maxApiCalls=2',
+    spineComp.nodes.some((n) => n.malId === 100),
+    JSON.stringify(spineComp.nodes.map((n) => n.malId))
+  );
+  expect(
+    'spine-first canonical root = S1 (100), not a side story',
+    pickCanonicalRoot(spineComp).malId === 100,
+    `got ${pickCanonicalRoot(spineComp).malId}`
+  );
+
   // --- truncation flags ---
   const truncCalls = await buildComponent(100, 'Classroom of the Elite', fakeRelations(coteGraph), { maxNodes: 30, maxApiCalls: 1 });
   expect('maxApiCalls=1 sets truncated', truncCalls.truncated === true);

@@ -15,6 +15,16 @@ const EXCLUDED_RELATIONS = new Set(['character', 'other']);
 /** Relation types meaning "current entry comes AFTER the target" (origin edges). */
 const BACKWARD_RELATIONS = new Set(['prequel', 'parent story']);
 
+/**
+ * Relations that form the main narrative timeline. We expand these FIRST so the
+ * earliest entry of a long franchise is reached before the node/call budget runs
+ * out — otherwise seeding from a late season (e.g. Re:Zero S4) could exhaust the
+ * budget on side stories/OVAs and never reach Season 1, picking a side entry as
+ * the canonical root. Side relations (alternative version, side story, spin-off,
+ * summary, …) are still followed for "widest" grouping, just at lower priority.
+ */
+const SPINE_RELATIONS = new Set(['prequel', 'sequel', 'parent story', 'full story']);
+
 export type FranchiseNode = { malId: number; name: string };
 
 export type FranchiseComponent = {
@@ -37,12 +47,17 @@ export async function buildComponent(
   const nodes = new Map<number, string>([[seedMalId, seedName]]);
   const backEdges: Array<{ from: number; to: number }> = [];
   const visited = new Set<number>();
-  const frontier: number[] = [seedMalId];
+  // Two-tier frontier: spine nodes (on the main timeline, reached from the seed
+  // via spine edges) are expanded before side nodes, so the chain root is found
+  // within budget regardless of how many side stories hang off later seasons.
+  const spine = new Set<number>([seedMalId]);
+  const spineFrontier: number[] = [seedMalId];
+  const sideFrontier: number[] = [];
   let apiCalls = 0;
   let truncated = false;
 
-  while (frontier.length > 0) {
-    const current = frontier.shift()!;
+  while (spineFrontier.length > 0 || sideFrontier.length > 0) {
+    const current = (spineFrontier.length > 0 ? spineFrontier : sideFrontier).shift()!;
     if (visited.has(current)) continue;
     if (apiCalls >= bounds.maxApiCalls) {
       truncated = true;
@@ -53,9 +68,14 @@ export async function buildComponent(
     const relations = await getRelations(current);
     apiCalls++;
 
+    const currentIsSpine = spine.has(current);
+
     for (const rel of relations) {
       const type = rel.relation.toLowerCase();
       if (EXCLUDED_RELATIONS.has(type)) continue;
+
+      // A neighbour is on the spine when reached via a spine edge from a spine node.
+      const childIsSpine = currentIsSpine && SPINE_RELATIONS.has(type);
 
       if (!nodes.has(rel.malId)) {
         if (nodes.size >= bounds.maxNodes) {
@@ -64,10 +84,13 @@ export async function buildComponent(
         }
         nodes.set(rel.malId, rel.name);
       }
+      if (childIsSpine) spine.add(rel.malId);
       if (BACKWARD_RELATIONS.has(type)) {
         backEdges.push({ from: current, to: rel.malId });
       }
-      if (!visited.has(rel.malId)) frontier.push(rel.malId);
+      if (!visited.has(rel.malId)) {
+        (childIsSpine ? spineFrontier : sideFrontier).push(rel.malId);
+      }
     }
   }
 
