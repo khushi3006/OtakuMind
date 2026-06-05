@@ -56,6 +56,18 @@ export function extractSeasonNumber(name: string): number {
   return 1;
 }
 
+/**
+ * Detect a split-cour part number from a title: "2nd-cour", "Part 2", "Cour 2".
+ * Returns null when the title names no part (a normal single season).
+ */
+export function extractPartNumber(name: string): number | null {
+  const ordinalCour = name.match(/(\d+)(?:st|nd|rd|th)[\s-]*cour/i);
+  if (ordinalCour) return parseInt(ordinalCour[1], 10);
+  const partOrCour = name.match(/\b(?:part|cour)\s*(\d+)/i);
+  if (partOrCour) return parseInt(partOrCour[1], 10);
+  return null;
+}
+
 export function inferAnimeType(name: string): string {
   const lowercase = name.toLowerCase();
   
