@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getSession, verifyPassword, hashPassword } from '@/lib/auth';
 import { errorMessage } from '@/lib/api-error';
+import { sendEmail } from '@/lib/email';
+import { passwordChangedEmail } from '@/lib/email-templates';
 
 export async function POST(request: Request) {
   try {
@@ -43,6 +45,14 @@ export async function POST(request: Request) {
       where: { id: session.userId },
       data: { password: newHashedPassword },
     });
+
+    // Best-effort security notification — never block the response on email.
+    try {
+      const { subject, html, text } = passwordChangedEmail();
+      await sendEmail({ to: user.email, subject, html, text });
+    } catch (e) {
+      console.error('password-changed email failed:', e);
+    }
 
     return NextResponse.json({ message: 'Password changed successfully' });
   } catch (error: unknown) {
