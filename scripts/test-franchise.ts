@@ -4,7 +4,9 @@
  */
 import { buildComponent, pickCanonicalRoot, canonicalSlugFor } from '../lib/franchise';
 import type { GetRelations, RelationEntry } from '../lib/mal-relations';
+import { parseRelationsPayload } from '../lib/mal-relations';
 import { planSeasons } from '../lib/season-reassign';
+import { resolveFranchise, localSlug, looseFranchiseMatch } from '../lib/franchise-resolve';
 
 let passed = 0;
 let failed = 0;
@@ -132,6 +134,87 @@ const coteGraph: Record<number, RelationEntry[]> = {
     clash.find((a) => a.id === 1)?.season === 1 && clash.find((a) => a.id === 2)?.season === 2,
     JSON.stringify(clash)
   );
+
+  // --- parseRelationsPayload: keep anime entries, drop manga & malformed ---
+  const parsed = parseRelationsPayload({
+    data: [
+      { relation: 'Prequel', entry: [{ mal_id: 100, type: 'anime', name: 'S1' }] },
+      { relation: 'Adaptation', entry: [{ mal_id: 7, type: 'manga', name: 'Manga' }] },
+      { relation: 'Sequel', entry: [{ mal_id: 300, type: 'anime', name: 'S3' }] },
+    ],
+  });
+  expect('parser keeps only the 2 anime entries', parsed.length === 2, JSON.stringify(parsed));
+  expect(
+    'parser maps fields correctly',
+    parsed[0].malId === 100 && parsed[0].relation === 'Prequel' && parsed[0].name === 'S1'
+  );
+  expect('parser handles non-object input', parseRelationsPayload(null).length === 0);
+
+  // --- resolveFranchise MAL path: groups via relations, canonical slug ---
+  const r1 = await resolveFranchise({
+    userId: 1,
+    name: 'Classroom of the Elite II',
+    malId: 200,
+    existingSlugs: [],
+    getRelations: fakeRelations(coteGraph),
+  });
+  expect('resolve MAL slug = canonical root', r1.slug === 'classroom of the elite', `got "${r1.slug}"`);
+  expect(
+    'resolve MAL memberMalIds = {100,200,300}',
+    [100, 200, 300].every((id) => r1.memberMalIds.includes(id)) && r1.memberMalIds.length === 3,
+    JSON.stringify(r1.memberMalIds)
+  );
+
+  // --- resolveFranchise no-malId path: conservative fuzzy adopts existing slug ---
+  const r2 = await resolveFranchise({
+    userId: 1,
+    name: 'Classroom of the Elite II Extra',
+    malId: null,
+    existingSlugs: ['classroom of the elite'],
+    getRelations: fakeRelations({}),
+  });
+  expect('resolve no-malId fuzzy adopts existing slug', r2.slug === 'classroom of the elite', `got "${r2.slug}"`);
+  expect('resolve no-malId memberMalIds empty', r2.memberMalIds.length === 0);
+
+  // --- looseFranchiseMatch: positive, and false-merge guards ---
+  expect(
+    'fuzzy: subset + shared first word matches',
+    looseFranchiseMatch('classroom of the elite ii', ['classroom of the elite']) === 'classroom of the elite'
+  );
+  expect(
+    'fuzzy: shared first word but not subset -> null (SAO vs Sword of the Stranger)',
+    looseFranchiseMatch('sword art online', ['sword of the stranger']) === null
+  );
+  expect('fuzzy: single-token candidate -> null', looseFranchiseMatch('naruto', ['naruto shippuuden']) === null);
+  expect(
+    'fuzzy: candidate is subset of existing matches (branch 2)',
+    looseFranchiseMatch('sword art', ['sword art online']) === 'sword art online'
+  );
+  expect(
+    'fuzzy: among matches, fewest-token slug wins',
+    looseFranchiseMatch('classroom of the elite iii', [
+      'classroom of the elite extra',
+      'classroom of the elite',
+    ]) === 'classroom of the elite'
+  );
+
+  // --- resolveFranchise single-node MAL path: standalone malId, no relations ---
+  const r3 = await resolveFranchise({
+    userId: 1,
+    name: 'Some Standalone',
+    malId: 999,
+    existingSlugs: [],
+    getRelations: fakeRelations({}),
+  });
+  expect(
+    'resolve single-node MAL: localSlug + memberMalIds=[malId]',
+    r3.slug === 'some standalone' && r3.memberMalIds.length === 1 && r3.memberMalIds[0] === 999,
+    JSON.stringify(r3)
+  );
+
+  // --- localSlug: exact match wins; otherwise base slug ---
+  expect('localSlug exact', localSlug('naruto', ['naruto']) === 'naruto');
+  expect('localSlug no match -> base', localSlug('bleach', ['naruto']) === 'bleach');
 
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed === 0 ? 0 : 1);
