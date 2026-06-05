@@ -135,6 +135,45 @@ const coteGraph: Record<number, RelationEntry[]> = {
     JSON.stringify(clash)
   );
 
+  // --- (season, part): split-cour parts of the same season coexist (no bump) ---
+  const cour = planSeasons([
+    { id: 1, type: 'TV', season: 2, part: 1 },
+    { id: 2, type: 'TV', season: 2, part: 2 },
+  ]);
+  expect(
+    'S2P1 + S2P2 coexist at season 2',
+    cour.find((a) => a.id === 1)?.season === 2 &&
+      cour.find((a) => a.id === 1)?.part === 1 &&
+      cour.find((a) => a.id === 2)?.season === 2 &&
+      cour.find((a) => a.id === 2)?.part === 2,
+    JSON.stringify(cour)
+  );
+
+  // --- (season, part): two rows at the SAME (season, part) collide -> bump season, keep part ---
+  const dupPart = planSeasons([
+    { id: 1, type: 'TV', season: 2, part: 1 },
+    { id: 2, type: 'TV', season: 2, part: 1 },
+  ]);
+  expect(
+    'duplicate S2P1 -> id1 (2,1), id2 bumps to (3,1)',
+    dupPart.find((a) => a.id === 1)?.season === 2 &&
+      dupPart.find((a) => a.id === 1)?.part === 1 &&
+      dupPart.find((a) => a.id === 2)?.season === 3 &&
+      dupPart.find((a) => a.id === 2)?.part === 1,
+    JSON.stringify(dupPart)
+  );
+
+  // --- (season, part): a null-part row and a part-1 row at the same season coexist ---
+  const nullVsPart = planSeasons([
+    { id: 1, type: 'TV', season: 2, part: null },
+    { id: 2, type: 'TV', season: 2, part: 1 },
+  ]);
+  expect(
+    'S2(null) + S2P1 coexist (null != 1)',
+    nullVsPart.find((a) => a.id === 1)?.season === 2 && nullVsPart.find((a) => a.id === 2)?.season === 2,
+    JSON.stringify(nullVsPart)
+  );
+
   // --- parseRelationsPayload: keep anime entries, drop manga & malformed ---
   const parsed = parseRelationsPayload({
     data: [

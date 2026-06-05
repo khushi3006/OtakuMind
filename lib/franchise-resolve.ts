@@ -1,7 +1,6 @@
 /**
- * Franchise resolution, shared by the anime POST/PUT routes and the backfill
- * migration. (The DB merge helpers are added during route integration, once the
- * season model is finalized — kept out of this file deliberately for now.)
+ * Franchise resolution + DB merge helpers, shared by the anime POST/PUT routes
+ * and the backfill migration.
  *
  * `resolveFranchise` decides the canonical slug for an anime being written:
  *   1. MAL path (malId present, relations reachable): build the related-web
@@ -9,10 +8,16 @@
  *   2. Local fallback (no malId / relations unavailable): exact slug match, else
  *      a conservative token-subset fuzzy match against the user's existing slugs,
  *      else the plain normalized title.
+ *
+ * The DB helpers run a two-phase merge so a franchise convergence never trips the
+ * partial unique index: park every TV row to a unique negative season first, then
+ * assign collision-free final (season, part) pairs.
  */
+import type { Prisma } from '../prisma/generated/client';
 import { normalizeAnimeName } from './normalize';
 import { buildComponent, canonicalSlugFor } from './franchise';
 import { getRelations as defaultGetRelations, type GetRelations } from './mal-relations';
+import type { SeasonAssignment } from './season-reassign';
 
 const BUILD_BOUNDS = { maxNodes: 30, maxApiCalls: 30 };
 
@@ -90,4 +95,73 @@ export function looseFranchiseMatch(candidate: string, existingSlugs: string[]):
     }
   }
   return best;
+}
+
+// --- DB merge helpers (two-phase, run inside a transaction) ---
+
+type TxClient = Prisma.TransactionClient;
+
+export type FranchiseDbRow = {
+  id: number;
+  type: string;
+  season: number;
+  part: number | null;
+  normalizedName: string;
+};
+
+/**
+ * Existing rows that belong under `slug`: same normalizedName OR malId in the
+ * franchise's member set. Used to gather everything that must converge on merge.
+ */
+export async function findFranchiseRows(
+  tx: TxClient,
+  userId: number,
+  slug: string,
+  memberMalIds: number[]
+): Promise<FranchiseDbRow[]> {
+  return tx.anime.findMany({
+    where: {
+      userId,
+      OR: [
+        { normalizedName: slug },
+        ...(memberMalIds.length ? [{ malId: { in: memberMalIds } }] : []),
+      ],
+    },
+    select: { id: true, type: true, season: true, part: true, normalizedName: true },
+  });
+}
+
+/**
+ * Phase A: move every row under `slug`; park each TV row at a unique negative
+ * season (-id) so no positive (season, part) slot is occupied during the merge.
+ * Non-TV rows are outside the unique index, so they only take the slug.
+ */
+export async function parkRows(
+  tx: TxClient,
+  slug: string,
+  rows: Array<{ id: number; type: string }>
+): Promise<void> {
+  for (const r of rows) {
+    await tx.anime.update({
+      where: { id: r.id },
+      data: r.type === 'TV' ? { normalizedName: slug, season: -r.id } : { normalizedName: slug },
+    });
+  }
+}
+
+/**
+ * Phase B: assign final (season, part) to the TV rows (others are untouched).
+ * Every row starts at a parked non-positive season, and the finals are mutually
+ * unique, so applying them in any order never trips the unique index.
+ */
+export async function applyFinalSeasons(
+  tx: TxClient,
+  assignments: SeasonAssignment[],
+  tvIds: Set<number>
+): Promise<void> {
+  for (const a of assignments) {
+    if (tvIds.has(a.id)) {
+      await tx.anime.update({ where: { id: a.id }, data: { season: a.season, part: a.part } });
+    }
+  }
 }
