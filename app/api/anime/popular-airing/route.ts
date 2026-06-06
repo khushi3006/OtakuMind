@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { errorMessage } from '@/lib/api-error';
+import { fetchAniListAiring } from '@/lib/anilist';
 
 interface PopularAnime {
   mal_id: number;
@@ -13,6 +14,8 @@ interface PopularAnime {
   synopsis: string | null;
   episodes: number;
   aired: unknown;
+  nextEpisode: number | null;
+  nextEpisodeAt: number | null;
 }
 
 interface PopularPayload {
@@ -73,7 +76,23 @@ export async function GET() {
         synopsis: anime.synopsis || null,
         episodes: anime.episodes || 0,
         aired: anime.aired || null,
+        nextEpisode: null,
+        nextEpisodeAt: null,
       });
+    }
+
+    // Attach the real next-episode number + exact air time from AniList (cached,
+    // best-effort). Cached alongside the payload so we don't re-query every load.
+    const airingIds = formattedData.filter((a) => a.airing).map((a) => a.mal_id);
+    if (airingIds.length > 0) {
+      const airingMap = await fetchAniListAiring(airingIds);
+      for (const item of formattedData) {
+        const info = airingMap.get(item.mal_id);
+        if (info) {
+          item.nextEpisode = info.episode;
+          item.nextEpisodeAt = info.airingAt;
+        }
+      }
     }
 
     const responsePayload = { data: formattedData };

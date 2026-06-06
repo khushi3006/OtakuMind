@@ -9,7 +9,7 @@ import Toast, { type ToastMessage } from '@/components/Toast';
 import Logo from '@/components/Logo';
 
 
-import { calculateAiringCountdown, getLocalBroadcastDay, getUpcomingEpisodeNumber } from '@/lib/airing-utils';
+import { calculateAiringCountdown, countdownFromAiringAt } from '@/lib/airing-utils';
 import { errorMessage } from '@/lib/api-error';
 import { formatSeasonText, parseSeasonField } from '@/lib/season-format';
 
@@ -45,6 +45,8 @@ type Anime = {
   broadcastTimezone: string | null;
   broadcastString: string | null;
   airingStart?: string | null;
+  nextEpisode?: number | null;
+  nextEpisodeAt?: number | null;
   type: string;
 };
 
@@ -917,10 +919,9 @@ export default function Home() {
                           <div className="anime-title-row">
                             <span className="anime-title-main">{anime.name}</span>
                             {anime.airing && (() => {
-                              const countdown = calculateAiringCountdown(anime.broadcastDay, anime.broadcastTime);
+                              const countdown = countdownFromAiringAt(anime.nextEpisodeAt) ?? calculateAiringCountdown(anime.broadcastDay, anime.broadcastTime);
                               if (!countdown) return null;
-                              const upcomingEp = getUpcomingEpisodeNumber(anime.airingStart);
-                              const label = upcomingEp ? `Ep ${upcomingEp} ${countdown.label}` : `Next episode ${countdown.label}`;
+                              const label = anime.nextEpisode ? `Ep ${anime.nextEpisode} ${countdown.label}` : `Next episode ${countdown.label}`;
                               return (
                                 <span className={`airing-pill-badge ${countdown.isAiringNow ? 'airing-now' : countdown.isToday ? 'airing-today' : ''}`} title={anime.broadcastString || ''}>
                                   {countdown.isAiringNow ? '🟢 Airing Now' : label}

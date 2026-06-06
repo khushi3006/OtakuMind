@@ -7,6 +7,7 @@ import type { Prisma } from '@/prisma/generated/client';
 import { withDeadlockRetry } from '@/lib/deadlock-retry';
 import { WATCH_ORDER_TRANSACTION_OPTIONS } from '@/lib/transaction-options';
 import { getSession } from '@/lib/auth';
+import { enrichWithAiring } from '@/lib/anilist';
 
 const ALLOWED_LIMITS = [20, 50, 100] as const;
 
@@ -105,8 +106,12 @@ export async function GET(request: Request) {
       ]);
     }
 
+    // Enrich airing rows with the real next-episode number + exact air time from
+    // AniList (cached, best-effort — never blocks or fails the list).
+    const data = await enrichWithAiring(animes);
+
     const result = {
-      data: animes,
+      data,
       pagination: {
         page,
         limit,

@@ -17,7 +17,7 @@ import {
   ExternalLink,
   Sparkles
 } from 'lucide-react';
-import { calculateAiringCountdown, getLocalBroadcastDay, getUpcomingEpisodeNumber, getISTBroadcastDetails, getISTDate } from '@/lib/airing-utils';
+import { calculateAiringCountdown, countdownFromAiringAt, getLocalBroadcastDay, getISTBroadcastDetails, getISTDate } from '@/lib/airing-utils';
 import Toast, { type ToastMessage } from '@/components/Toast';
 import { errorMessage } from '@/lib/api-error';
 
@@ -36,6 +36,8 @@ type Anime = {
   broadcastTimezone: string | null;
   broadcastString: string | null;
   airingStart?: string | null;
+  nextEpisode?: number | null;
+  nextEpisodeAt?: number | null;
   type?: string;
 };
 
@@ -62,6 +64,8 @@ type PopularShow = {
   aired?: {
     from?: string | null;
   } | null;
+  nextEpisode?: number | null;
+  nextEpisodeAt?: number | null;
 };
 
 type TabKey = 'today' | 'week' | 'upcoming' | 'popular';
@@ -275,12 +279,11 @@ export default function AiringSchedulePage() {
     .sort((a, b) => (a.countdown?.diffMs || 0) - (b.countdown?.diffMs || 0));
 
   const renderAiringCard = (anime: Anime) => {
-    const countdown = calculateAiringCountdown(anime.broadcastDay, anime.broadcastTime);
+    const countdown = countdownFromAiringAt(anime.nextEpisodeAt) ?? calculateAiringCountdown(anime.broadcastDay, anime.broadcastTime);
     const istDetails = getISTBroadcastDetails(anime.broadcastDay, anime.broadcastTime);
-    
-    const upcomingEp = getUpcomingEpisodeNumber(anime.airingStart);
-    const badgeLabel = upcomingEp ? `Ep ${upcomingEp} ${countdown?.label}` : `Next episode ${countdown?.label}`;
-    
+
+    const badgeLabel = anime.nextEpisode ? `Ep ${anime.nextEpisode} ${countdown?.label}` : `Next episode ${countdown?.label}`;
+
     return (
       <div key={anime.id} className="airing-anime-card animate-fade-in">
         <div className="card-image-wrapper">
@@ -354,12 +357,11 @@ export default function AiringSchedulePage() {
     const isAlreadyTracked = trackedAnime.some(anime => anime.malId === show.mal_id);
     const broadcastDay = show.broadcast?.day || null;
     const broadcastTime = show.broadcast?.time || null;
-    const countdown = calculateAiringCountdown(broadcastDay, broadcastTime);
+    const countdown = countdownFromAiringAt(show.nextEpisodeAt) ?? calculateAiringCountdown(broadcastDay, broadcastTime);
     const istDetails = getISTBroadcastDetails(broadcastDay, broadcastTime);
-    
-    const upcomingEp = getUpcomingEpisodeNumber(show.aired?.from);
-    const badgeLabel = upcomingEp ? `Ep ${upcomingEp} ${countdown?.label}` : `Next episode ${countdown?.label}`;
-    
+
+    const badgeLabel = show.nextEpisode ? `Ep ${show.nextEpisode} ${countdown?.label}` : `Next episode ${countdown?.label}`;
+
     return (
       <div key={show.mal_id} className="airing-anime-card discover animate-fade-in">
         <div className="card-image-wrapper">

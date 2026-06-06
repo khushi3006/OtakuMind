@@ -68,26 +68,6 @@ export function getISTBroadcastDetails(
 }
 
 /**
- * Calculates the next upcoming episode number based on the airing start timestamp.
- */
-export function getUpcomingEpisodeNumber(
-  airingStart: string | null | undefined
-): number | null {
-  if (!airingStart) return null;
-  const start = new Date(airingStart);
-  if (isNaN(start.getTime())) return null;
-
-  const now = new Date();
-  if (now < start) {
-    return 1;
-  }
-
-  const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
-  const weeksPassed = Math.floor((now.getTime() - start.getTime()) / oneWeekMs);
-  return weeksPassed + 2;
-}
-
-/**
  * Calculates the next airing time in UTC and the countdown details.
  * Performs checks using Indian Standard Time (IST).
  */
@@ -175,6 +155,50 @@ export function calculateAiringCountdown(
     isToday,
     isAiringNow,
   };
+}
+
+/**
+ * Builds a CountdownResult from an exact air time (Unix seconds, UTC) — used when
+ * AniList supplies a precise `airingAt`, which is more accurate than the
+ * broadcast-day heuristic. Returns null if the timestamp is missing or aired more
+ * than 2 hours ago (stale — caller should fall back / refetch).
+ */
+export function countdownFromAiringAt(
+  airingAt: number | null | undefined
+): CountdownResult | null {
+  if (!airingAt) return null;
+
+  const target = new Date(airingAt * 1000);
+  if (isNaN(target.getTime())) return null;
+
+  const now = new Date();
+  const diffMs = target.getTime() - now.getTime();
+
+  // More than 2h past the scheduled time means our data is stale.
+  if (diffMs < -2 * 60 * 60 * 1000) return null;
+
+  const isAiringNow = diffMs <= 0 && diffMs >= -2 * 60 * 60 * 1000;
+
+  const days = Math.max(0, Math.floor(diffMs / (24 * 60 * 60 * 1000)));
+  const hours = Math.max(0, Math.floor((diffMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000)));
+  const minutes = Math.max(0, Math.floor((diffMs % (60 * 60 * 1000)) / (60 * 1000)));
+
+  const istTarget = getISTDate(target);
+  const istNow = getISTDate(now);
+  const isToday = istTarget.getUTCDay() === istNow.getUTCDay() && !isAiringNow;
+
+  let label = '';
+  if (isAiringNow || (days === 0 && hours === 0 && minutes === 0)) {
+    label = 'Airing Now';
+  } else if (days === 0 && hours === 0) {
+    label = `in ${minutes}m`;
+  } else if (days === 0) {
+    label = `in ${hours}h ${minutes}m`;
+  } else {
+    label = `in ${days}d ${hours}h`;
+  }
+
+  return { diffMs, days, hours, minutes, label, isToday, isAiringNow };
 }
 
 /**
