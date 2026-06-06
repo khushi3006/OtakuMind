@@ -148,8 +148,13 @@ export const getRelations: GetRelations = async (malId: number) => {
     const row = await db.malRelation.findUnique({ where: { malId } });
     if (row && now - row.syncedAt.getTime() < DB_TTL) {
       const entries = row.relations as unknown as RelationEntry[];
-      relationsCache.set(malId, { entries, ts: now });
-      return entries;
+      // Guard against a malformed/corrupt JSON row: a non-array would make the
+      // caller's `for...of` throw (outside our never-throws contract). Fall
+      // through to a live fetch, which upserts a clean row over the bad one.
+      if (Array.isArray(entries)) {
+        relationsCache.set(malId, { entries, ts: now });
+        return entries;
+      }
     }
   } catch {
     // Fall through to a live fetch.
