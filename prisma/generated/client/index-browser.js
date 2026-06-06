@@ -188,6 +188,19 @@ exports.Prisma.AnimeScalarFieldEnum = {
   userId: 'userId'
 };
 
+exports.Prisma.AiringCacheScalarFieldEnum = {
+  malId: 'malId',
+  nextEpisode: 'nextEpisode',
+  nextEpisodeAt: 'nextEpisodeAt',
+  broadcastDay: 'broadcastDay',
+  broadcastTime: 'broadcastTime',
+  broadcastTimezone: 'broadcastTimezone',
+  broadcastString: 'broadcastString',
+  airingStart: 'airingStart',
+  releaseStatus: 'releaseStatus',
+  syncedAt: 'syncedAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -209,7 +222,8 @@ exports.Prisma.ModelName = {
   PendingSignup: 'PendingSignup',
   PasswordResetToken: 'PasswordResetToken',
   Follow: 'Follow',
-  Anime: 'Anime'
+  Anime: 'Anime',
+  AiringCache: 'AiringCache'
 };
 
 /**

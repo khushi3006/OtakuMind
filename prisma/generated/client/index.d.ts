@@ -38,6 +38,12 @@ export type Follow = $Result.DefaultSelection<Prisma.$FollowPayload>
  * 
  */
 export type Anime = $Result.DefaultSelection<Prisma.$AnimePayload>
+/**
+ * Model AiringCache
+ * Shared, user-independent cache of airing data keyed by MAL id.
+ * next-episode fields come from AniList; broadcast fields from Jikan.
+ */
+export type AiringCache = $Result.DefaultSelection<Prisma.$AiringCachePayload>
 
 /**
  * ##  Prisma Client ʲˢ
@@ -211,6 +217,16 @@ export class PrismaClient<
     * ```
     */
   get anime(): Prisma.AnimeDelegate<ExtArgs>;
+
+  /**
+   * `prisma.airingCache`: Exposes CRUD operations for the **AiringCache** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more AiringCaches
+    * const airingCaches = await prisma.airingCache.findMany()
+    * ```
+    */
+  get airingCache(): Prisma.AiringCacheDelegate<ExtArgs>;
 }
 
 export namespace Prisma {
@@ -656,7 +672,8 @@ export namespace Prisma {
     PendingSignup: 'PendingSignup',
     PasswordResetToken: 'PasswordResetToken',
     Follow: 'Follow',
-    Anime: 'Anime'
+    Anime: 'Anime',
+    AiringCache: 'AiringCache'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -672,7 +689,7 @@ export namespace Prisma {
 
   export type TypeMap<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, ClientOptions = {}> = {
     meta: {
-      modelProps: "user" | "pendingSignup" | "passwordResetToken" | "follow" | "anime"
+      modelProps: "user" | "pendingSignup" | "passwordResetToken" | "follow" | "anime" | "airingCache"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1023,6 +1040,76 @@ export namespace Prisma {
           count: {
             args: Prisma.AnimeCountArgs<ExtArgs>
             result: $Utils.Optional<AnimeCountAggregateOutputType> | number
+          }
+        }
+      }
+      AiringCache: {
+        payload: Prisma.$AiringCachePayload<ExtArgs>
+        fields: Prisma.AiringCacheFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.AiringCacheFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AiringCachePayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.AiringCacheFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AiringCachePayload>
+          }
+          findFirst: {
+            args: Prisma.AiringCacheFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AiringCachePayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.AiringCacheFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AiringCachePayload>
+          }
+          findMany: {
+            args: Prisma.AiringCacheFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AiringCachePayload>[]
+          }
+          create: {
+            args: Prisma.AiringCacheCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AiringCachePayload>
+          }
+          createMany: {
+            args: Prisma.AiringCacheCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.AiringCacheCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AiringCachePayload>[]
+          }
+          delete: {
+            args: Prisma.AiringCacheDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AiringCachePayload>
+          }
+          update: {
+            args: Prisma.AiringCacheUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AiringCachePayload>
+          }
+          deleteMany: {
+            args: Prisma.AiringCacheDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.AiringCacheUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.AiringCacheUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AiringCachePayload>
+          }
+          aggregate: {
+            args: Prisma.AiringCacheAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateAiringCache>
+          }
+          groupBy: {
+            args: Prisma.AiringCacheGroupByArgs<ExtArgs>
+            result: $Utils.Optional<AiringCacheGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.AiringCacheCountArgs<ExtArgs>
+            result: $Utils.Optional<AiringCacheCountAggregateOutputType> | number
           }
         }
       }
@@ -6482,6 +6569,986 @@ export namespace Prisma {
 
 
   /**
+   * Model AiringCache
+   */
+
+  export type AggregateAiringCache = {
+    _count: AiringCacheCountAggregateOutputType | null
+    _avg: AiringCacheAvgAggregateOutputType | null
+    _sum: AiringCacheSumAggregateOutputType | null
+    _min: AiringCacheMinAggregateOutputType | null
+    _max: AiringCacheMaxAggregateOutputType | null
+  }
+
+  export type AiringCacheAvgAggregateOutputType = {
+    malId: number | null
+    nextEpisode: number | null
+    nextEpisodeAt: number | null
+  }
+
+  export type AiringCacheSumAggregateOutputType = {
+    malId: number | null
+    nextEpisode: number | null
+    nextEpisodeAt: number | null
+  }
+
+  export type AiringCacheMinAggregateOutputType = {
+    malId: number | null
+    nextEpisode: number | null
+    nextEpisodeAt: number | null
+    broadcastDay: string | null
+    broadcastTime: string | null
+    broadcastTimezone: string | null
+    broadcastString: string | null
+    airingStart: string | null
+    releaseStatus: string | null
+    syncedAt: Date | null
+  }
+
+  export type AiringCacheMaxAggregateOutputType = {
+    malId: number | null
+    nextEpisode: number | null
+    nextEpisodeAt: number | null
+    broadcastDay: string | null
+    broadcastTime: string | null
+    broadcastTimezone: string | null
+    broadcastString: string | null
+    airingStart: string | null
+    releaseStatus: string | null
+    syncedAt: Date | null
+  }
+
+  export type AiringCacheCountAggregateOutputType = {
+    malId: number
+    nextEpisode: number
+    nextEpisodeAt: number
+    broadcastDay: number
+    broadcastTime: number
+    broadcastTimezone: number
+    broadcastString: number
+    airingStart: number
+    releaseStatus: number
+    syncedAt: number
+    _all: number
+  }
+
+
+  export type AiringCacheAvgAggregateInputType = {
+    malId?: true
+    nextEpisode?: true
+    nextEpisodeAt?: true
+  }
+
+  export type AiringCacheSumAggregateInputType = {
+    malId?: true
+    nextEpisode?: true
+    nextEpisodeAt?: true
+  }
+
+  export type AiringCacheMinAggregateInputType = {
+    malId?: true
+    nextEpisode?: true
+    nextEpisodeAt?: true
+    broadcastDay?: true
+    broadcastTime?: true
+    broadcastTimezone?: true
+    broadcastString?: true
+    airingStart?: true
+    releaseStatus?: true
+    syncedAt?: true
+  }
+
+  export type AiringCacheMaxAggregateInputType = {
+    malId?: true
+    nextEpisode?: true
+    nextEpisodeAt?: true
+    broadcastDay?: true
+    broadcastTime?: true
+    broadcastTimezone?: true
+    broadcastString?: true
+    airingStart?: true
+    releaseStatus?: true
+    syncedAt?: true
+  }
+
+  export type AiringCacheCountAggregateInputType = {
+    malId?: true
+    nextEpisode?: true
+    nextEpisodeAt?: true
+    broadcastDay?: true
+    broadcastTime?: true
+    broadcastTimezone?: true
+    broadcastString?: true
+    airingStart?: true
+    releaseStatus?: true
+    syncedAt?: true
+    _all?: true
+  }
+
+  export type AiringCacheAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which AiringCache to aggregate.
+     */
+    where?: AiringCacheWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of AiringCaches to fetch.
+     */
+    orderBy?: AiringCacheOrderByWithRelationInput | AiringCacheOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: AiringCacheWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` AiringCaches from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` AiringCaches.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned AiringCaches
+    **/
+    _count?: true | AiringCacheCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: AiringCacheAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: AiringCacheSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: AiringCacheMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: AiringCacheMaxAggregateInputType
+  }
+
+  export type GetAiringCacheAggregateType<T extends AiringCacheAggregateArgs> = {
+        [P in keyof T & keyof AggregateAiringCache]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateAiringCache[P]>
+      : GetScalarType<T[P], AggregateAiringCache[P]>
+  }
+
+
+
+
+  export type AiringCacheGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: AiringCacheWhereInput
+    orderBy?: AiringCacheOrderByWithAggregationInput | AiringCacheOrderByWithAggregationInput[]
+    by: AiringCacheScalarFieldEnum[] | AiringCacheScalarFieldEnum
+    having?: AiringCacheScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: AiringCacheCountAggregateInputType | true
+    _avg?: AiringCacheAvgAggregateInputType
+    _sum?: AiringCacheSumAggregateInputType
+    _min?: AiringCacheMinAggregateInputType
+    _max?: AiringCacheMaxAggregateInputType
+  }
+
+  export type AiringCacheGroupByOutputType = {
+    malId: number
+    nextEpisode: number | null
+    nextEpisodeAt: number | null
+    broadcastDay: string | null
+    broadcastTime: string | null
+    broadcastTimezone: string | null
+    broadcastString: string | null
+    airingStart: string | null
+    releaseStatus: string
+    syncedAt: Date
+    _count: AiringCacheCountAggregateOutputType | null
+    _avg: AiringCacheAvgAggregateOutputType | null
+    _sum: AiringCacheSumAggregateOutputType | null
+    _min: AiringCacheMinAggregateOutputType | null
+    _max: AiringCacheMaxAggregateOutputType | null
+  }
+
+  type GetAiringCacheGroupByPayload<T extends AiringCacheGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<AiringCacheGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof AiringCacheGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], AiringCacheGroupByOutputType[P]>
+            : GetScalarType<T[P], AiringCacheGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type AiringCacheSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    malId?: boolean
+    nextEpisode?: boolean
+    nextEpisodeAt?: boolean
+    broadcastDay?: boolean
+    broadcastTime?: boolean
+    broadcastTimezone?: boolean
+    broadcastString?: boolean
+    airingStart?: boolean
+    releaseStatus?: boolean
+    syncedAt?: boolean
+  }, ExtArgs["result"]["airingCache"]>
+
+  export type AiringCacheSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    malId?: boolean
+    nextEpisode?: boolean
+    nextEpisodeAt?: boolean
+    broadcastDay?: boolean
+    broadcastTime?: boolean
+    broadcastTimezone?: boolean
+    broadcastString?: boolean
+    airingStart?: boolean
+    releaseStatus?: boolean
+    syncedAt?: boolean
+  }, ExtArgs["result"]["airingCache"]>
+
+  export type AiringCacheSelectScalar = {
+    malId?: boolean
+    nextEpisode?: boolean
+    nextEpisodeAt?: boolean
+    broadcastDay?: boolean
+    broadcastTime?: boolean
+    broadcastTimezone?: boolean
+    broadcastString?: boolean
+    airingStart?: boolean
+    releaseStatus?: boolean
+    syncedAt?: boolean
+  }
+
+
+  export type $AiringCachePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "AiringCache"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      malId: number
+      nextEpisode: number | null
+      nextEpisodeAt: number | null
+      broadcastDay: string | null
+      broadcastTime: string | null
+      broadcastTimezone: string | null
+      broadcastString: string | null
+      airingStart: string | null
+      releaseStatus: string
+      syncedAt: Date
+    }, ExtArgs["result"]["airingCache"]>
+    composites: {}
+  }
+
+  type AiringCacheGetPayload<S extends boolean | null | undefined | AiringCacheDefaultArgs> = $Result.GetResult<Prisma.$AiringCachePayload, S>
+
+  type AiringCacheCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<AiringCacheFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: AiringCacheCountAggregateInputType | true
+    }
+
+  export interface AiringCacheDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['AiringCache'], meta: { name: 'AiringCache' } }
+    /**
+     * Find zero or one AiringCache that matches the filter.
+     * @param {AiringCacheFindUniqueArgs} args - Arguments to find a AiringCache
+     * @example
+     * // Get one AiringCache
+     * const airingCache = await prisma.airingCache.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends AiringCacheFindUniqueArgs>(args: SelectSubset<T, AiringCacheFindUniqueArgs<ExtArgs>>): Prisma__AiringCacheClient<$Result.GetResult<Prisma.$AiringCachePayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one AiringCache that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {AiringCacheFindUniqueOrThrowArgs} args - Arguments to find a AiringCache
+     * @example
+     * // Get one AiringCache
+     * const airingCache = await prisma.airingCache.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends AiringCacheFindUniqueOrThrowArgs>(args: SelectSubset<T, AiringCacheFindUniqueOrThrowArgs<ExtArgs>>): Prisma__AiringCacheClient<$Result.GetResult<Prisma.$AiringCachePayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first AiringCache that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AiringCacheFindFirstArgs} args - Arguments to find a AiringCache
+     * @example
+     * // Get one AiringCache
+     * const airingCache = await prisma.airingCache.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends AiringCacheFindFirstArgs>(args?: SelectSubset<T, AiringCacheFindFirstArgs<ExtArgs>>): Prisma__AiringCacheClient<$Result.GetResult<Prisma.$AiringCachePayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first AiringCache that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AiringCacheFindFirstOrThrowArgs} args - Arguments to find a AiringCache
+     * @example
+     * // Get one AiringCache
+     * const airingCache = await prisma.airingCache.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends AiringCacheFindFirstOrThrowArgs>(args?: SelectSubset<T, AiringCacheFindFirstOrThrowArgs<ExtArgs>>): Prisma__AiringCacheClient<$Result.GetResult<Prisma.$AiringCachePayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more AiringCaches that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AiringCacheFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all AiringCaches
+     * const airingCaches = await prisma.airingCache.findMany()
+     * 
+     * // Get first 10 AiringCaches
+     * const airingCaches = await prisma.airingCache.findMany({ take: 10 })
+     * 
+     * // Only select the `malId`
+     * const airingCacheWithMalIdOnly = await prisma.airingCache.findMany({ select: { malId: true } })
+     * 
+     */
+    findMany<T extends AiringCacheFindManyArgs>(args?: SelectSubset<T, AiringCacheFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AiringCachePayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a AiringCache.
+     * @param {AiringCacheCreateArgs} args - Arguments to create a AiringCache.
+     * @example
+     * // Create one AiringCache
+     * const AiringCache = await prisma.airingCache.create({
+     *   data: {
+     *     // ... data to create a AiringCache
+     *   }
+     * })
+     * 
+     */
+    create<T extends AiringCacheCreateArgs>(args: SelectSubset<T, AiringCacheCreateArgs<ExtArgs>>): Prisma__AiringCacheClient<$Result.GetResult<Prisma.$AiringCachePayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many AiringCaches.
+     * @param {AiringCacheCreateManyArgs} args - Arguments to create many AiringCaches.
+     * @example
+     * // Create many AiringCaches
+     * const airingCache = await prisma.airingCache.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends AiringCacheCreateManyArgs>(args?: SelectSubset<T, AiringCacheCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many AiringCaches and returns the data saved in the database.
+     * @param {AiringCacheCreateManyAndReturnArgs} args - Arguments to create many AiringCaches.
+     * @example
+     * // Create many AiringCaches
+     * const airingCache = await prisma.airingCache.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many AiringCaches and only return the `malId`
+     * const airingCacheWithMalIdOnly = await prisma.airingCache.createManyAndReturn({ 
+     *   select: { malId: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends AiringCacheCreateManyAndReturnArgs>(args?: SelectSubset<T, AiringCacheCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AiringCachePayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a AiringCache.
+     * @param {AiringCacheDeleteArgs} args - Arguments to delete one AiringCache.
+     * @example
+     * // Delete one AiringCache
+     * const AiringCache = await prisma.airingCache.delete({
+     *   where: {
+     *     // ... filter to delete one AiringCache
+     *   }
+     * })
+     * 
+     */
+    delete<T extends AiringCacheDeleteArgs>(args: SelectSubset<T, AiringCacheDeleteArgs<ExtArgs>>): Prisma__AiringCacheClient<$Result.GetResult<Prisma.$AiringCachePayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one AiringCache.
+     * @param {AiringCacheUpdateArgs} args - Arguments to update one AiringCache.
+     * @example
+     * // Update one AiringCache
+     * const airingCache = await prisma.airingCache.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends AiringCacheUpdateArgs>(args: SelectSubset<T, AiringCacheUpdateArgs<ExtArgs>>): Prisma__AiringCacheClient<$Result.GetResult<Prisma.$AiringCachePayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more AiringCaches.
+     * @param {AiringCacheDeleteManyArgs} args - Arguments to filter AiringCaches to delete.
+     * @example
+     * // Delete a few AiringCaches
+     * const { count } = await prisma.airingCache.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends AiringCacheDeleteManyArgs>(args?: SelectSubset<T, AiringCacheDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more AiringCaches.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AiringCacheUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many AiringCaches
+     * const airingCache = await prisma.airingCache.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends AiringCacheUpdateManyArgs>(args: SelectSubset<T, AiringCacheUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one AiringCache.
+     * @param {AiringCacheUpsertArgs} args - Arguments to update or create a AiringCache.
+     * @example
+     * // Update or create a AiringCache
+     * const airingCache = await prisma.airingCache.upsert({
+     *   create: {
+     *     // ... data to create a AiringCache
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the AiringCache we want to update
+     *   }
+     * })
+     */
+    upsert<T extends AiringCacheUpsertArgs>(args: SelectSubset<T, AiringCacheUpsertArgs<ExtArgs>>): Prisma__AiringCacheClient<$Result.GetResult<Prisma.$AiringCachePayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of AiringCaches.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AiringCacheCountArgs} args - Arguments to filter AiringCaches to count.
+     * @example
+     * // Count the number of AiringCaches
+     * const count = await prisma.airingCache.count({
+     *   where: {
+     *     // ... the filter for the AiringCaches we want to count
+     *   }
+     * })
+    **/
+    count<T extends AiringCacheCountArgs>(
+      args?: Subset<T, AiringCacheCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], AiringCacheCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a AiringCache.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AiringCacheAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends AiringCacheAggregateArgs>(args: Subset<T, AiringCacheAggregateArgs>): Prisma.PrismaPromise<GetAiringCacheAggregateType<T>>
+
+    /**
+     * Group by AiringCache.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AiringCacheGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends AiringCacheGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: AiringCacheGroupByArgs['orderBy'] }
+        : { orderBy?: AiringCacheGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, AiringCacheGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetAiringCacheGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the AiringCache model
+   */
+  readonly fields: AiringCacheFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for AiringCache.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__AiringCacheClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the AiringCache model
+   */ 
+  interface AiringCacheFieldRefs {
+    readonly malId: FieldRef<"AiringCache", 'Int'>
+    readonly nextEpisode: FieldRef<"AiringCache", 'Int'>
+    readonly nextEpisodeAt: FieldRef<"AiringCache", 'Int'>
+    readonly broadcastDay: FieldRef<"AiringCache", 'String'>
+    readonly broadcastTime: FieldRef<"AiringCache", 'String'>
+    readonly broadcastTimezone: FieldRef<"AiringCache", 'String'>
+    readonly broadcastString: FieldRef<"AiringCache", 'String'>
+    readonly airingStart: FieldRef<"AiringCache", 'String'>
+    readonly releaseStatus: FieldRef<"AiringCache", 'String'>
+    readonly syncedAt: FieldRef<"AiringCache", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * AiringCache findUnique
+   */
+  export type AiringCacheFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AiringCache
+     */
+    select?: AiringCacheSelect<ExtArgs> | null
+    /**
+     * Filter, which AiringCache to fetch.
+     */
+    where: AiringCacheWhereUniqueInput
+  }
+
+  /**
+   * AiringCache findUniqueOrThrow
+   */
+  export type AiringCacheFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AiringCache
+     */
+    select?: AiringCacheSelect<ExtArgs> | null
+    /**
+     * Filter, which AiringCache to fetch.
+     */
+    where: AiringCacheWhereUniqueInput
+  }
+
+  /**
+   * AiringCache findFirst
+   */
+  export type AiringCacheFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AiringCache
+     */
+    select?: AiringCacheSelect<ExtArgs> | null
+    /**
+     * Filter, which AiringCache to fetch.
+     */
+    where?: AiringCacheWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of AiringCaches to fetch.
+     */
+    orderBy?: AiringCacheOrderByWithRelationInput | AiringCacheOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for AiringCaches.
+     */
+    cursor?: AiringCacheWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` AiringCaches from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` AiringCaches.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of AiringCaches.
+     */
+    distinct?: AiringCacheScalarFieldEnum | AiringCacheScalarFieldEnum[]
+  }
+
+  /**
+   * AiringCache findFirstOrThrow
+   */
+  export type AiringCacheFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AiringCache
+     */
+    select?: AiringCacheSelect<ExtArgs> | null
+    /**
+     * Filter, which AiringCache to fetch.
+     */
+    where?: AiringCacheWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of AiringCaches to fetch.
+     */
+    orderBy?: AiringCacheOrderByWithRelationInput | AiringCacheOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for AiringCaches.
+     */
+    cursor?: AiringCacheWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` AiringCaches from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` AiringCaches.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of AiringCaches.
+     */
+    distinct?: AiringCacheScalarFieldEnum | AiringCacheScalarFieldEnum[]
+  }
+
+  /**
+   * AiringCache findMany
+   */
+  export type AiringCacheFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AiringCache
+     */
+    select?: AiringCacheSelect<ExtArgs> | null
+    /**
+     * Filter, which AiringCaches to fetch.
+     */
+    where?: AiringCacheWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of AiringCaches to fetch.
+     */
+    orderBy?: AiringCacheOrderByWithRelationInput | AiringCacheOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing AiringCaches.
+     */
+    cursor?: AiringCacheWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` AiringCaches from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` AiringCaches.
+     */
+    skip?: number
+    distinct?: AiringCacheScalarFieldEnum | AiringCacheScalarFieldEnum[]
+  }
+
+  /**
+   * AiringCache create
+   */
+  export type AiringCacheCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AiringCache
+     */
+    select?: AiringCacheSelect<ExtArgs> | null
+    /**
+     * The data needed to create a AiringCache.
+     */
+    data: XOR<AiringCacheCreateInput, AiringCacheUncheckedCreateInput>
+  }
+
+  /**
+   * AiringCache createMany
+   */
+  export type AiringCacheCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many AiringCaches.
+     */
+    data: AiringCacheCreateManyInput | AiringCacheCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * AiringCache createManyAndReturn
+   */
+  export type AiringCacheCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AiringCache
+     */
+    select?: AiringCacheSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many AiringCaches.
+     */
+    data: AiringCacheCreateManyInput | AiringCacheCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * AiringCache update
+   */
+  export type AiringCacheUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AiringCache
+     */
+    select?: AiringCacheSelect<ExtArgs> | null
+    /**
+     * The data needed to update a AiringCache.
+     */
+    data: XOR<AiringCacheUpdateInput, AiringCacheUncheckedUpdateInput>
+    /**
+     * Choose, which AiringCache to update.
+     */
+    where: AiringCacheWhereUniqueInput
+  }
+
+  /**
+   * AiringCache updateMany
+   */
+  export type AiringCacheUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update AiringCaches.
+     */
+    data: XOR<AiringCacheUpdateManyMutationInput, AiringCacheUncheckedUpdateManyInput>
+    /**
+     * Filter which AiringCaches to update
+     */
+    where?: AiringCacheWhereInput
+  }
+
+  /**
+   * AiringCache upsert
+   */
+  export type AiringCacheUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AiringCache
+     */
+    select?: AiringCacheSelect<ExtArgs> | null
+    /**
+     * The filter to search for the AiringCache to update in case it exists.
+     */
+    where: AiringCacheWhereUniqueInput
+    /**
+     * In case the AiringCache found by the `where` argument doesn't exist, create a new AiringCache with this data.
+     */
+    create: XOR<AiringCacheCreateInput, AiringCacheUncheckedCreateInput>
+    /**
+     * In case the AiringCache was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<AiringCacheUpdateInput, AiringCacheUncheckedUpdateInput>
+  }
+
+  /**
+   * AiringCache delete
+   */
+  export type AiringCacheDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AiringCache
+     */
+    select?: AiringCacheSelect<ExtArgs> | null
+    /**
+     * Filter which AiringCache to delete.
+     */
+    where: AiringCacheWhereUniqueInput
+  }
+
+  /**
+   * AiringCache deleteMany
+   */
+  export type AiringCacheDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which AiringCaches to delete
+     */
+    where?: AiringCacheWhereInput
+  }
+
+  /**
+   * AiringCache without action
+   */
+  export type AiringCacheDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AiringCache
+     */
+    select?: AiringCacheSelect<ExtArgs> | null
+  }
+
+
+  /**
    * Enums
    */
 
@@ -6574,6 +7641,22 @@ export namespace Prisma {
   };
 
   export type AnimeScalarFieldEnum = (typeof AnimeScalarFieldEnum)[keyof typeof AnimeScalarFieldEnum]
+
+
+  export const AiringCacheScalarFieldEnum: {
+    malId: 'malId',
+    nextEpisode: 'nextEpisode',
+    nextEpisodeAt: 'nextEpisodeAt',
+    broadcastDay: 'broadcastDay',
+    broadcastTime: 'broadcastTime',
+    broadcastTimezone: 'broadcastTimezone',
+    broadcastString: 'broadcastString',
+    airingStart: 'airingStart',
+    releaseStatus: 'releaseStatus',
+    syncedAt: 'syncedAt'
+  };
+
+  export type AiringCacheScalarFieldEnum = (typeof AiringCacheScalarFieldEnum)[keyof typeof AiringCacheScalarFieldEnum]
 
 
   export const SortOrder: {
@@ -7096,6 +8179,85 @@ export namespace Prisma {
     userId?: IntWithAggregatesFilter<"Anime"> | number
   }
 
+  export type AiringCacheWhereInput = {
+    AND?: AiringCacheWhereInput | AiringCacheWhereInput[]
+    OR?: AiringCacheWhereInput[]
+    NOT?: AiringCacheWhereInput | AiringCacheWhereInput[]
+    malId?: IntFilter<"AiringCache"> | number
+    nextEpisode?: IntNullableFilter<"AiringCache"> | number | null
+    nextEpisodeAt?: IntNullableFilter<"AiringCache"> | number | null
+    broadcastDay?: StringNullableFilter<"AiringCache"> | string | null
+    broadcastTime?: StringNullableFilter<"AiringCache"> | string | null
+    broadcastTimezone?: StringNullableFilter<"AiringCache"> | string | null
+    broadcastString?: StringNullableFilter<"AiringCache"> | string | null
+    airingStart?: StringNullableFilter<"AiringCache"> | string | null
+    releaseStatus?: StringFilter<"AiringCache"> | string
+    syncedAt?: DateTimeFilter<"AiringCache"> | Date | string
+  }
+
+  export type AiringCacheOrderByWithRelationInput = {
+    malId?: SortOrder
+    nextEpisode?: SortOrderInput | SortOrder
+    nextEpisodeAt?: SortOrderInput | SortOrder
+    broadcastDay?: SortOrderInput | SortOrder
+    broadcastTime?: SortOrderInput | SortOrder
+    broadcastTimezone?: SortOrderInput | SortOrder
+    broadcastString?: SortOrderInput | SortOrder
+    airingStart?: SortOrderInput | SortOrder
+    releaseStatus?: SortOrder
+    syncedAt?: SortOrder
+  }
+
+  export type AiringCacheWhereUniqueInput = Prisma.AtLeast<{
+    malId?: number
+    AND?: AiringCacheWhereInput | AiringCacheWhereInput[]
+    OR?: AiringCacheWhereInput[]
+    NOT?: AiringCacheWhereInput | AiringCacheWhereInput[]
+    nextEpisode?: IntNullableFilter<"AiringCache"> | number | null
+    nextEpisodeAt?: IntNullableFilter<"AiringCache"> | number | null
+    broadcastDay?: StringNullableFilter<"AiringCache"> | string | null
+    broadcastTime?: StringNullableFilter<"AiringCache"> | string | null
+    broadcastTimezone?: StringNullableFilter<"AiringCache"> | string | null
+    broadcastString?: StringNullableFilter<"AiringCache"> | string | null
+    airingStart?: StringNullableFilter<"AiringCache"> | string | null
+    releaseStatus?: StringFilter<"AiringCache"> | string
+    syncedAt?: DateTimeFilter<"AiringCache"> | Date | string
+  }, "malId">
+
+  export type AiringCacheOrderByWithAggregationInput = {
+    malId?: SortOrder
+    nextEpisode?: SortOrderInput | SortOrder
+    nextEpisodeAt?: SortOrderInput | SortOrder
+    broadcastDay?: SortOrderInput | SortOrder
+    broadcastTime?: SortOrderInput | SortOrder
+    broadcastTimezone?: SortOrderInput | SortOrder
+    broadcastString?: SortOrderInput | SortOrder
+    airingStart?: SortOrderInput | SortOrder
+    releaseStatus?: SortOrder
+    syncedAt?: SortOrder
+    _count?: AiringCacheCountOrderByAggregateInput
+    _avg?: AiringCacheAvgOrderByAggregateInput
+    _max?: AiringCacheMaxOrderByAggregateInput
+    _min?: AiringCacheMinOrderByAggregateInput
+    _sum?: AiringCacheSumOrderByAggregateInput
+  }
+
+  export type AiringCacheScalarWhereWithAggregatesInput = {
+    AND?: AiringCacheScalarWhereWithAggregatesInput | AiringCacheScalarWhereWithAggregatesInput[]
+    OR?: AiringCacheScalarWhereWithAggregatesInput[]
+    NOT?: AiringCacheScalarWhereWithAggregatesInput | AiringCacheScalarWhereWithAggregatesInput[]
+    malId?: IntWithAggregatesFilter<"AiringCache"> | number
+    nextEpisode?: IntNullableWithAggregatesFilter<"AiringCache"> | number | null
+    nextEpisodeAt?: IntNullableWithAggregatesFilter<"AiringCache"> | number | null
+    broadcastDay?: StringNullableWithAggregatesFilter<"AiringCache"> | string | null
+    broadcastTime?: StringNullableWithAggregatesFilter<"AiringCache"> | string | null
+    broadcastTimezone?: StringNullableWithAggregatesFilter<"AiringCache"> | string | null
+    broadcastString?: StringNullableWithAggregatesFilter<"AiringCache"> | string | null
+    airingStart?: StringNullableWithAggregatesFilter<"AiringCache"> | string | null
+    releaseStatus?: StringWithAggregatesFilter<"AiringCache"> | string
+    syncedAt?: DateTimeWithAggregatesFilter<"AiringCache"> | Date | string
+  }
+
   export type UserCreateInput = {
     email: string
     username: string
@@ -7553,6 +8715,97 @@ export namespace Prisma {
     airingStart?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     userId?: IntFieldUpdateOperationsInput | number
+  }
+
+  export type AiringCacheCreateInput = {
+    malId: number
+    nextEpisode?: number | null
+    nextEpisodeAt?: number | null
+    broadcastDay?: string | null
+    broadcastTime?: string | null
+    broadcastTimezone?: string | null
+    broadcastString?: string | null
+    airingStart?: string | null
+    releaseStatus?: string
+    syncedAt?: Date | string
+  }
+
+  export type AiringCacheUncheckedCreateInput = {
+    malId: number
+    nextEpisode?: number | null
+    nextEpisodeAt?: number | null
+    broadcastDay?: string | null
+    broadcastTime?: string | null
+    broadcastTimezone?: string | null
+    broadcastString?: string | null
+    airingStart?: string | null
+    releaseStatus?: string
+    syncedAt?: Date | string
+  }
+
+  export type AiringCacheUpdateInput = {
+    malId?: IntFieldUpdateOperationsInput | number
+    nextEpisode?: NullableIntFieldUpdateOperationsInput | number | null
+    nextEpisodeAt?: NullableIntFieldUpdateOperationsInput | number | null
+    broadcastDay?: NullableStringFieldUpdateOperationsInput | string | null
+    broadcastTime?: NullableStringFieldUpdateOperationsInput | string | null
+    broadcastTimezone?: NullableStringFieldUpdateOperationsInput | string | null
+    broadcastString?: NullableStringFieldUpdateOperationsInput | string | null
+    airingStart?: NullableStringFieldUpdateOperationsInput | string | null
+    releaseStatus?: StringFieldUpdateOperationsInput | string
+    syncedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type AiringCacheUncheckedUpdateInput = {
+    malId?: IntFieldUpdateOperationsInput | number
+    nextEpisode?: NullableIntFieldUpdateOperationsInput | number | null
+    nextEpisodeAt?: NullableIntFieldUpdateOperationsInput | number | null
+    broadcastDay?: NullableStringFieldUpdateOperationsInput | string | null
+    broadcastTime?: NullableStringFieldUpdateOperationsInput | string | null
+    broadcastTimezone?: NullableStringFieldUpdateOperationsInput | string | null
+    broadcastString?: NullableStringFieldUpdateOperationsInput | string | null
+    airingStart?: NullableStringFieldUpdateOperationsInput | string | null
+    releaseStatus?: StringFieldUpdateOperationsInput | string
+    syncedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type AiringCacheCreateManyInput = {
+    malId: number
+    nextEpisode?: number | null
+    nextEpisodeAt?: number | null
+    broadcastDay?: string | null
+    broadcastTime?: string | null
+    broadcastTimezone?: string | null
+    broadcastString?: string | null
+    airingStart?: string | null
+    releaseStatus?: string
+    syncedAt?: Date | string
+  }
+
+  export type AiringCacheUpdateManyMutationInput = {
+    malId?: IntFieldUpdateOperationsInput | number
+    nextEpisode?: NullableIntFieldUpdateOperationsInput | number | null
+    nextEpisodeAt?: NullableIntFieldUpdateOperationsInput | number | null
+    broadcastDay?: NullableStringFieldUpdateOperationsInput | string | null
+    broadcastTime?: NullableStringFieldUpdateOperationsInput | string | null
+    broadcastTimezone?: NullableStringFieldUpdateOperationsInput | string | null
+    broadcastString?: NullableStringFieldUpdateOperationsInput | string | null
+    airingStart?: NullableStringFieldUpdateOperationsInput | string | null
+    releaseStatus?: StringFieldUpdateOperationsInput | string
+    syncedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type AiringCacheUncheckedUpdateManyInput = {
+    malId?: IntFieldUpdateOperationsInput | number
+    nextEpisode?: NullableIntFieldUpdateOperationsInput | number | null
+    nextEpisodeAt?: NullableIntFieldUpdateOperationsInput | number | null
+    broadcastDay?: NullableStringFieldUpdateOperationsInput | string | null
+    broadcastTime?: NullableStringFieldUpdateOperationsInput | string | null
+    broadcastTimezone?: NullableStringFieldUpdateOperationsInput | string | null
+    broadcastString?: NullableStringFieldUpdateOperationsInput | string | null
+    airingStart?: NullableStringFieldUpdateOperationsInput | string | null
+    releaseStatus?: StringFieldUpdateOperationsInput | string
+    syncedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type IntFilter<$PrismaModel = never> = {
@@ -8043,6 +9296,57 @@ export namespace Prisma {
     _sum?: NestedIntNullableFilter<$PrismaModel>
     _min?: NestedIntNullableFilter<$PrismaModel>
     _max?: NestedIntNullableFilter<$PrismaModel>
+  }
+
+  export type AiringCacheCountOrderByAggregateInput = {
+    malId?: SortOrder
+    nextEpisode?: SortOrder
+    nextEpisodeAt?: SortOrder
+    broadcastDay?: SortOrder
+    broadcastTime?: SortOrder
+    broadcastTimezone?: SortOrder
+    broadcastString?: SortOrder
+    airingStart?: SortOrder
+    releaseStatus?: SortOrder
+    syncedAt?: SortOrder
+  }
+
+  export type AiringCacheAvgOrderByAggregateInput = {
+    malId?: SortOrder
+    nextEpisode?: SortOrder
+    nextEpisodeAt?: SortOrder
+  }
+
+  export type AiringCacheMaxOrderByAggregateInput = {
+    malId?: SortOrder
+    nextEpisode?: SortOrder
+    nextEpisodeAt?: SortOrder
+    broadcastDay?: SortOrder
+    broadcastTime?: SortOrder
+    broadcastTimezone?: SortOrder
+    broadcastString?: SortOrder
+    airingStart?: SortOrder
+    releaseStatus?: SortOrder
+    syncedAt?: SortOrder
+  }
+
+  export type AiringCacheMinOrderByAggregateInput = {
+    malId?: SortOrder
+    nextEpisode?: SortOrder
+    nextEpisodeAt?: SortOrder
+    broadcastDay?: SortOrder
+    broadcastTime?: SortOrder
+    broadcastTimezone?: SortOrder
+    broadcastString?: SortOrder
+    airingStart?: SortOrder
+    releaseStatus?: SortOrder
+    syncedAt?: SortOrder
+  }
+
+  export type AiringCacheSumOrderByAggregateInput = {
+    malId?: SortOrder
+    nextEpisode?: SortOrder
+    nextEpisodeAt?: SortOrder
   }
 
   export type AnimeCreateNestedManyWithoutUserInput = {
@@ -9232,6 +10536,10 @@ export namespace Prisma {
      * @deprecated Use AnimeDefaultArgs instead
      */
     export type AnimeArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = AnimeDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use AiringCacheDefaultArgs instead
+     */
+    export type AiringCacheArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = AiringCacheDefaultArgs<ExtArgs>
 
   /**
    * Batch Payload for updateMany & deleteMany & createMany
