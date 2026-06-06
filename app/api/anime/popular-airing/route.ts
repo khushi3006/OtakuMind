@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
+import { after } from 'next/server';
 import { errorMessage } from '@/lib/api-error';
-import { fetchAniListAiring } from '@/lib/anilist';
+import { getAiringForMalIds, refreshAniList } from '@/lib/airing-cache';
 
 interface PopularAnime {
   mal_id: number;
@@ -85,13 +86,22 @@ export async function GET() {
     // best-effort). Cached alongside the payload so we don't re-query every load.
     const airingIds = formattedData.filter((a) => a.airing).map((a) => a.mal_id);
     if (airingIds.length > 0) {
-      const airingMap = await fetchAniListAiring(airingIds);
+      const { rows: cache, stale } = await getAiringForMalIds(airingIds);
       for (const item of formattedData) {
-        const info = airingMap.get(item.mal_id);
-        if (info) {
-          item.nextEpisode = info.episode;
-          item.nextEpisodeAt = info.airingAt;
+        const c = cache.get(item.mal_id);
+        if (c) {
+          item.nextEpisode = c.nextEpisode;
+          item.nextEpisodeAt = c.nextEpisodeAt;
         }
+      }
+      if (stale.length > 0) {
+        after(async () => {
+          try {
+            await refreshAniList(stale);
+          } catch (e) {
+            console.warn(`[popular-airing] background refresh failed: ${errorMessage(e)}`);
+          }
+        });
       }
     }
 
