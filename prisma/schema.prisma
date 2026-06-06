@@ -113,3 +113,21 @@ model Anime {
   @@index([userId, status, watchOrder])
   @@index([userId, normalizedName])
 }
+
+/// Shared, user-independent cache of airing data keyed by MAL id.
+/// next-episode fields come from AniList; broadcast fields from Jikan.
+model AiringCache {
+  malId             Int      @id        // MAL id — the global key
+  nextEpisode       Int?                // AniList: next episode number
+  nextEpisodeAt     Int?                // AniList: exact air time (unix seconds, UTC)
+  broadcastDay      String?             // Jikan: weekly broadcast day
+  broadcastTime     String?             // Jikan: JST time
+  broadcastTimezone String?
+  broadcastString   String?
+  airingStart       String?
+  releaseStatus     String   @default("unknown") // "releasing" | "finished" | "unknown"
+  syncedAt          DateTime @default(now())
+
+  @@index([releaseStatus, nextEpisodeAt])
+  @@index([syncedAt])
+}
