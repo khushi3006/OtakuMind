@@ -1,5 +1,4 @@
-import { NextResponse } from 'next/server';
-import { after } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { errorMessage } from '@/lib/api-error';
 import { getAiringForMalIds, refreshAniList } from '@/lib/airing-cache';
 
