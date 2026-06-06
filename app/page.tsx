@@ -168,15 +168,30 @@ export default function Home() {
   // optimistic order back before the server confirms it.
   const reorderInFlight = useRef(false);
 
-  // Sync local list from query data whenever the query produces fresh data.
-  // Skip placeholderData (the PREVIOUS tab's rows shown while a new tab/page loads
-  // — seeding it would briefly render the wrong tab's rows under the new heading),
-  // and skip while a reorder is mid-flight.
-  useEffect(() => {
-    if (listQuery.data?.data && !listQuery.isPlaceholderData && !reorderInFlight.current) {
-      setAnimes(listQuery.data.data as Anime[]);
-    }
-  }, [listQuery.data, listQuery.isPlaceholderData]);
+  // Identify the current view + the exact server snapshot the local list should
+  // reflect. `seedToken` is null while placeholderData (the PREVIOUS view's rows)
+  // is showing, so we never adopt another view's data.
+  const viewKey = `${status}|${listSort ?? ''}|${listSearch ?? ''}|${currentPage}|${pageSize}`;
+  const seedToken =
+    listQuery.data && !listQuery.isPlaceholderData ? `${viewKey}@${listQuery.dataUpdatedAt}` : null;
+  const [shownViewKey, setShownViewKey] = useState(viewKey);
+  const [seededToken, setSeededToken] = useState<string | null>(null);
+
+  // Adjust the visible list DURING render (no effect lag → no stale-frame flash):
+  //  1) the instant the view (tab/page/sort/search) changes, clear it so the
+  //     previous view's rows never render under the new heading;
+  //  2) adopt fresh server data for the current view once it arrives.
+  // Both are guarded so they only fire on change (no render loop); seeding is
+  // skipped mid-reorder so an optimistic drag order isn't clobbered.
+  if (viewKey !== shownViewKey) {
+    setShownViewKey(viewKey);
+    setSeededToken(null);
+    setAnimes([]);
+  }
+  if (seedToken && seedToken !== seededToken && !reorderInFlight.current) {
+    setSeededToken(seedToken);
+    setAnimes((listQuery.data?.data ?? []) as Anime[]);
+  }
 
   // Per-row in-flight indicator: which anime ids currently have a mutation running.
   const [updatingIds, setUpdatingIds] = useState<Record<number, boolean>>({});
@@ -184,8 +199,10 @@ export default function Home() {
   // The list query retries transient DB cold-start errors automatically; surface
   // the "database waking up" message while it is retrying.
   const isWakingUp = listQuery.isError && isWakingUpError(listQuery.error);
-  // Mirror the old `loading` flag: only show skeletons before any data exists for this view.
-  const loading = listQuery.isPending;
+  // Show skeletons whenever the current view has no real data yet — including the
+  // placeholderData window on a tab/page switch (else the previous view's local
+  // rows would flash under the new heading).
+  const loading = listQuery.isPending || listQuery.isPlaceholderData;
 
   // If the current page became empty but there are still items overall (e.g.
   // after deleting the last row on a page), drop to the last valid page.
