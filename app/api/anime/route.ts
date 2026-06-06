@@ -303,12 +303,9 @@ export async function POST(request: Request) {
       if (newAnime.malId) {
         const malId = newAnime.malId;
         after(async () => {
-          try {
-            await refreshAniList([malId]);
-            await refreshBroadcast([malId]);
-          } catch {
-            /* best-effort; never affects the add response */
-          }
+          // Independent catches so a failure in one never skips the other.
+          try { await refreshAniList([malId]); } catch { /* best-effort */ }
+          try { await refreshBroadcast([malId]); } catch { /* best-effort */ }
         });
       }
       return NextResponse.json(newAnime);
