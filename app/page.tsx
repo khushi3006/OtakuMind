@@ -1054,10 +1054,8 @@ export default function Home() {
             <div className="sort-selector animate-fade-in">
               <label>Sort</label>
               <select value={completedSort} onChange={(e) => handleSortChange(e.target.value)}>
-                <option value="completed_desc">Recently Completed (LIFO)</option>
-                <option value="completed_asc">Oldest Completed (FIFO)</option>
-                <option value="created_desc">Recently Added (LIFO)</option>
-                <option value="created_asc">Oldest Added (FIFO)</option>
+                <option value="completed_desc">Recently Completed</option>
+                <option value="completed_asc">Oldest Completed</option>
                 <option value="alphabetical_asc">Title (A-Z)</option>
                 <option value="alphabetical_desc">Title (Z-A)</option>
               </select>
