@@ -201,9 +201,19 @@ exports.Prisma.AiringCacheScalarFieldEnum = {
   syncedAt: 'syncedAt'
 };
 
+exports.Prisma.MalRelationScalarFieldEnum = {
+  malId: 'malId',
+  relations: 'relations',
+  syncedAt: 'syncedAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
+};
+
+exports.Prisma.JsonNullValueInput = {
+  JsonNull: Prisma.JsonNull
 };
 
 exports.Prisma.QueryMode = {
@@ -216,6 +226,12 @@ exports.Prisma.NullsOrder = {
   last: 'last'
 };
 
+exports.Prisma.JsonNullValueFilter = {
+  DbNull: Prisma.DbNull,
+  JsonNull: Prisma.JsonNull,
+  AnyNull: Prisma.AnyNull
+};
+
 
 exports.Prisma.ModelName = {
   User: 'User',
@@ -223,7 +239,8 @@ exports.Prisma.ModelName = {
   PasswordResetToken: 'PasswordResetToken',
   Follow: 'Follow',
   Anime: 'Anime',
-  AiringCache: 'AiringCache'
+  AiringCache: 'AiringCache',
+  MalRelation: 'MalRelation'
 };
 
 /**

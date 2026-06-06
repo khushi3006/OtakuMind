@@ -44,6 +44,13 @@ export type Anime = $Result.DefaultSelection<Prisma.$AnimePayload>
  * next-episode fields come from AniList; broadcast fields from Jikan.
  */
 export type AiringCache = $Result.DefaultSelection<Prisma.$AiringCachePayload>
+/**
+ * Model MalRelation
+ * Shared, user-independent cache of MAL relation edges keyed by MAL id.
+ * `relations` is a RelationEntry[] = { relation, malId, name }[]. Relations are
+ * effectively static, so a long TTL governs refresh (see lib/mal-relations.ts).
+ */
+export type MalRelation = $Result.DefaultSelection<Prisma.$MalRelationPayload>
 
 /**
  * ##  Prisma Client ʲˢ
@@ -227,6 +234,16 @@ export class PrismaClient<
     * ```
     */
   get airingCache(): Prisma.AiringCacheDelegate<ExtArgs>;
+
+  /**
+   * `prisma.malRelation`: Exposes CRUD operations for the **MalRelation** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more MalRelations
+    * const malRelations = await prisma.malRelation.findMany()
+    * ```
+    */
+  get malRelation(): Prisma.MalRelationDelegate<ExtArgs>;
 }
 
 export namespace Prisma {
@@ -673,7 +690,8 @@ export namespace Prisma {
     PasswordResetToken: 'PasswordResetToken',
     Follow: 'Follow',
     Anime: 'Anime',
-    AiringCache: 'AiringCache'
+    AiringCache: 'AiringCache',
+    MalRelation: 'MalRelation'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -689,7 +707,7 @@ export namespace Prisma {
 
   export type TypeMap<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, ClientOptions = {}> = {
     meta: {
-      modelProps: "user" | "pendingSignup" | "passwordResetToken" | "follow" | "anime" | "airingCache"
+      modelProps: "user" | "pendingSignup" | "passwordResetToken" | "follow" | "anime" | "airingCache" | "malRelation"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1110,6 +1128,76 @@ export namespace Prisma {
           count: {
             args: Prisma.AiringCacheCountArgs<ExtArgs>
             result: $Utils.Optional<AiringCacheCountAggregateOutputType> | number
+          }
+        }
+      }
+      MalRelation: {
+        payload: Prisma.$MalRelationPayload<ExtArgs>
+        fields: Prisma.MalRelationFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.MalRelationFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MalRelationPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.MalRelationFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MalRelationPayload>
+          }
+          findFirst: {
+            args: Prisma.MalRelationFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MalRelationPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.MalRelationFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MalRelationPayload>
+          }
+          findMany: {
+            args: Prisma.MalRelationFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MalRelationPayload>[]
+          }
+          create: {
+            args: Prisma.MalRelationCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MalRelationPayload>
+          }
+          createMany: {
+            args: Prisma.MalRelationCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.MalRelationCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MalRelationPayload>[]
+          }
+          delete: {
+            args: Prisma.MalRelationDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MalRelationPayload>
+          }
+          update: {
+            args: Prisma.MalRelationUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MalRelationPayload>
+          }
+          deleteMany: {
+            args: Prisma.MalRelationDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.MalRelationUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.MalRelationUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MalRelationPayload>
+          }
+          aggregate: {
+            args: Prisma.MalRelationAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateMalRelation>
+          }
+          groupBy: {
+            args: Prisma.MalRelationGroupByArgs<ExtArgs>
+            result: $Utils.Optional<MalRelationGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.MalRelationCountArgs<ExtArgs>
+            result: $Utils.Optional<MalRelationCountAggregateOutputType> | number
           }
         }
       }
@@ -7549,6 +7637,890 @@ export namespace Prisma {
 
 
   /**
+   * Model MalRelation
+   */
+
+  export type AggregateMalRelation = {
+    _count: MalRelationCountAggregateOutputType | null
+    _avg: MalRelationAvgAggregateOutputType | null
+    _sum: MalRelationSumAggregateOutputType | null
+    _min: MalRelationMinAggregateOutputType | null
+    _max: MalRelationMaxAggregateOutputType | null
+  }
+
+  export type MalRelationAvgAggregateOutputType = {
+    malId: number | null
+  }
+
+  export type MalRelationSumAggregateOutputType = {
+    malId: number | null
+  }
+
+  export type MalRelationMinAggregateOutputType = {
+    malId: number | null
+    syncedAt: Date | null
+  }
+
+  export type MalRelationMaxAggregateOutputType = {
+    malId: number | null
+    syncedAt: Date | null
+  }
+
+  export type MalRelationCountAggregateOutputType = {
+    malId: number
+    relations: number
+    syncedAt: number
+    _all: number
+  }
+
+
+  export type MalRelationAvgAggregateInputType = {
+    malId?: true
+  }
+
+  export type MalRelationSumAggregateInputType = {
+    malId?: true
+  }
+
+  export type MalRelationMinAggregateInputType = {
+    malId?: true
+    syncedAt?: true
+  }
+
+  export type MalRelationMaxAggregateInputType = {
+    malId?: true
+    syncedAt?: true
+  }
+
+  export type MalRelationCountAggregateInputType = {
+    malId?: true
+    relations?: true
+    syncedAt?: true
+    _all?: true
+  }
+
+  export type MalRelationAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which MalRelation to aggregate.
+     */
+    where?: MalRelationWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of MalRelations to fetch.
+     */
+    orderBy?: MalRelationOrderByWithRelationInput | MalRelationOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: MalRelationWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` MalRelations from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` MalRelations.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned MalRelations
+    **/
+    _count?: true | MalRelationCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: MalRelationAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: MalRelationSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: MalRelationMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: MalRelationMaxAggregateInputType
+  }
+
+  export type GetMalRelationAggregateType<T extends MalRelationAggregateArgs> = {
+        [P in keyof T & keyof AggregateMalRelation]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateMalRelation[P]>
+      : GetScalarType<T[P], AggregateMalRelation[P]>
+  }
+
+
+
+
+  export type MalRelationGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: MalRelationWhereInput
+    orderBy?: MalRelationOrderByWithAggregationInput | MalRelationOrderByWithAggregationInput[]
+    by: MalRelationScalarFieldEnum[] | MalRelationScalarFieldEnum
+    having?: MalRelationScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: MalRelationCountAggregateInputType | true
+    _avg?: MalRelationAvgAggregateInputType
+    _sum?: MalRelationSumAggregateInputType
+    _min?: MalRelationMinAggregateInputType
+    _max?: MalRelationMaxAggregateInputType
+  }
+
+  export type MalRelationGroupByOutputType = {
+    malId: number
+    relations: JsonValue
+    syncedAt: Date
+    _count: MalRelationCountAggregateOutputType | null
+    _avg: MalRelationAvgAggregateOutputType | null
+    _sum: MalRelationSumAggregateOutputType | null
+    _min: MalRelationMinAggregateOutputType | null
+    _max: MalRelationMaxAggregateOutputType | null
+  }
+
+  type GetMalRelationGroupByPayload<T extends MalRelationGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<MalRelationGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof MalRelationGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], MalRelationGroupByOutputType[P]>
+            : GetScalarType<T[P], MalRelationGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type MalRelationSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    malId?: boolean
+    relations?: boolean
+    syncedAt?: boolean
+  }, ExtArgs["result"]["malRelation"]>
+
+  export type MalRelationSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    malId?: boolean
+    relations?: boolean
+    syncedAt?: boolean
+  }, ExtArgs["result"]["malRelation"]>
+
+  export type MalRelationSelectScalar = {
+    malId?: boolean
+    relations?: boolean
+    syncedAt?: boolean
+  }
+
+
+  export type $MalRelationPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "MalRelation"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      malId: number
+      relations: Prisma.JsonValue
+      syncedAt: Date
+    }, ExtArgs["result"]["malRelation"]>
+    composites: {}
+  }
+
+  type MalRelationGetPayload<S extends boolean | null | undefined | MalRelationDefaultArgs> = $Result.GetResult<Prisma.$MalRelationPayload, S>
+
+  type MalRelationCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<MalRelationFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: MalRelationCountAggregateInputType | true
+    }
+
+  export interface MalRelationDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['MalRelation'], meta: { name: 'MalRelation' } }
+    /**
+     * Find zero or one MalRelation that matches the filter.
+     * @param {MalRelationFindUniqueArgs} args - Arguments to find a MalRelation
+     * @example
+     * // Get one MalRelation
+     * const malRelation = await prisma.malRelation.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends MalRelationFindUniqueArgs>(args: SelectSubset<T, MalRelationFindUniqueArgs<ExtArgs>>): Prisma__MalRelationClient<$Result.GetResult<Prisma.$MalRelationPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one MalRelation that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {MalRelationFindUniqueOrThrowArgs} args - Arguments to find a MalRelation
+     * @example
+     * // Get one MalRelation
+     * const malRelation = await prisma.malRelation.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends MalRelationFindUniqueOrThrowArgs>(args: SelectSubset<T, MalRelationFindUniqueOrThrowArgs<ExtArgs>>): Prisma__MalRelationClient<$Result.GetResult<Prisma.$MalRelationPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first MalRelation that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MalRelationFindFirstArgs} args - Arguments to find a MalRelation
+     * @example
+     * // Get one MalRelation
+     * const malRelation = await prisma.malRelation.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends MalRelationFindFirstArgs>(args?: SelectSubset<T, MalRelationFindFirstArgs<ExtArgs>>): Prisma__MalRelationClient<$Result.GetResult<Prisma.$MalRelationPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first MalRelation that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MalRelationFindFirstOrThrowArgs} args - Arguments to find a MalRelation
+     * @example
+     * // Get one MalRelation
+     * const malRelation = await prisma.malRelation.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends MalRelationFindFirstOrThrowArgs>(args?: SelectSubset<T, MalRelationFindFirstOrThrowArgs<ExtArgs>>): Prisma__MalRelationClient<$Result.GetResult<Prisma.$MalRelationPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more MalRelations that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MalRelationFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all MalRelations
+     * const malRelations = await prisma.malRelation.findMany()
+     * 
+     * // Get first 10 MalRelations
+     * const malRelations = await prisma.malRelation.findMany({ take: 10 })
+     * 
+     * // Only select the `malId`
+     * const malRelationWithMalIdOnly = await prisma.malRelation.findMany({ select: { malId: true } })
+     * 
+     */
+    findMany<T extends MalRelationFindManyArgs>(args?: SelectSubset<T, MalRelationFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$MalRelationPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a MalRelation.
+     * @param {MalRelationCreateArgs} args - Arguments to create a MalRelation.
+     * @example
+     * // Create one MalRelation
+     * const MalRelation = await prisma.malRelation.create({
+     *   data: {
+     *     // ... data to create a MalRelation
+     *   }
+     * })
+     * 
+     */
+    create<T extends MalRelationCreateArgs>(args: SelectSubset<T, MalRelationCreateArgs<ExtArgs>>): Prisma__MalRelationClient<$Result.GetResult<Prisma.$MalRelationPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many MalRelations.
+     * @param {MalRelationCreateManyArgs} args - Arguments to create many MalRelations.
+     * @example
+     * // Create many MalRelations
+     * const malRelation = await prisma.malRelation.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends MalRelationCreateManyArgs>(args?: SelectSubset<T, MalRelationCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many MalRelations and returns the data saved in the database.
+     * @param {MalRelationCreateManyAndReturnArgs} args - Arguments to create many MalRelations.
+     * @example
+     * // Create many MalRelations
+     * const malRelation = await prisma.malRelation.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many MalRelations and only return the `malId`
+     * const malRelationWithMalIdOnly = await prisma.malRelation.createManyAndReturn({ 
+     *   select: { malId: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends MalRelationCreateManyAndReturnArgs>(args?: SelectSubset<T, MalRelationCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$MalRelationPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a MalRelation.
+     * @param {MalRelationDeleteArgs} args - Arguments to delete one MalRelation.
+     * @example
+     * // Delete one MalRelation
+     * const MalRelation = await prisma.malRelation.delete({
+     *   where: {
+     *     // ... filter to delete one MalRelation
+     *   }
+     * })
+     * 
+     */
+    delete<T extends MalRelationDeleteArgs>(args: SelectSubset<T, MalRelationDeleteArgs<ExtArgs>>): Prisma__MalRelationClient<$Result.GetResult<Prisma.$MalRelationPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one MalRelation.
+     * @param {MalRelationUpdateArgs} args - Arguments to update one MalRelation.
+     * @example
+     * // Update one MalRelation
+     * const malRelation = await prisma.malRelation.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends MalRelationUpdateArgs>(args: SelectSubset<T, MalRelationUpdateArgs<ExtArgs>>): Prisma__MalRelationClient<$Result.GetResult<Prisma.$MalRelationPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more MalRelations.
+     * @param {MalRelationDeleteManyArgs} args - Arguments to filter MalRelations to delete.
+     * @example
+     * // Delete a few MalRelations
+     * const { count } = await prisma.malRelation.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends MalRelationDeleteManyArgs>(args?: SelectSubset<T, MalRelationDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more MalRelations.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MalRelationUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many MalRelations
+     * const malRelation = await prisma.malRelation.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends MalRelationUpdateManyArgs>(args: SelectSubset<T, MalRelationUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one MalRelation.
+     * @param {MalRelationUpsertArgs} args - Arguments to update or create a MalRelation.
+     * @example
+     * // Update or create a MalRelation
+     * const malRelation = await prisma.malRelation.upsert({
+     *   create: {
+     *     // ... data to create a MalRelation
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the MalRelation we want to update
+     *   }
+     * })
+     */
+    upsert<T extends MalRelationUpsertArgs>(args: SelectSubset<T, MalRelationUpsertArgs<ExtArgs>>): Prisma__MalRelationClient<$Result.GetResult<Prisma.$MalRelationPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of MalRelations.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MalRelationCountArgs} args - Arguments to filter MalRelations to count.
+     * @example
+     * // Count the number of MalRelations
+     * const count = await prisma.malRelation.count({
+     *   where: {
+     *     // ... the filter for the MalRelations we want to count
+     *   }
+     * })
+    **/
+    count<T extends MalRelationCountArgs>(
+      args?: Subset<T, MalRelationCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], MalRelationCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a MalRelation.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MalRelationAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends MalRelationAggregateArgs>(args: Subset<T, MalRelationAggregateArgs>): Prisma.PrismaPromise<GetMalRelationAggregateType<T>>
+
+    /**
+     * Group by MalRelation.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MalRelationGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends MalRelationGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: MalRelationGroupByArgs['orderBy'] }
+        : { orderBy?: MalRelationGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, MalRelationGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetMalRelationGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the MalRelation model
+   */
+  readonly fields: MalRelationFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for MalRelation.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__MalRelationClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the MalRelation model
+   */ 
+  interface MalRelationFieldRefs {
+    readonly malId: FieldRef<"MalRelation", 'Int'>
+    readonly relations: FieldRef<"MalRelation", 'Json'>
+    readonly syncedAt: FieldRef<"MalRelation", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * MalRelation findUnique
+   */
+  export type MalRelationFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MalRelation
+     */
+    select?: MalRelationSelect<ExtArgs> | null
+    /**
+     * Filter, which MalRelation to fetch.
+     */
+    where: MalRelationWhereUniqueInput
+  }
+
+  /**
+   * MalRelation findUniqueOrThrow
+   */
+  export type MalRelationFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MalRelation
+     */
+    select?: MalRelationSelect<ExtArgs> | null
+    /**
+     * Filter, which MalRelation to fetch.
+     */
+    where: MalRelationWhereUniqueInput
+  }
+
+  /**
+   * MalRelation findFirst
+   */
+  export type MalRelationFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MalRelation
+     */
+    select?: MalRelationSelect<ExtArgs> | null
+    /**
+     * Filter, which MalRelation to fetch.
+     */
+    where?: MalRelationWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of MalRelations to fetch.
+     */
+    orderBy?: MalRelationOrderByWithRelationInput | MalRelationOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for MalRelations.
+     */
+    cursor?: MalRelationWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` MalRelations from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` MalRelations.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of MalRelations.
+     */
+    distinct?: MalRelationScalarFieldEnum | MalRelationScalarFieldEnum[]
+  }
+
+  /**
+   * MalRelation findFirstOrThrow
+   */
+  export type MalRelationFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MalRelation
+     */
+    select?: MalRelationSelect<ExtArgs> | null
+    /**
+     * Filter, which MalRelation to fetch.
+     */
+    where?: MalRelationWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of MalRelations to fetch.
+     */
+    orderBy?: MalRelationOrderByWithRelationInput | MalRelationOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for MalRelations.
+     */
+    cursor?: MalRelationWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` MalRelations from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` MalRelations.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of MalRelations.
+     */
+    distinct?: MalRelationScalarFieldEnum | MalRelationScalarFieldEnum[]
+  }
+
+  /**
+   * MalRelation findMany
+   */
+  export type MalRelationFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MalRelation
+     */
+    select?: MalRelationSelect<ExtArgs> | null
+    /**
+     * Filter, which MalRelations to fetch.
+     */
+    where?: MalRelationWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of MalRelations to fetch.
+     */
+    orderBy?: MalRelationOrderByWithRelationInput | MalRelationOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing MalRelations.
+     */
+    cursor?: MalRelationWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` MalRelations from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` MalRelations.
+     */
+    skip?: number
+    distinct?: MalRelationScalarFieldEnum | MalRelationScalarFieldEnum[]
+  }
+
+  /**
+   * MalRelation create
+   */
+  export type MalRelationCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MalRelation
+     */
+    select?: MalRelationSelect<ExtArgs> | null
+    /**
+     * The data needed to create a MalRelation.
+     */
+    data: XOR<MalRelationCreateInput, MalRelationUncheckedCreateInput>
+  }
+
+  /**
+   * MalRelation createMany
+   */
+  export type MalRelationCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many MalRelations.
+     */
+    data: MalRelationCreateManyInput | MalRelationCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * MalRelation createManyAndReturn
+   */
+  export type MalRelationCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MalRelation
+     */
+    select?: MalRelationSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many MalRelations.
+     */
+    data: MalRelationCreateManyInput | MalRelationCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * MalRelation update
+   */
+  export type MalRelationUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MalRelation
+     */
+    select?: MalRelationSelect<ExtArgs> | null
+    /**
+     * The data needed to update a MalRelation.
+     */
+    data: XOR<MalRelationUpdateInput, MalRelationUncheckedUpdateInput>
+    /**
+     * Choose, which MalRelation to update.
+     */
+    where: MalRelationWhereUniqueInput
+  }
+
+  /**
+   * MalRelation updateMany
+   */
+  export type MalRelationUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update MalRelations.
+     */
+    data: XOR<MalRelationUpdateManyMutationInput, MalRelationUncheckedUpdateManyInput>
+    /**
+     * Filter which MalRelations to update
+     */
+    where?: MalRelationWhereInput
+  }
+
+  /**
+   * MalRelation upsert
+   */
+  export type MalRelationUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MalRelation
+     */
+    select?: MalRelationSelect<ExtArgs> | null
+    /**
+     * The filter to search for the MalRelation to update in case it exists.
+     */
+    where: MalRelationWhereUniqueInput
+    /**
+     * In case the MalRelation found by the `where` argument doesn't exist, create a new MalRelation with this data.
+     */
+    create: XOR<MalRelationCreateInput, MalRelationUncheckedCreateInput>
+    /**
+     * In case the MalRelation was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<MalRelationUpdateInput, MalRelationUncheckedUpdateInput>
+  }
+
+  /**
+   * MalRelation delete
+   */
+  export type MalRelationDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MalRelation
+     */
+    select?: MalRelationSelect<ExtArgs> | null
+    /**
+     * Filter which MalRelation to delete.
+     */
+    where: MalRelationWhereUniqueInput
+  }
+
+  /**
+   * MalRelation deleteMany
+   */
+  export type MalRelationDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which MalRelations to delete
+     */
+    where?: MalRelationWhereInput
+  }
+
+  /**
+   * MalRelation without action
+   */
+  export type MalRelationDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MalRelation
+     */
+    select?: MalRelationSelect<ExtArgs> | null
+  }
+
+
+  /**
    * Enums
    */
 
@@ -7659,12 +8631,28 @@ export namespace Prisma {
   export type AiringCacheScalarFieldEnum = (typeof AiringCacheScalarFieldEnum)[keyof typeof AiringCacheScalarFieldEnum]
 
 
+  export const MalRelationScalarFieldEnum: {
+    malId: 'malId',
+    relations: 'relations',
+    syncedAt: 'syncedAt'
+  };
+
+  export type MalRelationScalarFieldEnum = (typeof MalRelationScalarFieldEnum)[keyof typeof MalRelationScalarFieldEnum]
+
+
   export const SortOrder: {
     asc: 'asc',
     desc: 'desc'
   };
 
   export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
+
+
+  export const JsonNullValueInput: {
+    JsonNull: typeof JsonNull
+  };
+
+  export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
 
 
   export const QueryMode: {
@@ -7681,6 +8669,15 @@ export namespace Prisma {
   };
 
   export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
+  export const JsonNullValueFilter: {
+    DbNull: typeof DbNull,
+    JsonNull: typeof JsonNull,
+    AnyNull: typeof AnyNull
+  };
+
+  export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
 
 
   /**
@@ -7734,6 +8731,13 @@ export namespace Prisma {
    * Reference to a field of type 'DateTime[]'
    */
   export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'Json'
+   */
+  export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
     
 
 
@@ -8256,6 +9260,50 @@ export namespace Prisma {
     airingStart?: StringNullableWithAggregatesFilter<"AiringCache"> | string | null
     releaseStatus?: StringWithAggregatesFilter<"AiringCache"> | string
     syncedAt?: DateTimeWithAggregatesFilter<"AiringCache"> | Date | string
+  }
+
+  export type MalRelationWhereInput = {
+    AND?: MalRelationWhereInput | MalRelationWhereInput[]
+    OR?: MalRelationWhereInput[]
+    NOT?: MalRelationWhereInput | MalRelationWhereInput[]
+    malId?: IntFilter<"MalRelation"> | number
+    relations?: JsonFilter<"MalRelation">
+    syncedAt?: DateTimeFilter<"MalRelation"> | Date | string
+  }
+
+  export type MalRelationOrderByWithRelationInput = {
+    malId?: SortOrder
+    relations?: SortOrder
+    syncedAt?: SortOrder
+  }
+
+  export type MalRelationWhereUniqueInput = Prisma.AtLeast<{
+    malId?: number
+    AND?: MalRelationWhereInput | MalRelationWhereInput[]
+    OR?: MalRelationWhereInput[]
+    NOT?: MalRelationWhereInput | MalRelationWhereInput[]
+    relations?: JsonFilter<"MalRelation">
+    syncedAt?: DateTimeFilter<"MalRelation"> | Date | string
+  }, "malId">
+
+  export type MalRelationOrderByWithAggregationInput = {
+    malId?: SortOrder
+    relations?: SortOrder
+    syncedAt?: SortOrder
+    _count?: MalRelationCountOrderByAggregateInput
+    _avg?: MalRelationAvgOrderByAggregateInput
+    _max?: MalRelationMaxOrderByAggregateInput
+    _min?: MalRelationMinOrderByAggregateInput
+    _sum?: MalRelationSumOrderByAggregateInput
+  }
+
+  export type MalRelationScalarWhereWithAggregatesInput = {
+    AND?: MalRelationScalarWhereWithAggregatesInput | MalRelationScalarWhereWithAggregatesInput[]
+    OR?: MalRelationScalarWhereWithAggregatesInput[]
+    NOT?: MalRelationScalarWhereWithAggregatesInput | MalRelationScalarWhereWithAggregatesInput[]
+    malId?: IntWithAggregatesFilter<"MalRelation"> | number
+    relations?: JsonWithAggregatesFilter<"MalRelation">
+    syncedAt?: DateTimeWithAggregatesFilter<"MalRelation"> | Date | string
   }
 
   export type UserCreateInput = {
@@ -8808,6 +9856,48 @@ export namespace Prisma {
     syncedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type MalRelationCreateInput = {
+    malId: number
+    relations: JsonNullValueInput | InputJsonValue
+    syncedAt?: Date | string
+  }
+
+  export type MalRelationUncheckedCreateInput = {
+    malId: number
+    relations: JsonNullValueInput | InputJsonValue
+    syncedAt?: Date | string
+  }
+
+  export type MalRelationUpdateInput = {
+    malId?: IntFieldUpdateOperationsInput | number
+    relations?: JsonNullValueInput | InputJsonValue
+    syncedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type MalRelationUncheckedUpdateInput = {
+    malId?: IntFieldUpdateOperationsInput | number
+    relations?: JsonNullValueInput | InputJsonValue
+    syncedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type MalRelationCreateManyInput = {
+    malId: number
+    relations: JsonNullValueInput | InputJsonValue
+    syncedAt?: Date | string
+  }
+
+  export type MalRelationUpdateManyMutationInput = {
+    malId?: IntFieldUpdateOperationsInput | number
+    relations?: JsonNullValueInput | InputJsonValue
+    syncedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type MalRelationUncheckedUpdateManyInput = {
+    malId?: IntFieldUpdateOperationsInput | number
+    relations?: JsonNullValueInput | InputJsonValue
+    syncedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type IntFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel>
     in?: number[] | ListIntFieldRefInput<$PrismaModel>
@@ -9348,6 +10438,77 @@ export namespace Prisma {
     nextEpisode?: SortOrder
     nextEpisodeAt?: SortOrder
   }
+  export type JsonFilter<$PrismaModel = never> = 
+    | PatchUndefined<
+        Either<Required<JsonFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+  }
+
+  export type MalRelationCountOrderByAggregateInput = {
+    malId?: SortOrder
+    relations?: SortOrder
+    syncedAt?: SortOrder
+  }
+
+  export type MalRelationAvgOrderByAggregateInput = {
+    malId?: SortOrder
+  }
+
+  export type MalRelationMaxOrderByAggregateInput = {
+    malId?: SortOrder
+    syncedAt?: SortOrder
+  }
+
+  export type MalRelationMinOrderByAggregateInput = {
+    malId?: SortOrder
+    syncedAt?: SortOrder
+  }
+
+  export type MalRelationSumOrderByAggregateInput = {
+    malId?: SortOrder
+  }
+  export type JsonWithAggregatesFilter<$PrismaModel = never> = 
+    | PatchUndefined<
+        Either<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonWithAggregatesFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonWithAggregatesFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedJsonFilter<$PrismaModel>
+    _max?: NestedJsonFilter<$PrismaModel>
+  }
 
   export type AnimeCreateNestedManyWithoutUserInput = {
     create?: XOR<AnimeCreateWithoutUserInput, AnimeUncheckedCreateWithoutUserInput> | AnimeCreateWithoutUserInput[] | AnimeUncheckedCreateWithoutUserInput[]
@@ -9808,6 +10969,28 @@ export namespace Prisma {
     gt?: number | FloatFieldRefInput<$PrismaModel>
     gte?: number | FloatFieldRefInput<$PrismaModel>
     not?: NestedFloatNullableFilter<$PrismaModel> | number | null
+  }
+  export type NestedJsonFilter<$PrismaModel = never> = 
+    | PatchUndefined<
+        Either<Required<NestedJsonFilterBase<$PrismaModel>>, Exclude<keyof Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>,
+        Required<NestedJsonFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>
+
+  export type NestedJsonFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
   }
 
   export type AnimeCreateWithoutUserInput = {
@@ -10540,6 +11723,10 @@ export namespace Prisma {
      * @deprecated Use AiringCacheDefaultArgs instead
      */
     export type AiringCacheArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = AiringCacheDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use MalRelationDefaultArgs instead
+     */
+    export type MalRelationArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = MalRelationDefaultArgs<ExtArgs>
 
   /**
    * Batch Payload for updateMany & deleteMany & createMany

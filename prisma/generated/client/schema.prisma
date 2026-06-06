@@ -132,3 +132,12 @@ model AiringCache {
   @@index([releaseStatus, nextEpisodeAt])
   @@index([syncedAt])
 }
+
+/// Shared, user-independent cache of MAL relation edges keyed by MAL id.
+/// `relations` is a RelationEntry[] = { relation, malId, name }[]. Relations are
+/// effectively static, so a long TTL governs refresh (see lib/mal-relations.ts).
+model MalRelation {
+  malId     Int      @id
+  relations Json
+  syncedAt  DateTime @default(now())
+}
