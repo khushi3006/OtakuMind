@@ -112,6 +112,7 @@ model Anime {
   @@index([userId, status, originalOrder])
   @@index([userId, status, watchOrder])
   @@index([userId, normalizedName])
+  @@index([userId, malId])
 }
 
 /// Shared, user-independent cache of airing data keyed by MAL id.
