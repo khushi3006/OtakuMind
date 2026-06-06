@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Search, ExternalLink, CalendarDays, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
-import { errorMessage } from '@/lib/api-error';
+import { isWakingUpError } from '@/lib/api';
 import { useAnimeList } from '@/lib/query/hooks/anime';
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100] as const;
@@ -14,16 +14,6 @@ export function formatSeasonText(season: number, type: string): string {
   if (type === 'Special') return 'Special';
   if (season === 99) return 'Final Season';
   return `Season ${season}`;
-}
-
-function isWakingUpError(err: unknown): boolean {
-  if (!err) return false;
-  const msg = errorMessage(err, String(err));
-  return (
-    msg.includes('SSL connection') ||
-    msg.includes('consuming input failed') ||
-    msg.includes('Database error')
-  );
 }
 
 const EMPTY_PAGINATION = { page: 1, limit: 20, total: 0, totalPages: 0 };

@@ -1,3 +1,20 @@
+import { errorMessage } from '@/lib/api-error';
+
+/**
+ * Transient Neon cold-start ("database waking up") errors. Neon free-tier compute
+ * scales to zero, so the first request after idle can fail for several seconds
+ * before the compute wakes. The shared QueryClient retries these more patiently.
+ */
+export function isWakingUpError(err: unknown): boolean {
+  if (!err) return false;
+  const msg = errorMessage(err, String(err));
+  return (
+    msg.includes('SSL connection') ||
+    msg.includes('consuming input failed') ||
+    msg.includes('Database error')
+  );
+}
+
 export class ApiError extends Error {
   status: number; code?: string; body?: unknown;
   constructor(status: number, message: string, code?: string, body?: unknown) {
