@@ -164,13 +164,19 @@ export default function Home() {
   // without refetching, so the cache won't clobber the reordered order).
   const [animes, setAnimes] = useState<Anime[]>([]);
   const pagination = listQuery.data?.pagination ?? { page: currentPage, limit: pageSize, total: 0, totalPages: 0 };
+  // True while a drag-reorder PUT is in flight, so a stray refetch can't snap the
+  // optimistic order back before the server confirms it.
+  const reorderInFlight = useRef(false);
 
   // Sync local list from query data whenever the query produces fresh data.
+  // Skip placeholderData (the PREVIOUS tab's rows shown while a new tab/page loads
+  // — seeding it would briefly render the wrong tab's rows under the new heading),
+  // and skip while a reorder is mid-flight.
   useEffect(() => {
-    if (listQuery.data?.data) {
+    if (listQuery.data?.data && !listQuery.isPlaceholderData && !reorderInFlight.current) {
       setAnimes(listQuery.data.data as Anime[]);
     }
-  }, [listQuery.data]);
+  }, [listQuery.data, listQuery.isPlaceholderData]);
 
   // Per-row in-flight indicator: which anime ids currently have a mutation running.
   const [updatingIds, setUpdatingIds] = useState<Record<number, boolean>>({});
@@ -530,12 +536,15 @@ export default function Home() {
     }));
     setAnimes(optimisticAnimes);
 
+    reorderInFlight.current = true;
     try {
       await reorderAnime.mutateAsync(items);
     } catch (e) {
       // Rollback on failure — refetch the current view from the server.
       console.error('Reorder failed:', e);
       listQuery.refetch();
+    } finally {
+      reorderInFlight.current = false;
     }
   };
 
