@@ -76,7 +76,6 @@ export default function AiringSchedulePage() {
   
   const [loadingTracked, setLoadingTracked] = useState(true);
   const [loadingPopular, setLoadingPopular] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [isWakingUp, setIsWakingUp] = useState(false);
   const [isAdding, setIsAdding] = useState<string | null>(null);
   
@@ -159,29 +158,6 @@ export default function AiringSchedulePage() {
       setLoadingPopular(false);
     }
   }, [addToast]);
-
-  const handleSyncAiring = async () => {
-    setIsSyncing(true);
-    addToast("Syncing airing schedules from Jikan API...", "info", 3000);
-    try {
-      const res = await fetch('/api/anime/sync-airing', { method: 'POST' });
-      const json = await res.json();
-      
-      if (!res.ok) throw new Error(json.error || 'Failed to sync schedule');
-      
-      if (json.syncedCount > 0) {
-        addToast(`Synced airing details for ${json.syncedCount} anime!`, "success");
-        void fetchTrackedAnime();
-      } else {
-        addToast("Airing details are already up to date.", "info");
-      }
-    } catch (e) {
-      console.error(e);
-      addToast("Failed to sync airing details", "warning");
-    } finally {
-      setIsSyncing(false);
-    }
-  };
 
   useEffect(() => {
     fetchTrackedAnime();
@@ -467,20 +443,6 @@ export default function AiringSchedulePage() {
           </div>
           <h1 className="hero-title">Airing Schedule</h1>
           <p className="hero-subtitle">Track upcoming episodes, countdowns, and seasonal releases in real-time</p>
-          
-          <div className="hero-action-row">
-            <button 
-              onClick={handleSyncAiring}
-              disabled={isSyncing}
-              className="btn-hero-sync"
-            >
-              <RefreshCw className={isSyncing ? 'spin' : ''} size={16} />
-              <span>{isSyncing ? 'Syncing schedules...' : 'Sync Schedules'}</span>
-            </button>
-            <div className="sync-timestamp-notice">
-              Refreshes from the Jikan MAL API
-            </div>
-          </div>
         </div>
         
         {/* Decorative Floating Anime Shape */}
