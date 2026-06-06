@@ -11,7 +11,17 @@ import Logo from '@/components/Logo';
 
 import { calculateAiringCountdown, countdownFromAiringAt } from '@/lib/airing-utils';
 import { errorMessage } from '@/lib/api-error';
+import { ApiError, isWakingUpError } from '@/lib/api';
 import { formatSeasonText, parseSeasonField } from '@/lib/season-format';
+import {
+  useAnimeList,
+  useStats,
+  useJikanSearch,
+  useCreateAnime,
+  useUpdateAnime,
+  useDeleteAnime,
+  useReorderAnime,
+} from '@/lib/query/hooks/anime';
 
 /** Minimal shape of a Jikan search result used for the add-anime suggestions. */
 interface Suggestion {
@@ -50,13 +60,6 @@ type Anime = {
   type: string;
 };
 
-type Pagination = {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-};
-
 const PAGE_SIZE_OPTIONS = [20, 50, 100] as const;
 type TabKey = 'watching' | 'completed' | 'dropped';
 const STATUS_MAP: Record<TabKey, string> = {
@@ -66,9 +69,8 @@ const STATUS_MAP: Record<TabKey, string> = {
 };
 
 export default function Home() {
-  const [animes, setAnimes] = useState<Anime[]>([]);
-  const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 20, total: 0, totalPages: 0 });
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
@@ -76,10 +78,6 @@ export default function Home() {
   const [debouncedLocalSearchQuery, setDebouncedLocalSearchQuery] = useState('');
   const [searchPage, setSearchPage] = useState(1);
   const [hasNextPage, setHasNextPage] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
-  const [stats, setStats] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [isWakingUp, setIsWakingUp] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>('watching');
   const [pageSize, setPageSize] = useState<number>(20);
   const [completedSort, setCompletedSort] = useState<string>(() => {
@@ -97,17 +95,6 @@ export default function Home() {
     setTabPages(prev => ({ ...prev, completed: 1 }));
   };
 
-  const activeTabRef = useRef<TabKey>(activeTab);
-  const currentPageRef = useRef(1);
-  const pageSizeRef = useRef(pageSize);
-  const latestVisibleRequestRef = useRef(0);
-  const visibleRequestAbortRef = useRef<AbortController | null>(null);
-
-  // Request sequencing and in-flight state tracking for robust UI sync
-  const latestRequestRef = useRef(0);
-  const pendingUpdatesRef = useRef<Map<number, Partial<Anime> & { expiresAtRequestId?: number }>>(new Map());
-  const pendingDeletionsRef = useRef<Map<number, { expiresAtRequestId?: number }>>(new Map());
-
   // Track per-tab pages
   const [tabPages, setTabPages] = useState<Record<string, number>>({
     watching: 1,
@@ -116,7 +103,6 @@ export default function Home() {
   });
 
   // UI state for toast & modals
-  const [updatingIds, setUpdatingIds] = useState<Record<number, boolean>>({});
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -127,14 +113,11 @@ export default function Home() {
   const [editEpisodesWatched, setEditEpisodesWatched] = useState('');
   const [editSeason, setEditSeason] = useState('');
   const [editSlug, setEditSlug] = useState('');
-  const [existingSlugs, setExistingSlugs] = useState<string[]>([]);
   const [editError, setEditError] = useState<string | null>(null);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [isAdding, setIsAdding] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-
-
 
   const addToast = useCallback((
     message: string,
@@ -151,206 +134,68 @@ export default function Home() {
 
   const currentPage = tabPages[activeTab] || 1;
 
-  const parseApiResponse = useCallback(async (res: Response) => {
-    const contentType = res.headers.get('content-type') || '';
-    const isJson = contentType.includes('application/json');
-    const payload = isJson ? await res.json() : await res.text();
+  // --- Data layer (React Query) ------------------------------------------
 
-    if (!res.ok) {
-      const message =
-        isJson && payload && typeof payload === 'object' && 'error' in payload && typeof payload.error === 'string'
-          ? payload.error
-          : typeof payload === 'string' && payload.trim().length > 0
-            ? payload
-            : `Request failed with status ${res.status}`;
+  const status = STATUS_MAP[activeTab];
+  const listSearch = (activeTab === 'completed' || activeTab === 'dropped') && debouncedLocalSearchQuery
+    ? debouncedLocalSearchQuery
+    : undefined;
+  const listSort = activeTab === 'completed' ? completedSort : undefined;
 
-      throw new Error(message);
+  const listQuery = useAnimeList({
+    status,
+    sort: listSort,
+    search: listSearch,
+    page: currentPage,
+    limit: pageSize,
+  });
+
+  const statsQuery = useStats();
+  const stats = statsQuery.data?.uniqueTotal ?? 0;
+  const existingSlugs = statsQuery.data?.slugs ?? [];
+
+  const createAnime = useCreateAnime();
+  const updateAnime = useUpdateAnime();
+  const deleteAnime = useDeleteAnime();
+  const reorderAnime = useReorderAnime();
+
+  // Visible list. Seeded from the query cache; the drag-reorder handler drives
+  // the visible order via this local state (the reorder mutation persists
+  // without refetching, so the cache won't clobber the reordered order).
+  const [animes, setAnimes] = useState<Anime[]>([]);
+  const pagination = listQuery.data?.pagination ?? { page: currentPage, limit: pageSize, total: 0, totalPages: 0 };
+
+  // Sync local list from query data whenever the query produces fresh data.
+  useEffect(() => {
+    if (listQuery.data?.data) {
+      setAnimes(listQuery.data.data as Anime[]);
     }
+  }, [listQuery.data]);
 
-    return payload;
-  }, []);
+  // Per-row in-flight indicator: which anime ids currently have a mutation running.
+  const [updatingIds, setUpdatingIds] = useState<Record<number, boolean>>({});
 
+  // The list query retries transient DB cold-start errors automatically; surface
+  // the "database waking up" message while it is retrying.
+  const isWakingUp = listQuery.isError && isWakingUpError(listQuery.error);
+  // Mirror the old `loading` flag: only show skeletons before any data exists for this view.
+  const loading = listQuery.isPending;
+
+  // If the current page became empty but there are still items overall (e.g.
+  // after deleting the last row on a page), drop to the last valid page.
   useEffect(() => {
-    activeTabRef.current = activeTab;
-  }, [activeTab]);
-
-  useEffect(() => {
-    currentPageRef.current = currentPage;
-  }, [currentPage]);
-
-  useEffect(() => {
-    pageSizeRef.current = pageSize;
-  }, [pageSize]);
+    const pag = listQuery.data?.pagination;
+    if (pag && listQuery.data?.data.length === 0 && pag.total > 0 && pag.page > 1) {
+      const lastValidPage = Math.max(1, pag.totalPages);
+      setTabPages(prev => ({ ...prev, [activeTab]: lastValidPage }));
+    }
+  }, [listQuery.data, activeTab]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
-  const fetchAnimes = useCallback(async (
-    tab: TabKey,
-    page: number,
-    options: { showLoader?: boolean; isRetry?: boolean } = {}
-  ) => {
-    const { showLoader = true, isRetry = false } = options;
-    const requestedPageSize = pageSize;
-    const isCurrentViewRequest =
-      activeTabRef.current === tab &&
-      currentPageRef.current === page &&
-      pageSizeRef.current === requestedPageSize;
-    let visibleRequestId: number | null = null;
-    let controller: AbortController | null = null;
-
-    if (showLoader && !isCurrentViewRequest) {
-      return;
-    }
-
-    if (!isRetry) {
-      latestRequestRef.current += 1;
-    }
-    const requestId = latestRequestRef.current;
-
-    if (showLoader) {
-      if (!isRetry) {
-        latestVisibleRequestRef.current += 1;
-      }
-      visibleRequestId = latestVisibleRequestRef.current;
-      visibleRequestAbortRef.current?.abort();
-      controller = new AbortController();
-      visibleRequestAbortRef.current = controller;
-    }
-
-    if (showLoader && !isRetry) {
-      setLoading(true);
-      setIsWakingUp(false);
-      setAnimes([]); // Clear the list to show beautiful shimmer skeletons immediately!
-    }
-    try {
-      const status = STATUS_MAP[tab];
-      const searchParam = (tab === 'completed' || tab === 'dropped') && debouncedLocalSearchQuery ? `&search=${encodeURIComponent(debouncedLocalSearchQuery)}` : '';
-      const sortParam = tab === 'completed' ? `&sort=${completedSort}` : '';
-      const res = await fetch(
-        `/api/anime?status=${status}&page=${page}&limit=${requestedPageSize}${searchParam}${sortParam}`,
-        controller ? { signal: controller.signal } : undefined
-      );
-      const json = await parseApiResponse(res);
-
-      const isStillCurrentView =
-        activeTabRef.current === tab &&
-        currentPageRef.current === page &&
-        pageSizeRef.current === requestedPageSize;
-      const isLatestVisibleRequest =
-        !showLoader || visibleRequestId === latestVisibleRequestRef.current;
-      const isLatestRequest = requestId === latestRequestRef.current;
-
-      if (!isStillCurrentView || !isLatestVisibleRequest || !isLatestRequest) {
-        return;
-      }
-
-      // If we are on a page that is now empty, but there are items in the list overall,
-      // and we are not on the first page, go to the last available page.
-      if (json.data.length === 0 && json.pagination.total > 0 && page > 1) {
-        const lastValidPage = Math.max(1, json.pagination.totalPages);
-        setTabPages(prev => ({ ...prev, [tab]: lastValidPage }));
-        return await fetchAnimes(tab, lastValidPage, { showLoader });
-      }
-
-      // 1. Expire any pending updates/deletions whose triggering fetch has successfully completed.
-      for (const [id, pending] of pendingUpdatesRef.current.entries()) {
-        if (pending.expiresAtRequestId !== undefined && requestId >= pending.expiresAtRequestId) {
-          pendingUpdatesRef.current.delete(id);
-        }
-      }
-      for (const [id, pending] of pendingDeletionsRef.current.entries()) {
-        if (pending.expiresAtRequestId !== undefined && requestId >= pending.expiresAtRequestId) {
-          pendingDeletionsRef.current.delete(id);
-        }
-      }
-
-      // 2. Filter/Merge data using remaining pending updates/deletions
-      let processedList = json.data.map((anime: Anime) => {
-        const pending = pendingUpdatesRef.current.get(anime.id);
-        if (pending) {
-          return { ...anime, ...pending };
-        }
-        return anime;
-      });
-
-      processedList = processedList.filter((anime: Anime) => {
-        if (pendingDeletionsRef.current.has(anime.id)) {
-          return false;
-        }
-        const pending = pendingUpdatesRef.current.get(anime.id);
-        if (pending && pending.status !== undefined) {
-          const targetStatus = STATUS_MAP[tab];
-          if (pending.status !== targetStatus) {
-            return false;
-          }
-        }
-        return true;
-      });
-
-      setAnimes(processedList);
-      setPagination(json.pagination);
-      setIsWakingUp(false);
-      if (showLoader) {
-        setLoading(false);
-      }
-    } catch (e: unknown) {
-      const error = e instanceof Error ? e : new Error(String(e));
-
-      if (error.name === 'AbortError') {
-        return;
-      }
-
-      console.error(error);
-      const msg = error.message || String(error);
-      if (msg.includes('SSL connection') || msg.includes('consuming input failed') || msg.includes('Database error') || msg.includes('ENOTFOUND') || msg.includes('getaddrinfo') || msg.includes("Can't reach database server")) {
-        if (showLoader && visibleRequestId === latestVisibleRequestRef.current) {
-          setIsWakingUp(true);
-        }
-        setTimeout(() => {
-          void fetchAnimes(tab, page, { showLoader, isRetry: true });
-        }, 3000);
-      } else {
-        if (!showLoader || visibleRequestId === latestVisibleRequestRef.current) {
-          setIsWakingUp(false);
-        }
-        if (showLoader && visibleRequestId === latestVisibleRequestRef.current) {
-          setLoading(false);
-        }
-      }
-    }
-  }, [pageSize, parseApiResponse, debouncedLocalSearchQuery, completedSort]);
-
-  const fetchStats = useCallback(async (isRetry = false) => {
-    try {
-      const res = await fetch('/api/stats');
-      const data = await parseApiResponse(res);
-      setStats(data.uniqueTotal || 0);
-      setExistingSlugs(data.slugs || []);
-    } catch (e: unknown) {
-      const error = e instanceof Error ? e : new Error(String(e));
-      console.error(error);
-      const msg = error.message || String(error);
-      if (msg.includes('SSL connection') || msg.includes('consuming input failed') || msg.includes('Database error') || msg.includes('ENOTFOUND') || msg.includes('getaddrinfo') || msg.includes("Can't reach database server")) {
-        setTimeout(() => {
-          fetchStats(true);
-        }, 3000);
-      }
-    }
-  }, [parseApiResponse]);
-
-  // Fetch on mount and whenever tab or page changes
-  useEffect(() => {
-    fetchAnimes(activeTab, currentPage);
-  }, [activeTab, currentPage, fetchAnimes]);
-
-  // Fetch stats on mount
-  useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
-
-  // Debounce local search query
+  // Debounce local (completed/dropped) search query
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedLocalSearchQuery(localSearchQuery);
@@ -365,37 +210,45 @@ export default function Home() {
     }
   }, [debouncedLocalSearchQuery, activeTab]);
 
-  // Debounced Jikan search
+  // --- Jikan add-anime search --------------------------------------------
+
+  // Debounce the Jikan search query (400ms) and reset pagination on change.
   useEffect(() => {
     setSearchPage(1);
     setHasNextPage(false);
-
     const delayDebounce = setTimeout(() => {
-      if (searchQuery.length >= 3) {
-        setIsSearching(true);
-        fetch(`/api/search?q=${searchQuery}&page=1`)
-          .then(parseApiResponse)
-          .then(data => {
-            const items: Suggestion[] = data.data || [];
-            const uniqueItems = Array.from(new Map(items.map((item) => [item.mal_id, item] as [number, Suggestion])).values());
-            setSuggestions(uniqueItems);
-            setHasNextPage(data.pagination?.has_next_page || false);
-            if (uniqueItems.length > 0) {
-              setShowSuggestions(true);
-            }
-          })
-          .catch(e => {
-            console.error(e);
-            addToast(e.message || "Failed to search anime", "warning");
-          })
-          .finally(() => setIsSearching(false));
-      } else {
-        setSuggestions([]);
-        setShowSuggestions(false);
-      }
+      setDebouncedSearchQuery(searchQuery);
     }, 400);
     return () => clearTimeout(delayDebounce);
-  }, [searchQuery, parseApiResponse]);
+  }, [searchQuery]);
+
+  const jikanQuery = useJikanSearch(debouncedSearchQuery, searchPage);
+  const isSearching = jikanQuery.isFetching;
+
+  // Merge incoming Jikan results into the accumulated suggestion list. Page 1
+  // replaces the list; subsequent pages append. Dedup by mal_id.
+  useEffect(() => {
+    if (debouncedSearchQuery.length < 3) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    if (jikanQuery.isError) {
+      addToast(errorMessage(jikanQuery.error, 'Failed to search anime'), 'warning');
+      return;
+    }
+    const data = jikanQuery.data;
+    if (!data) return;
+    const items: Suggestion[] = (data.data as Suggestion[]) || [];
+    setSuggestions(prev => {
+      const combined = searchPage === 1 ? items : [...prev, ...items];
+      return Array.from(new Map(combined.map((item) => [item.mal_id, item] as [number, Suggestion])).values());
+    });
+    setHasNextPage(data.pagination?.has_next_page || false);
+    if (searchPage === 1 && items.length > 0) {
+      setShowSuggestions(true);
+    }
+  }, [jikanQuery.data, jikanQuery.isError, jikanQuery.error, debouncedSearchQuery, searchPage, addToast]);
 
   // Click outside to close Jikan suggestions
   useEffect(() => {
@@ -423,25 +276,8 @@ export default function Home() {
     }
   };
 
-  const loadMoreSuggestions = async () => {
-    const nextPage = searchPage + 1;
-    setIsSearching(true);
-    try {
-      const res = await fetch(`/api/search?q=${searchQuery}&page=${nextPage}`);
-      const data = await parseApiResponse(res);
-      setSuggestions(prev => {
-        const newItems: Suggestion[] = data.data || [];
-        const combined = [...prev, ...newItems];
-        return Array.from(new Map(combined.map((item) => [item.mal_id, item] as [number, Suggestion])).values());
-      });
-      setHasNextPage(data.pagination?.has_next_page || false);
-      setSearchPage(nextPage);
-    } catch (e: unknown) {
-      console.error(e);
-      addToast(errorMessage(e, "Failed to load more anime suggestions"), "warning");
-    } finally {
-      setIsSearching(false);
-    }
+  const loadMoreSuggestions = () => {
+    setSearchPage(prev => prev + 1);
   };
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -454,132 +290,88 @@ export default function Home() {
   const handleAddAnime = async (sugg: Suggestion) => {
     if (isAdding) return;
     setIsAdding(String(sugg.mal_id));
-    
+
+    const newAnime = {
+      name: sugg.title_english || sugg.title,
+      episodesWatched: 0,
+      status: 'incomplete',
+      imageUrl: sugg.images?.jpg?.image_url || null,
+      malId: sugg.mal_id,
+      airing: sugg.airing || false,
+      broadcastDay: sugg.broadcast?.day || null,
+      broadcastTime: sugg.broadcast?.time || null,
+      broadcastTimezone: sugg.broadcast?.timezone || null,
+      broadcastString: sugg.broadcast?.string || null,
+      type: sugg.type,
+      totalEpisodes: sugg.episodes || 0,
+      airingStart: sugg.aired?.from || null,
+    };
+
     try {
-      const newAnime = {
-        name: sugg.title_english || sugg.title,
-        episodesWatched: 0,
-        status: 'incomplete',
-        imageUrl: sugg.images?.jpg?.image_url || null,
-        malId: sugg.mal_id,
-        airing: sugg.airing || false,
-        broadcastDay: sugg.broadcast?.day || null,
-        broadcastTime: sugg.broadcast?.time || null,
-        broadcastTimezone: sugg.broadcast?.timezone || null,
-        broadcastString: sugg.broadcast?.string || null,
-        type: sugg.type,
-        totalEpisodes: sugg.episodes || 0,
-        airingStart: sugg.aired?.from || null,
-      };
-      
-      const res = await fetch('/api/anime', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newAnime)
-      });
+      await createAnime.mutateAsync(newAnime);
 
-      const data = res.status === 409
-        ? await res.json()
-        : await parseApiResponse(res);
-
-      if (res.status === 409) {
-        if (data.type === 'DUPLICATE_INCOMPLETE') {
-          addToast("This anime is already in your watching list", 'warning');
-        } else if (data.type === 'DUPLICATE_OTHER_STATUS') {
-          setPendingAnime(data.existingAnime);
+      addToast(`Added ${newAnime.name} to Currently Watching`, 'success');
+      // Since we add to top, go to page 1 of the 'watching' tab.
+      if (activeTab !== 'watching') {
+        setActiveTab('watching');
+      }
+      setTabPages(prev => ({ ...prev, watching: 1 }));
+      setSearchQuery('');
+      setSuggestions([]);
+      setShowSuggestions(false);
+    } catch (e) {
+      // A 409 (duplicate) is surfaced via ApiError with the original body.
+      if (e instanceof ApiError && e.status === 409) {
+        const body = e.body as { type?: string; existingAnime?: Anime } | undefined;
+        if (body?.type === 'DUPLICATE_INCOMPLETE') {
+          addToast('This anime is already in your watching list', 'warning');
+        } else if (body?.type === 'DUPLICATE_OTHER_STATUS' && body.existingAnime) {
+          setPendingAnime(body.existingAnime);
           setShowMoveModal(true);
         }
         setSearchQuery('');
         setSuggestions([]);
         setShowSuggestions(false);
-        return;
+      } else {
+        console.error(e);
+        addToast('Failed to add anime', 'warning');
       }
-
-      if (res.ok) {
-        addToast(`Added ${newAnime.name} to Currently Watching`, 'success');
-        // Refetch current view
-        // Since we add to top, we should probably go to page 1 of 'watching' tab
-        if (activeTab !== 'watching') {
-          setActiveTab('watching');
-        }
-        setTabPages(prev => ({ ...prev, watching: 1 }));
-        void fetchAnimes('watching', 1, { showLoader: false });
-        void fetchStats();
-        setSearchQuery('');
-        setSuggestions([]);
-        setShowSuggestions(false);
-      }
-
-    } catch (e) {
-      console.error(e);
-      addToast("Failed to add anime", 'warning');
     } finally {
       setIsAdding(null);
     }
   };
 
-
-  const updateAnime = async (id: number, updates: Partial<Anime>) => {
-    if (updatingIds[id]) return;
+  // Update an anime via the mutation hook. Mirrors the previous optimistic UX:
+  // immediately reflect the change locally (a status change removes the row from
+  // the current list; a plain field change patches it in place), surface the
+  // per-row spinner, and roll back the local list on error. The hook handles the
+  // cache patching/invalidation; the returned row is used by the edit modal.
+  const runUpdate = async (id: number, updates: Partial<Anime>): Promise<Anime> => {
+    if (updatingIds[id]) {
+      throw new Error('Update already in flight');
+    }
 
     setUpdatingIds(prev => ({ ...prev, [id]: true }));
 
-    const backup = [...animes];
-    const paginationBackup = pagination;
+    const backup = animes;
 
-    // Track the pending update in-flight
-    pendingUpdatesRef.current.set(id, { ...updates, expiresAtRequestId: undefined });
-
-    // Optimistic update
+    // Optimistic local update
     if (updates.status) {
-      // Status change → remove from current list
       setAnimes(prev => prev.filter(a => a.id !== id));
-      setPagination(prev => ({ ...prev, total: Math.max(0, prev.total - 1) }));
     } else {
       setAnimes(prev => prev.map(a => a.id === id ? { ...a, ...updates } : a));
     }
 
-    const doPut = async (retryCount = 0): Promise<Anime> => {
-      try {
-        const res = await fetch(`/api/anime/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updates)
-        });
-        return await parseApiResponse(res);
-      } catch (e: unknown) {
-        const msg = errorMessage(e, String(e));
-        if ((msg.includes('SSL connection') || msg.includes('consuming input failed') || msg.includes('Database error') || msg.includes('ENOTFOUND') || msg.includes('getaddrinfo') || msg.includes("Can't reach database server")) && retryCount < 3) {
-          await new Promise(r => setTimeout(r, 3000));
-          return doPut(retryCount + 1);
-        }
-        throw e;
-      }
-    };
-    
     try {
-      const data = await doPut();
-
-      if (updates.status) {
-        void fetchStats();
-        // Re-sync the current tab in the background to fill pagination gaps.
-        const nextFetchPromise = fetchAnimes(activeTabRef.current, currentPageRef.current, { showLoader: false });
-        // The fetch request generated above incremented latestRequestRef.current synchronously.
-        const generatedRequestId = latestRequestRef.current;
-        // Keep the pending update active until this resync fetch successfully completes
-        pendingUpdatesRef.current.set(id, { ...updates, expiresAtRequestId: generatedRequestId });
-        await nextFetchPromise;
-      } else {
-        // Simple property updates are resolved immediately once PUT completes.
-        pendingUpdatesRef.current.delete(id);
+      const data = await updateAnime.mutateAsync({ id, ...updates });
+      if (!updates.status) {
+        // Reflect the exact server data for in-place edits.
+        setAnimes(prev => prev.map(a => a.id === id ? { ...a, ...(data as Anime) } : a));
       }
-
-      return data;
+      return data as Anime;
     } catch (e) {
-      // Revert optimistic updates
+      // Revert optimistic update
       setAnimes(backup);
-      setPagination(paginationBackup);
-      pendingUpdatesRef.current.delete(id);
       throw e;
     } finally {
       setUpdatingIds(prev => {
@@ -592,23 +384,20 @@ export default function Home() {
 
   const handleMoveToWatching = async () => {
     if (!pendingAnime) return;
-    
+
     try {
-      await updateAnime(pendingAnime.id, { status: 'incomplete' });
-      
+      await runUpdate(pendingAnime.id, { status: 'incomplete' });
+
       addToast(`Moved ${pendingAnime.name} to Watching at the top`, 'success');
       setShowMoveModal(false);
       setPendingAnime(null);
-      
 
       setActiveTab('watching');
       setTabPages(prev => ({ ...prev, watching: 1 }));
-      void fetchAnimes('watching', 1, { showLoader: false });
-    } catch (e) {
-      addToast("Failed to move anime", 'warning');
+    } catch {
+      addToast('Failed to move anime', 'warning');
     }
   };
-
 
   const handleDeleteInitiate = (anime: Anime) => {
     setPendingAnime(anime);
@@ -618,37 +407,22 @@ export default function Home() {
   const handleConfirmDelete = async () => {
     if (!pendingAnime) return;
     const id = pendingAnime.id;
-    const backup = [...animes];
-    const paginationBackup = pagination;
-    
-    setIsDeleting(true);
+    const backup = animes;
 
-    // Track pending deletion
-    pendingDeletionsRef.current.set(id, { expiresAtRequestId: undefined });
+    setIsDeleting(true);
 
     // Optimistic removal
     setAnimes(prev => prev.filter(a => a.id !== id));
-    setPagination(prev => ({ ...prev, total: Math.max(0, prev.total - 1) }));
 
     try {
-      const res = await fetch(`/api/anime/${id}`, { method: 'DELETE' });
-      await parseApiResponse(res);
-      
+      await deleteAnime.mutateAsync(id);
+
       // Close modal and show toast immediately on success
       setShowDeleteModal(false);
       addToast(`Permanently deleted ${pendingAnime.name}`, 'success');
-
-      void fetchStats();
-      // Re-sync in the background so the next item slides in without a full-screen loader.
-      const nextFetchPromise = fetchAnimes(activeTab, currentPage, { showLoader: false });
-      const generatedRequestId = latestRequestRef.current;
-      pendingDeletionsRef.current.set(id, { expiresAtRequestId: generatedRequestId });
-      await nextFetchPromise;
-    } catch (e) {
+    } catch {
       setAnimes(backup);
-      setPagination(paginationBackup);
-      pendingDeletionsRef.current.delete(id);
-      addToast("Failed to delete anime", "warning");
+      addToast('Failed to delete anime', 'warning');
     } finally {
       setIsDeleting(false);
       setPendingAnime(null);
@@ -671,7 +445,7 @@ export default function Home() {
 
     const { season, part, type } = parseSeasonField(editSeason);
     const isMovieSelected = type === 'Movie';
-    
+
     // Frontend validation (for non-movies)
     if (!isMovieSelected) {
       const watched = parseInt(editEpisodesWatched, 10);
@@ -710,7 +484,7 @@ export default function Home() {
         episodesWatched: isMovieSelected ? 0 : parseInt(editEpisodesWatched, 10),
       };
 
-      const updatedAnime = await updateAnime(pendingAnime.id, updates);
+      const updatedAnime = await runUpdate(pendingAnime.id, updates);
 
       // Instantly update local state with exact data returned from API
       setAnimes(prev => prev.map(a => a.id === pendingAnime.id ? { ...a, ...updatedAnime } : a));
@@ -728,7 +502,7 @@ export default function Home() {
     if (updatingIds[anime.id]) return;
     try {
       addToast(`Moved ${anime.name} to Dropped`, 'info', 900);
-      await updateAnime(anime.id, { status: 'dropped' });
+      await runUpdate(anime.id, { status: 'dropped' });
     } catch {
       addToast("Failed to drop anime", "warning");
     }
@@ -749,26 +523,19 @@ export default function Home() {
       watchOrder: offset + index + 1,
     }));
 
-    // Optimistic UI update
+    // Optimistic UI update — local state drives the visible order.
     const optimisticAnimes = reordered.map((anime, index) => ({
       ...anime,
       watchOrder: offset + index + 1,
     }));
     setAnimes(optimisticAnimes);
 
-
-
     try {
-      const res = await fetch('/api/anime/reorder', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items }),
-      });
-      if (!res.ok) throw new Error('Reorder failed');
+      await reorderAnime.mutateAsync(items);
     } catch (e) {
-      // Rollback on failure
+      // Rollback on failure — refetch the current view from the server.
       console.error('Reorder failed:', e);
-      void fetchAnimes(activeTab, currentPage, { showLoader: false });
+      listQuery.refetch();
     }
   };
 
@@ -776,13 +543,13 @@ export default function Home() {
     if (isExporting) return;
     setIsExporting(true);
     addToast("Generating Excel file, please wait...", "info", 3000);
-    
+
     try {
       const response = await fetch('/api/anime/export');
       if (!response.ok) {
         throw new Error('Export request failed');
       }
-      
+
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -792,7 +559,7 @@ export default function Home() {
       link.click();
       link.parentNode?.removeChild(link);
       window.URL.revokeObjectURL(url);
-      
+
       addToast("Collection exported successfully!", "success");
     } catch (e) {
       console.error(e);
@@ -931,7 +698,7 @@ export default function Home() {
                           </div>
                           <span className="anime-meta-mini">{formatSeasonText(anime.season, anime.part, anime.type)} &middot; {anime.normalizedName}</span>
                         </div>
-                        
+
                         <div className="col-ep-control">
                           {anime.type === 'Movie' ? (
                             <span className="movie-badge">
@@ -945,15 +712,15 @@ export default function Home() {
                                 <small>eps</small>
                               </div>
                               <div className="ep-btns">
-                                <button 
-                                  onClick={() => updateAnime(anime.id, { episodesWatched: Math.max(0, anime.episodesWatched - 1) })} 
+                                <button
+                                  onClick={() => runUpdate(anime.id, { episodesWatched: Math.max(0, anime.episodesWatched - 1) })}
                                   className="btn-mini"
                                   disabled={!!updatingIds[anime.id]}
                                 >
                                   <Minus size={14} />
                                 </button>
-                                <button 
-                                  onClick={() => updateAnime(anime.id, { episodesWatched: anime.episodesWatched + 1 })} 
+                                <button
+                                  onClick={() => runUpdate(anime.id, { episodesWatched: anime.episodesWatched + 1 })}
                                   className="btn-mini primary"
                                   disabled={!!updatingIds[anime.id] || (anime.totalEpisodes !== undefined && anime.totalEpisodes > 0 && anime.episodesWatched >= anime.totalEpisodes)}
                                   title={anime.totalEpisodes !== undefined && anime.totalEpisodes > 0 && anime.episodesWatched >= anime.totalEpisodes ? "Progress reached total episodes" : "Increment episodes"}
@@ -964,7 +731,7 @@ export default function Home() {
                             </>
                           )}
                         </div>
-                        
+
                         <div className="col-actions-group">
                           {updatingIds[anime.id] ? (
                             <div className="row-loader" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '92px' }}>
@@ -972,33 +739,33 @@ export default function Home() {
                             </div>
                           ) : (
                             <>
-                              <button 
-                                onClick={() => updateAnime(anime.id, { status: 'completed' })} 
-                                className="btn-row success" 
+                              <button
+                                onClick={() => runUpdate(anime.id, { status: 'completed' })}
+                                className="btn-row success"
                                 title="Complete"
                                 disabled={!!updatingIds[anime.id]}
                               >
                                 <Check size={16} />
                               </button>
-                              <button 
-                                onClick={() => handleDropInitiate(anime)} 
-                                className="btn-row danger" 
+                              <button
+                                onClick={() => handleDropInitiate(anime)}
+                                className="btn-row danger"
                                 title="Drop"
                                 disabled={!!updatingIds[anime.id]}
                               >
                                 <XCircle size={16} />
                               </button>
-                              <button 
-                                onClick={() => handleEditInitiate(anime)} 
-                                className="btn-row ghost" 
+                              <button
+                                onClick={() => handleEditInitiate(anime)}
+                                className="btn-row ghost"
                                 title="Edit"
                                 disabled={!!updatingIds[anime.id]}
                               >
                                 <Edit2 size={16} />
                               </button>
-                              <button 
-                                onClick={() => handleDeleteInitiate(anime)} 
-                                className="btn-row ghost" 
+                              <button
+                                onClick={() => handleDeleteInitiate(anime)}
+                                className="btn-row ghost"
                                 title="Delete"
                                 disabled={!!updatingIds[anime.id]}
                               >
@@ -1024,7 +791,7 @@ export default function Home() {
                   <span className="anime-title-main">{anime.name}</span>
                   <span className="anime-meta-mini">{formatSeasonText(anime.season, anime.part, anime.type)} &middot; {anime.normalizedName}</span>
                 </div>
-                
+
                 <div className="col-ep-control">
                   {anime.type === 'Movie' ? (
                     <span className="movie-badge">
@@ -1038,15 +805,15 @@ export default function Home() {
                         <small>eps</small>
                       </div>
                       <div className="ep-btns">
-                        <button 
-                          onClick={() => updateAnime(anime.id, { episodesWatched: Math.max(0, anime.episodesWatched - 1) })} 
+                        <button
+                          onClick={() => runUpdate(anime.id, { episodesWatched: Math.max(0, anime.episodesWatched - 1) })}
                           className="btn-mini"
                           disabled={!!updatingIds[anime.id]}
                         >
                           <Minus size={14} />
                         </button>
-                        <button 
-                          onClick={() => updateAnime(anime.id, { episodesWatched: anime.episodesWatched + 1 })} 
+                        <button
+                          onClick={() => runUpdate(anime.id, { episodesWatched: anime.episodesWatched + 1 })}
                           className="btn-mini primary"
                           disabled={!!updatingIds[anime.id] || (anime.totalEpisodes !== undefined && anime.totalEpisodes > 0 && anime.episodesWatched >= anime.totalEpisodes)}
                           title={anime.totalEpisodes !== undefined && anime.totalEpisodes > 0 && anime.episodesWatched >= anime.totalEpisodes ? "Progress reached total episodes" : "Increment episodes"}
@@ -1057,7 +824,7 @@ export default function Home() {
                     </>
                   )}
                 </div>
-                
+
                 <div className="col-actions-group">
                   {updatingIds[anime.id] ? (
                     <div className="row-loader" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '92px' }}>
@@ -1066,9 +833,9 @@ export default function Home() {
                   ) : (
                     <>
                       {activeTab !== 'completed' && (
-                        <button 
-                          onClick={() => updateAnime(anime.id, { status: 'completed' })} 
-                          className="btn-row success" 
+                        <button
+                          onClick={() => runUpdate(anime.id, { status: 'completed' })}
+                          className="btn-row success"
                           title="Complete"
                           disabled={!!updatingIds[anime.id]}
                         >
@@ -1076,9 +843,9 @@ export default function Home() {
                         </button>
                       )}
                       {activeTab !== 'watching' as string && (
-                        <button 
-                          onClick={() => updateAnime(anime.id, { status: 'incomplete' })} 
-                          className="btn-row" 
+                        <button
+                          onClick={() => runUpdate(anime.id, { status: 'incomplete' })}
+                          className="btn-row"
                           title="Watching"
                           disabled={!!updatingIds[anime.id]}
                         >
@@ -1086,26 +853,26 @@ export default function Home() {
                         </button>
                       )}
                       {activeTab !== 'dropped' && (
-                        <button 
-                          onClick={() => handleDropInitiate(anime)} 
-                          className="btn-row danger" 
+                        <button
+                          onClick={() => handleDropInitiate(anime)}
+                          className="btn-row danger"
                           title="Drop"
                           disabled={!!updatingIds[anime.id]}
                         >
                           <XCircle size={16} />
                         </button>
                       )}
-                      <button 
-                        onClick={() => handleEditInitiate(anime)} 
-                        className="btn-row ghost" 
+                      <button
+                        onClick={() => handleEditInitiate(anime)}
+                        className="btn-row ghost"
                         title="Edit"
                         disabled={!!updatingIds[anime.id]}
                       >
                         <Edit2 size={16} />
                       </button>
-                      <button 
-                        onClick={() => handleDeleteInitiate(anime)} 
-                        className="btn-row ghost" 
+                      <button
+                        onClick={() => handleDeleteInitiate(anime)}
+                        className="btn-row ghost"
                         title="Delete"
                         disabled={!!updatingIds[anime.id]}
                       >
@@ -1139,7 +906,7 @@ export default function Home() {
               <p className="tagline">Your minimalist anime journey</p>
             </div>
           </div>
-          
+
           <div className="stats-box">
             <span className="stats-label">Total Unique Anime</span>
             <span className="stats-number">{stats}</span>
@@ -1151,9 +918,9 @@ export default function Home() {
         <div className="search-section animate-fade-in" ref={searchContainerRef}>
           <div className="search-wrapper">
             <Search className="search-icon" size={20} />
-            <input 
-              type="text" 
-              placeholder="Search anime to add..." 
+            <input
+              type="text"
+              placeholder="Search anime to add..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               onFocus={handleInputFocus}
@@ -1161,9 +928,9 @@ export default function Home() {
               className="search-input"
             />
             {searchQuery && (
-              <button 
-                type="button" 
-                className="search-clear-btn" 
+              <button
+                type="button"
+                className="search-clear-btn"
                 onClick={() => {
                   setSearchQuery('');
                   setSuggestions([]);
@@ -1175,13 +942,13 @@ export default function Home() {
               </button>
             )}
           </div>
-          
+
           {showSuggestions && suggestions.length > 0 && (
             <div className="search-suggestions animate-fade-in" onScroll={handleScroll}>
               {suggestions.map((sugg) => (
-                <div 
-                  key={sugg.mal_id} 
-                  className={`suggestion-item ${isAdding === String(sugg.mal_id) ? 'is-adding' : ''}`} 
+                <div
+                  key={sugg.mal_id}
+                  className={`suggestion-item ${isAdding === String(sugg.mal_id) ? 'is-adding' : ''}`}
                   onClick={() => handleAddAnime(sugg)}
                 >
                   <img src={sugg.images?.jpg?.image_url} alt="" className="sugg-img" />
@@ -1201,7 +968,7 @@ export default function Home() {
               ))}
 
               {isSearching && hasNextPage && (
-                <div 
+                <div
                   style={{
                     width: '100%',
                     padding: '1rem',
@@ -1225,17 +992,17 @@ export default function Home() {
         <div className="search-section animate-fade-in">
           <div className="search-wrapper">
             <Search className="search-icon" size={20} />
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder={activeTab === 'completed' ? "Search completed anime..." : "Search dropped anime..."}
               value={localSearchQuery}
               onChange={e => setLocalSearchQuery(e.target.value)}
               className="search-input"
             />
             {localSearchQuery && (
-              <button 
-                type="button" 
-                className="search-clear-btn" 
+              <button
+                type="button"
+                className="search-clear-btn"
                 onClick={() => {
                   setLocalSearchQuery('');
                   setDebouncedLocalSearchQuery('');
@@ -1281,9 +1048,9 @@ export default function Home() {
             <label>per page</label>
           </div>
 
-          <button 
-            className="btn-export animate-fade-in" 
-            onClick={handleExportExcel} 
+          <button
+            className="btn-export animate-fade-in"
+            onClick={handleExportExcel}
             disabled={isExporting}
             title="Export all anime to formatted Excel workbook"
           >
@@ -1348,7 +1115,7 @@ export default function Home() {
                   </>
                 )}
               </section>
-              
+
               <div className="dashboard-promo">
                 <p>Looking for your original detailed history with numbering?</p>
                 <Link href="/original-list" className="btn-link">View Original Numbered List &rarr;</Link>
@@ -1359,9 +1126,9 @@ export default function Home() {
       )}
       <Toast messages={toasts} onRemove={removeToast} />
 
-      <Modal 
-        isOpen={showMoveModal} 
-        onClose={() => { setShowMoveModal(false); setPendingAnime(null); }} 
+      <Modal
+        isOpen={showMoveModal}
+        onClose={() => { setShowMoveModal(false); setPendingAnime(null); }}
         title="Anime Already Exists"
       >
         <div className="move-modal-inner">
@@ -1398,15 +1165,15 @@ export default function Home() {
           </p>
           <p className="modal-description-sub">This action is permanent and will remove all tracking history for this anime.</p>
           <div className="modal-actions">
-            <button 
-              className="modal-btn secondary" 
+            <button
+              className="modal-btn secondary"
               onClick={() => { setShowDeleteModal(false); setPendingAnime(null); }}
               disabled={isDeleting}
             >
               No, Keep It
             </button>
-            <button 
-              className="modal-btn danger" 
+            <button
+              className="modal-btn danger"
               onClick={handleConfirmDelete}
               disabled={isDeleting}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
@@ -1432,7 +1199,7 @@ export default function Home() {
       >
         <div className="edit-modal-inner animate-fade-in">
           {editError && <div className="form-error">{editError}</div>}
-          
+
           <div className="form-group">
             <label className="form-label" htmlFor="edit-name">Anime Name</label>
             <input
@@ -1532,15 +1299,15 @@ export default function Home() {
           )}
 
           <div className="modal-actions">
-            <button 
-              className="modal-btn secondary" 
+            <button
+              className="modal-btn secondary"
               onClick={() => { setShowEditModal(false); setPendingAnime(null); }}
               disabled={isSavingEdit}
             >
               Cancel
             </button>
-            <button 
-              className="modal-btn primary" 
+            <button
+              className="modal-btn primary"
               onClick={handleEditConfirm}
               disabled={isSavingEdit || !editName.trim() || !editSlug.trim()}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
