@@ -9,4 +9,6 @@ export const qk = {
   userSearch: (q: string) => ['user-search', q] as const,
   profile: (username: string) => ['profile', username] as const,
   userAnime: (username: string, status: string, page?: number) => ['user-anime', username, status, page ?? 1] as const,
+  followers: (username: string) => ['followers', username] as const,
+  following: (username: string) => ['following', username] as const,
 };

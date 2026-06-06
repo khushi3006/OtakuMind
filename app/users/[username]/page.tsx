@@ -1,44 +1,28 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Lock, Plus, Check, RefreshCw, Film, PlayCircle, XCircle, Settings, ChevronLeft, ChevronRight, ArrowLeft,
+  UserPlus, UserCheck, Loader2,
 } from 'lucide-react';
 import Modal from '@/components/Modal';
 import Toast, { type ToastMessage } from '@/components/Toast';
-import FollowButton from '@/components/FollowButton';
-import UserCard, { type UserCardData } from '@/components/UserCard';
-
-type Profile = {
-  id: number;
-  username: string;
-  name: string | null;
-  bio: string | null;
-  isPublic: boolean;
-  createdAt: string;
-  followersCount: number;
-  followingCount: number;
-  isSelf: boolean;
-  isFollowing: boolean;
-  canViewList: boolean;
-  animeCounts: { watching: number; completed: number; dropped: number; total: number };
-};
-
-type ListAnime = {
-  id: number;
-  name: string;
-  normalizedName: string;
-  season: number;
-  episodesWatched: number;
-  totalEpisodes: number;
-  status: string;
-  imageUrl: string | null;
-  malId: number | null;
-  type: string;
-  airing: boolean;
-  inMyList: boolean;
-};
+import UserCard from '@/components/UserCard';
+import { ApiError } from '@/lib/api';
+import { qk } from '@/lib/query/keys';
+import {
+  useProfile,
+  useUserAnime,
+  useFollow,
+  useFollowers,
+  useFollowing,
+  useUpdateProfile,
+  type ListAnime,
+  type ListAnimePage,
+} from '@/lib/query/hooks/users';
+import { useCreateAnime } from '@/lib/query/hooks/anime';
 
 type TabKey = 'incomplete' | 'completed' | 'dropped';
 
@@ -67,18 +51,13 @@ function initials(name: string | null, username: string) {
 export default function ProfilePage() {
   const params = useParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const username = String(params.username || '');
 
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [profileLoading, setProfileLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
   const [activeTab, setActiveTab] = useState<TabKey>('incomplete');
-  const [animes, setAnimes] = useState<ListAnime[]>([]);
-  const [listLoading, setListLoading] = useState(false);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [addingId, setAddingId] = useState<number | null>(null);
+  const [followHovered, setFollowHovered] = useState(false);
 
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
@@ -88,15 +67,10 @@ export default function ProfilePage() {
   const [editUsername, setEditUsername] = useState('');
   const [editBio, setEditBio] = useState('');
   const [editIsPublic, setEditIsPublic] = useState(true);
-  const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
   // Followers / Following modal
   const [showConnections, setShowConnections] = useState<null | 'followers' | 'following'>(null);
-  const [connections, setConnections] = useState<UserCardData[]>([]);
-  const [connectionsLoading, setConnectionsLoading] = useState(false);
-
-  const listReqRef = useRef(0);
 
   const addToast = useCallback((message: string, type: 'success' | 'info' | 'warning' = 'info') => {
     const id = Math.random().toString(36).slice(2, 9);
@@ -106,95 +80,82 @@ export default function ProfilePage() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const loadProfile = useCallback(async () => {
-    setProfileLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/users/${encodeURIComponent(username)}`);
-      if (res.status === 401) {
-        router.replace('/login');
-        return;
-      }
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || 'Could not load profile');
-        setProfile(null);
-        return;
-      }
-      setProfile(data.profile);
-    } catch {
-      setError('Could not load profile');
-    } finally {
-      setProfileLoading(false);
-    }
-  }, [username, router]);
+  const profileQuery = useProfile(username);
+  const profile = profileQuery.data ?? null;
 
+  // Redirect to /login on an unauthorized profile fetch.
   useEffect(() => {
-    loadProfile();
-  }, [loadProfile]);
-
-  const loadList = useCallback(async (tab: TabKey, pageNum: number) => {
-    if (!profile?.canViewList) return;
-    const reqId = ++listReqRef.current;
-    setListLoading(true);
-    try {
-      const res = await fetch(
-        `/api/users/${encodeURIComponent(username)}/anime?status=${tab}&page=${pageNum}&limit=20`
-      );
-      const data = await res.json();
-      if (reqId !== listReqRef.current) return;
-      if (res.ok) {
-        setAnimes(data.data || []);
-        setTotalPages(data.pagination?.totalPages || 1);
-      } else {
-        setAnimes([]);
-      }
-    } catch {
-      if (reqId === listReqRef.current) setAnimes([]);
-    } finally {
-      if (reqId === listReqRef.current) setListLoading(false);
+    const err = profileQuery.error;
+    if (err instanceof ApiError && err.status === 401) {
+      router.replace('/login');
     }
-  }, [username, profile?.canViewList]);
+  }, [profileQuery.error, router]);
 
-  useEffect(() => {
-    if (profile?.canViewList) loadList(activeTab, page);
-  }, [profile?.canViewList, activeTab, page, loadList]);
+  const canViewList = !!profile?.canViewList;
+  const listQuery = useUserAnime(username, activeTab, page, canViewList);
+  const animes = listQuery.data?.data ?? [];
+  const totalPages = listQuery.data?.pagination?.totalPages ?? 1;
+  // Match the old behavior: skeleton shows while fetching the active page.
+  const listLoading = canViewList && listQuery.isFetching && !listQuery.data;
+
+  const followMutation = useFollow(username);
+  const createMutation = useCreateAnime();
+  const updateProfile = useUpdateProfile();
+
+  const followersQuery = useFollowers(username, showConnections === 'followers');
+  const followingQuery = useFollowing(username, showConnections === 'following');
+  const connections =
+    (showConnections === 'followers' ? followersQuery.data : followingQuery.data) ?? [];
+  const connectionsLoading =
+    showConnections === 'followers'
+      ? followersQuery.isLoading
+      : showConnections === 'following'
+      ? followingQuery.isLoading
+      : false;
 
   const handleTabChange = (tab: TabKey) => {
     setActiveTab(tab);
     setPage(1);
   };
 
+  const toggleFollow = () => {
+    if (!profile || followMutation.isPending) return;
+    followMutation.mutate(profile.isFollowing ? 'unfollow' : 'follow');
+  };
+
   const handleAddToMyList = async (anime: ListAnime) => {
     if (addingId) return;
     setAddingId(anime.id);
-    try {
-      const res = await fetch('/api/anime', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: anime.name,
-          malId: anime.malId,
-          imageUrl: anime.imageUrl,
-          type: anime.type,
-          totalEpisodes: anime.totalEpisodes,
-          episodesWatched: 0,
-          status: 'incomplete',
-          airing: anime.airing,
-        }),
-      });
-
-      if (res.status === 409) {
-        addToast('Already in your list', 'warning');
-        setAnimes((prev) => prev.map((a) => (a.id === anime.id ? { ...a, inMyList: true } : a)));
-        return;
+    const markInList = () => {
+      const key = qk.userAnime(username, activeTab, page);
+      const prev = queryClient.getQueryData<ListAnimePage>(key);
+      if (prev) {
+        queryClient.setQueryData<ListAnimePage>(key, {
+          ...prev,
+          data: prev.data.map((a) => (a.id === anime.id ? { ...a, inMyList: true } : a)),
+        });
       }
-      if (!res.ok) throw new Error('Add failed');
-
+    };
+    try {
+      await createMutation.mutateAsync({
+        name: anime.name,
+        malId: anime.malId,
+        imageUrl: anime.imageUrl,
+        type: anime.type,
+        totalEpisodes: anime.totalEpisodes,
+        episodesWatched: 0,
+        status: 'incomplete',
+        airing: anime.airing,
+      });
       addToast(`Added "${anime.name}" to your watching list`, 'success');
-      setAnimes((prev) => prev.map((a) => (a.id === anime.id ? { ...a, inMyList: true } : a)));
-    } catch {
-      addToast('Failed to add anime', 'warning');
+      markInList();
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 409) {
+        addToast('Already in your list', 'warning');
+        markInList();
+      } else {
+        addToast('Failed to add anime', 'warning');
+      }
     } finally {
       setAddingId(null);
     }
@@ -212,56 +173,30 @@ export default function ProfilePage() {
 
   const saveEdit = async () => {
     if (!profile) return;
-    setSavingEdit(true);
     setEditError(null);
     try {
-      const res = await fetch('/api/users/me', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: editName,
-          username: editUsername.trim().toLowerCase(),
-          bio: editBio,
-          isPublic: editIsPublic,
-        }),
+      const data = await updateProfile.mutateAsync({
+        name: editName,
+        username: editUsername.trim().toLowerCase(),
+        bio: editBio,
+        isPublic: editIsPublic,
       });
-      const data = await res.json();
-      if (!res.ok) {
-        setEditError(data.error || 'Failed to save');
-        return;
-      }
       addToast('Profile updated', 'success');
       setShowEdit(false);
       const newUsername = data.user.username;
       if (newUsername !== profile.username) {
         router.replace(`/users/${newUsername}`);
-      } else {
-        setProfile((prev) => prev && { ...prev, ...data.user });
       }
-    } catch {
-      setEditError('Failed to save');
-    } finally {
-      setSavingEdit(false);
+      // else: invalidation in the hook refetches the profile with the new values.
+    } catch (e) {
+      setEditError(e instanceof ApiError ? e.message : 'Failed to save');
     }
   };
 
-  const openConnections = async (kind: 'followers' | 'following') => {
-    setShowConnections(kind);
-    setConnectionsLoading(true);
-    setConnections([]);
-    try {
-      const res = await fetch(`/api/users/${encodeURIComponent(username)}/${kind}`);
-      const data = await res.json();
-      setConnections(res.ok ? data.data || [] : []);
-    } catch {
-      setConnections([]);
-    } finally {
-      setConnectionsLoading(false);
-    }
-  };
+  const savingEdit = updateProfile.isPending;
 
   // ---- Render states ----
-  if (profileLoading) {
+  if (profileQuery.isLoading) {
     return (
       <main className="dashboard">
         <div className="profile-header-card skeleton-row" style={{ minHeight: '160px' }}>
@@ -275,11 +210,17 @@ export default function ProfilePage() {
     );
   }
 
-  if (error || !profile) {
+  if (profileQuery.isError || !profile) {
+    const message =
+      profileQuery.error instanceof ApiError
+        ? profileQuery.error.message
+        : profileQuery.error
+        ? 'Could not load profile'
+        : 'User not found';
     return (
       <main className="dashboard">
         <div className="profile-empty">
-          <p className="empty-state">{error || 'User not found'}</p>
+          <p className="empty-state">{message}</p>
           <button className="btn-link" onClick={() => router.push('/users')}>
             <ArrowLeft size={16} /> Back to Discover
           </button>
@@ -308,10 +249,10 @@ export default function ProfilePage() {
           {profile.bio && <p className="profile-bio">{profile.bio}</p>}
 
           <div className="profile-stats">
-            <button className="profile-stat" onClick={() => openConnections('followers')}>
+            <button className="profile-stat" onClick={() => setShowConnections('followers')}>
               <strong>{profile.followersCount}</strong> Followers
             </button>
-            <button className="profile-stat" onClick={() => openConnections('following')}>
+            <button className="profile-stat" onClick={() => setShowConnections('following')}>
               <strong>{profile.followingCount}</strong> Following
             </button>
             {profile.canViewList && (
@@ -328,19 +269,28 @@ export default function ProfilePage() {
               <Settings size={16} /> Edit Profile
             </button>
           ) : (
-            <FollowButton
-              username={profile.username}
-              initialIsFollowing={profile.isFollowing}
-              onChange={(isFollowing, followersCount) =>
-                setProfile((prev) =>
-                  prev && {
-                    ...prev,
-                    isFollowing,
-                    followersCount: followersCount ?? prev.followersCount,
-                  }
-                )
-              }
-            />
+            <button
+              className={['follow-btn', profile.isFollowing ? 'following' : ''].filter(Boolean).join(' ')}
+              onClick={toggleFollow}
+              disabled={followMutation.isPending}
+              onMouseEnter={() => setFollowHovered(true)}
+              onMouseLeave={() => setFollowHovered(false)}
+              aria-pressed={profile.isFollowing}
+            >
+              {followMutation.isPending ? (
+                <Loader2 size={16} className="spin" />
+              ) : profile.isFollowing ? (
+                <>
+                  <UserCheck size={16} />
+                  <span>{followHovered ? 'Unfollow' : 'Following'}</span>
+                </>
+              ) : (
+                <>
+                  <UserPlus size={16} />
+                  <span>Follow</span>
+                </>
+              )}
+            </button>
           )}
         </div>
       </div>
