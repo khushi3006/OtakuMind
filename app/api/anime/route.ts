@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { db } from '@/lib/db';
+import { refreshAniList, refreshBroadcast } from '@/lib/airing-cache';
 import { extractSeasonNumber, extractPartNumber } from '@/lib/normalize';
 import { resolveFranchise, findFranchiseRows, parkRows, applyFinalSeasons } from '@/lib/franchise-resolve';
 import { planSeasons } from '@/lib/season-reassign';
@@ -297,6 +298,19 @@ export async function POST(request: Request) {
         }, WATCH_ORDER_TRANSACTION_OPTIONS)
       );
 
+      // Populate the shared airing cache for this show in the background so the
+      // next list read is warm and the badge fills in within ~1s. Non-blocking.
+      if (newAnime.malId) {
+        const malId = newAnime.malId;
+        after(async () => {
+          try {
+            await refreshAniList([malId]);
+            await refreshBroadcast([malId]);
+          } catch {
+            /* best-effort; never affects the add response */
+          }
+        });
+      }
       return NextResponse.json(newAnime);
     } catch (error: unknown) {
       const message =
