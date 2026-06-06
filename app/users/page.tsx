@@ -1,47 +1,31 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, Users, XCircle } from 'lucide-react';
-import UserCard, { type UserCardData } from '@/components/UserCard';
+import UserCard from '@/components/UserCard';
+import { useMe } from '@/lib/query/hooks/auth';
+import { useUserSearch } from '@/lib/query/hooks/users';
 
 export default function DiscoverPeople() {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [debounced, setDebounced] = useState('');
-  const [users, setUsers] = useState<UserCardData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [authChecked, setAuthChecked] = useState(false);
 
   // Redirect to login if not authenticated.
+  const me = useMe();
   useEffect(() => {
-    fetch('/api/auth/me').then((res) => {
-      if (!res.ok) router.replace('/login');
-      else setAuthChecked(true);
-    });
-  }, [router]);
+    if (me.isError) router.replace('/login');
+  }, [me.isError, router]);
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(query.trim()), 300);
     return () => clearTimeout(t);
   }, [query]);
 
-  const fetchUsers = useCallback(async (q: string) => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/users/search?q=${encodeURIComponent(q)}`);
-      const data = await res.json();
-      setUsers(res.ok ? data.data || [] : []);
-    } catch {
-      setUsers([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (authChecked) fetchUsers(debounced);
-  }, [debounced, authChecked, fetchUsers]);
+  const search = useUserSearch(debounced, me.isSuccess);
+  const users = search.data ?? [];
+  const loading = !me.isSuccess || search.isPending;
 
   return (
     <main className="dashboard">
@@ -66,9 +50,9 @@ export default function DiscoverPeople() {
             autoFocus
           />
           {query && (
-            <button 
-              type="button" 
-              className="search-clear-btn" 
+            <button
+              type="button"
+              className="search-clear-btn"
               onClick={() => setQuery('')}
               title="Clear search"
             >
