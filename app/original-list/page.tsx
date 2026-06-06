@@ -1,28 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, ExternalLink, CalendarDays, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { errorMessage } from '@/lib/api-error';
-
-type Anime = {
-  id: number;
-  name: string;
-  normalizedName: string;
-  season: number;
-  episodesWatched: number;
-  status: string;
-  imageUrl: string | null;
-  malId: number | null;
-  originalOrder: number | null;
-  type: string;
-};
-
-type Pagination = {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-};
+import { useAnimeList } from '@/lib/query/hooks/anime';
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100] as const;
 
@@ -35,54 +16,36 @@ export function formatSeasonText(season: number, type: string): string {
   return `Season ${season}`;
 }
 
+function isWakingUpError(err: unknown): boolean {
+  if (!err) return false;
+  const msg = errorMessage(err, String(err));
+  return (
+    msg.includes('SSL connection') ||
+    msg.includes('consuming input failed') ||
+    msg.includes('Database error')
+  );
+}
+
+const EMPTY_PAGINATION = { page: 1, limit: 20, total: 0, totalPages: 0 };
+
 export default function OriginalListPage() {
-  const [animes, setAnimes] = useState<Anime[]>([]);
-  const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 20, total: 0, totalPages: 0 });
-  const [loading, setLoading] = useState(true);
-  const [isWakingUp, setIsWakingUp] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [pageSize, setPageSize] = useState<number>(20);
   const [page, setPage] = useState(1);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  // Two-tier search state
-  const [isServerSearching, setIsServerSearching] = useState(false);
-  const [serverSearchResults, setServerSearchResults] = useState<Anime[] | null>(null);
-  const [serverSearchPagination, setServerSearchPagination] = useState<Pagination | null>(null);
+  // Main completed list for the current page.
+  const listQuery = useAnimeList({ status: 'completed', page, limit: pageSize });
+  const animes = listQuery.data?.data ?? [];
+  const pagination = listQuery.data?.pagination ?? { ...EMPTY_PAGINATION, page, limit: pageSize };
 
+  // The query retries automatically; surface the "database waking up" message
+  // while it is retrying a transient DB connection error.
+  const isWakingUp = listQuery.isError && isWakingUpError(listQuery.error);
+  // Mirror the old `loading` flag: only show the spinner before any data exists.
+  const loading = listQuery.isPending;
 
-  const fetchAnimes = useCallback(async (pg: number, force = false, isRetry = false) => {
-    if (!isRetry) {
-      setLoading(true);
-      setIsWakingUp(false);
-    }
-    try {
-      const res = await fetch(`/api/anime?status=completed&page=${pg}&limit=${pageSize}`);
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Failed to fetch');
-      setAnimes(json.data || []);
-      setPagination(json.pagination || { page: pg, limit: pageSize, total: 0, totalPages: 0 });
-      setIsWakingUp(false);
-      setLoading(false);
-    } catch (err: unknown) {
-      console.error(err);
-      const msg = errorMessage(err, String(err));
-      if (msg.includes('SSL connection') || msg.includes('consuming input failed') || msg.includes('Database error')) {
-        setIsWakingUp(true);
-        setTimeout(() => {
-          fetchAnimes(pg, force, true);
-        }, 3000);
-      } else {
-        setIsWakingUp(false);
-        setLoading(false);
-      }
-    }
-  }, [pageSize]);
-
-  useEffect(() => {
-    fetchAnimes(page);
-  }, [page, fetchAnimes]);
-
-  // Two-tier search: first filter current page, then fall back to server search
+  // Two-tier search: first filter the current page, then fall back to server search.
   const clientFiltered = searchQuery
     ? animes.filter(a =>
         a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -92,31 +55,31 @@ export default function OriginalListPage() {
 
   const hasClientResults = searchQuery ? clientFiltered.length > 0 : true;
 
-  // Debounced server-side search when client search finds nothing
+  // Debounce the search term that drives the server-side fallback search.
   useEffect(() => {
     if (!searchQuery || hasClientResults) {
-      setServerSearchResults(null);
-      setServerSearchPagination(null);
+      setDebouncedSearch("");
       return;
     }
-
-    setIsServerSearching(true);
-    const timeout = setTimeout(async () => {
-      try {
-        const res = await fetch(`/api/anime?status=completed&search=${encodeURIComponent(searchQuery)}&page=1&limit=${pageSize}`);
-        const json = await res.json();
-        setServerSearchResults(json.data || []);
-        setServerSearchPagination(json.pagination || null);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setIsServerSearching(false);
-      }
-    }, 500);
+    const timeout = setTimeout(() => setDebouncedSearch(searchQuery), 500);
     return () => clearTimeout(timeout);
-  }, [searchQuery, hasClientResults, pageSize]);
+  }, [searchQuery, hasClientResults]);
 
-  // Decide which list to display
+  // Server-side search across all completed anime when the current page has no match.
+  const serverSearchEnabled = !!debouncedSearch && !hasClientResults;
+  const serverSearchQuery = useAnimeList({
+    status: 'completed',
+    search: debouncedSearch || undefined,
+    page: 1,
+    limit: pageSize,
+    enabled: serverSearchEnabled,
+  });
+
+  const serverSearchResults = serverSearchEnabled ? (serverSearchQuery.data?.data ?? null) : null;
+  const serverSearchPagination = serverSearchEnabled ? (serverSearchQuery.data?.pagination ?? null) : null;
+  const isServerSearching = serverSearchEnabled && serverSearchQuery.isFetching && serverSearchResults === null;
+
+  // Decide which list to display.
   const displayList = searchQuery
     ? (hasClientResults ? clientFiltered : (serverSearchResults || []))
     : animes;
@@ -129,7 +92,6 @@ export default function OriginalListPage() {
 
   const goToPage = (pg: number) => {
     setPage(pg);
-    setServerSearchResults(null);
   };
 
   const handlePageSizeChange = (newSize: number) => {
@@ -186,12 +148,12 @@ export default function OriginalListPage() {
           <h1>Original Completed List</h1>
           <p className="subtitle">All {displayPagination.total} entries from your initial archives, preserved with original numbering.</p>
         </div>
-        
+
         <div className="search-bar">
           <Search size={18} />
-          <input 
-            type="text" 
-            placeholder="Search your history..." 
+          <input
+            type="text"
+            placeholder="Search your history..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -235,7 +197,7 @@ export default function OriginalListPage() {
             <span className="col-type">Type</span>
             <span className="col-group">Group</span>
           </div>
-          
+
           <div className="list-body">
             {displayList.map((anime) => (
               <div key={anime.id} className="list-row">
@@ -243,11 +205,11 @@ export default function OriginalListPage() {
                 <div className="col-title-detail">
                   <span className="anime-name-text">{anime.name}</span>
                   <div className="anime-sub-details">
-                    <CalendarDays size={12} /> {formatSeasonText(anime.season, anime.type)} 
+                    <CalendarDays size={12} /> {formatSeasonText(anime.season, anime.type)}
                     {anime.malId && (
-                      <a 
-                        href={`https://myanimelist.net/anime/${anime.malId}`} 
-                        target="_blank" 
+                      <a
+                        href={`https://myanimelist.net/anime/${anime.malId}`}
+                        target="_blank"
                         rel="noreferrer"
                         className="mal-link"
                       >
