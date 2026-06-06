@@ -129,7 +129,7 @@ export async function refreshAniList(malIds: number[]): Promise<number> {
       continue;
     }
     const byMal = new Map(media.map((m) => [m.idMal, m]));
-    await Promise.all(
+    const results = await Promise.allSettled(
       batch.map(async (malId) => {
         const hit = byMal.get(malId);
         const releaseStatus = hit ? mapStatus(hit.status) : 'unknown';
@@ -149,9 +149,15 @@ export async function refreshAniList(malIds: number[]): Promise<number> {
             syncedAt: new Date(),
           },
         });
-        updated++;
+        return 1;
       })
     );
+    updated += results.filter((r) => r.status === 'fulfilled').length;
+    for (const r of results) {
+      if (r.status === 'rejected') {
+        console.warn(`[airing-cache] AniList upsert failed: ${errorMessage(r.reason)}`);
+      }
+    }
   }
   return updated;
 }
@@ -197,7 +203,7 @@ export async function refreshBroadcast(malIds: number[]): Promise<number> {
           broadcastTimezone: b.timezone || null,
           broadcastString: b.string || null,
           airingStart: d.aired?.from || null,
-          releaseStatus: d.airing ? 'releasing' : 'unknown',
+          releaseStatus: d.airing ? 'releasing' : (d.status === 'Finished Airing' ? 'finished' : 'unknown'),
         },
         update: {
           broadcastDay: b.day || null,
