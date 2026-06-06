@@ -1,87 +1,58 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
-import { 
-  PlayCircle, 
-  Calendar, 
-  RefreshCw, 
-  Plus, 
-  Minus, 
-  Check, 
-  Clock, 
-  AlertCircle, 
-  ChevronRight, 
-  Compass, 
-  Tv, 
+import { useState, useCallback, useMemo, useEffect } from 'react';
+import {
+  PlayCircle,
+  Calendar,
+  RefreshCw,
+  Plus,
+  Minus,
+  Check,
+  Clock,
+  AlertCircle,
+  ChevronRight,
+  Compass,
+  Tv,
   ExternalLink,
   Sparkles
 } from 'lucide-react';
 import { calculateAiringCountdown, countdownFromAiringAt, getLocalBroadcastDay, getISTBroadcastDetails, getISTDate } from '@/lib/airing-utils';
 import Toast, { type ToastMessage } from '@/components/Toast';
-import { errorMessage } from '@/lib/api-error';
-
-type Anime = {
-  id: number;
-  name: string;
-  normalizedName: string;
-  season: number;
-  episodesWatched: number;
-  status: string;
-  imageUrl: string | null;
-  malId: number | null;
-  airing: boolean;
-  broadcastDay: string | null;
-  broadcastTime: string | null;
-  broadcastTimezone: string | null;
-  broadcastString: string | null;
-  airingStart?: string | null;
-  nextEpisode?: number | null;
-  nextEpisodeAt?: number | null;
-  type?: string;
-};
-
-type PopularShow = {
-  mal_id: number;
-  title: string;
-  title_english: string | null;
-  images: {
-    jpg: {
-      image_url: string | null;
-    }
-  };
-  airing: boolean;
-  broadcast: {
-    day?: string | null;
-    time?: string | null;
-    timezone?: string | null;
-    string?: string | null;
-  };
-  type: string;
-  score: number | null;
-  synopsis: string | null;
-  episodes?: number | null;
-  aired?: {
-    from?: string | null;
-  } | null;
-  nextEpisode?: number | null;
-  nextEpisodeAt?: number | null;
-};
+import { isWakingUpError } from '@/lib/api';
+import { useIncompleteAll, useUpdateAnime, useCreateAnime, type Anime } from '@/lib/query/hooks/anime';
+import { usePopularAiring, type PopularAnime } from '@/lib/query/hooks/airing';
 
 type TabKey = 'today' | 'week' | 'upcoming' | 'popular';
 
 export default function AiringSchedulePage() {
-  const [trackedAnime, setTrackedAnime] = useState<Anime[]>([]);
-  const [popularAiring, setPopularAiring] = useState<PopularShow[]>([]);
-  
-  const [loadingTracked, setLoadingTracked] = useState(true);
-  const [loadingPopular, setLoadingPopular] = useState(false);
-  const [isWakingUp, setIsWakingUp] = useState(false);
   const [isAdding, setIsAdding] = useState<string | null>(null);
-  
   const [activeTab, setActiveTab] = useState<TabKey>('today');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  
+
+  const trackedQuery = useIncompleteAll();
+  const popularQuery = usePopularAiring();
+  const updateAnime = useUpdateAnime();
+  const createAnime = useCreateAnime();
+
+  const trackedAnime = useMemo<Anime[]>(() => trackedQuery.data ?? [], [trackedQuery.data]);
+
+  // Deduplicate popular shows by mal_id so cards render uniquely (preserved from original).
+  const popularAiring = useMemo<PopularAnime[]>(() => {
+    const data = popularQuery.data ?? [];
+    const seen = new Set<number>();
+    return data.filter((show) => {
+      if (!show.mal_id || seen.has(show.mal_id)) return false;
+      seen.add(show.mal_id);
+      return true;
+    });
+  }, [popularQuery.data]);
+
+  // The tracked list is still loading (cold-start retries are handled by the
+  // shared QueryClient). isWakingUp drives the "database waking up" notice.
+  const loadingTracked = trackedQuery.isPending;
+  const isWakingUp = (trackedQuery.isPending || trackedQuery.isFetching) && isWakingUpError(trackedQuery.error);
+  const loadingPopular = popularQuery.isPending;
+
   const currentLocalDay = (() => {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     return days[getISTDate().getUTCDay()];
@@ -102,136 +73,56 @@ export default function AiringSchedulePage() {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
-  const fetchTrackedAnime = useCallback(async (isRetry = false) => {
-    if (!isRetry) {
-      setLoadingTracked(true);
-      setIsWakingUp(false);
-    }
-    try {
-      // Load all incomplete (currently watching) shows to filter for airing schedule
-      const res = await fetch('/api/anime?status=incomplete&limit=100');
-      const json = await res.json();
-      
-      if (!res.ok) throw new Error(json.error || 'Failed to fetch tracked anime');
-      
-      setTrackedAnime(json.data || []);
-      setIsWakingUp(false);
-      setLoadingTracked(false);
-    } catch (err: unknown) {
-      console.error(err);
-      const msg = errorMessage(err, String(err));
-      if (msg.includes('SSL connection') || msg.includes('consuming input failed') || msg.includes('Database error') || msg.includes('ENOTFOUND') || msg.includes('getaddrinfo')) {
-        setIsWakingUp(true);
-        setTimeout(() => {
-          fetchTrackedAnime(true);
-        }, 3000);
-      } else {
-        setLoadingTracked(false);
-      }
-    }
-  }, []);
-
-  const fetchPopularAiring = useCallback(async () => {
-    setLoadingPopular(true);
-    try {
-      const res = await fetch('/api/anime/popular-airing');
-      const json = await res.json();
-      
-      if (!res.ok) throw new Error(json.error || 'Failed to fetch seasonal airing anime');
-      
-      // Deduplicate before setting state to ensure cards render uniquely
-      const data = json.data || [];
-      const seenIds = new Set<number>();
-      const uniqueData = data.filter((show: PopularShow) => {
-        if (!show.mal_id || seenIds.has(show.mal_id)) {
-          return false;
-        }
-        seenIds.add(show.mal_id);
-        return true;
-      });
-      
-      setPopularAiring(uniqueData);
-    } catch (err) {
-      console.error(err);
-      addToast("Could not load popular seasonal recommendations", "warning");
-    } finally {
-      setLoadingPopular(false);
-    }
-  }, [addToast]);
-
+  // Surface a one-time warning if the popular feed fails (matches original toast).
   useEffect(() => {
-    fetchTrackedAnime();
-    fetchPopularAiring();
-  }, [fetchTrackedAnime, fetchPopularAiring]);
-
-  const handleUpdateEpisode = async (id: number, currentCount: number, change: number) => {
-    const newCount = Math.max(0, currentCount + change);
-    
-    // Optimistic UI updates
-    setTrackedAnime(prev => prev.map(anime => 
-      anime.id === id ? { ...anime, episodesWatched: newCount } : anime
-    ));
-
-    try {
-      const res = await fetch(`/api/anime/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ episodesWatched: newCount })
-      });
-      const json = await res.json();
-      
-      if (!res.ok) throw new Error(json.error || 'Failed to update episodes');
-    } catch (e) {
-      console.error(e);
-      addToast("Failed to update progress on database", "warning");
-      // Rollback
-      setTrackedAnime(prev => prev.map(anime => 
-        anime.id === id ? { ...anime, episodesWatched: currentCount } : anime
-      ));
+    if (popularQuery.isError) {
+      addToast("Could not load popular seasonal recommendations", "warning");
     }
+  }, [popularQuery.isError, addToast]);
+
+  const handleUpdateEpisode = (id: number, currentCount: number, change: number) => {
+    const newCount = Math.max(0, currentCount + change);
+    // useUpdateAnime optimistically patches the cached incomplete list (status
+    // unchanged), so the count updates instantly; it rolls back on error.
+    updateAnime.mutate(
+      { id, episodesWatched: newCount },
+      {
+        onError: () => addToast("Failed to update progress on database", "warning"),
+      }
+    );
   };
 
-  const handleAddPopularShow = async (show: PopularShow) => {
+  const handleAddPopularShow = async (show: PopularAnime) => {
     if (isAdding) return;
     setIsAdding(String(show.mal_id));
-    
+
+    const newAnime = {
+      name: show.title_english || show.title,
+      episodesWatched: 0,
+      status: 'incomplete',
+      imageUrl: show.images?.jpg?.image_url || null,
+      malId: show.mal_id,
+      airing: show.airing || false,
+      broadcastDay: show.broadcast?.day || null,
+      broadcastTime: show.broadcast?.time || null,
+      broadcastTimezone: show.broadcast?.timezone || null,
+      broadcastString: show.broadcast?.string || null,
+      type: show.type,
+      totalEpisodes: show.episodes || 0,
+      airingStart: show.aired?.from || null,
+    };
+
     try {
-      const newAnime = {
-        name: show.title_english || show.title,
-        episodesWatched: 0,
-        status: 'incomplete',
-        imageUrl: show.images?.jpg?.image_url || null,
-        malId: show.mal_id,
-        airing: show.airing || false,
-        broadcastDay: show.broadcast?.day || null,
-        broadcastTime: show.broadcast?.time || null,
-        broadcastTimezone: show.broadcast?.timezone || null,
-        broadcastString: show.broadcast?.string || null,
-        type: show.type,
-        totalEpisodes: show.episodes || 0,
-        airingStart: show.aired?.from || null,
-      };
-      
-      const res = await fetch('/api/anime', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newAnime)
-      });
-
-      const json = await res.json();
-
-      if (res.status === 409) {
-        addToast(`"${newAnime.name}" is already in your watchlist.`, "info");
-        return;
-      }
-
-      if (!res.ok) throw new Error(json.error || 'Failed to add anime');
-
+      await createAnime.mutateAsync(newAnime);
       addToast(`Added "${newAnime.name}" to Currently Watching!`, "success");
-      void fetchTrackedAnime();
     } catch (e) {
-      console.error(e);
-      addToast("Failed to add anime to watchlist", "warning");
+      const status = (e as { status?: number } | null)?.status;
+      if (status === 409) {
+        addToast(`"${newAnime.name}" is already in your watchlist.`, "info");
+      } else {
+        console.error(e);
+        addToast("Failed to add anime to watchlist", "warning");
+      }
     } finally {
       setIsAdding(null);
     }
@@ -242,21 +133,21 @@ export default function AiringSchedulePage() {
 
   // Grouped datasets
   const todayShows = airingTrackedShows.filter(anime => {
-    const localDay = getLocalBroadcastDay(anime.broadcastDay, anime.broadcastTime);
+    const localDay = getLocalBroadcastDay(anime.broadcastDay ?? null, anime.broadcastTime ?? null);
     return localDay === currentLocalDay;
   });
 
   const upcomingShows = airingTrackedShows
     .map(anime => {
-      const countdown = calculateAiringCountdown(anime.broadcastDay, anime.broadcastTime);
+      const countdown = calculateAiringCountdown(anime.broadcastDay ?? null, anime.broadcastTime ?? null);
       return { anime, countdown };
     })
     .filter(item => item.countdown !== null)
     .sort((a, b) => (a.countdown?.diffMs || 0) - (b.countdown?.diffMs || 0));
 
   const renderAiringCard = (anime: Anime) => {
-    const countdown = countdownFromAiringAt(anime.nextEpisodeAt) ?? calculateAiringCountdown(anime.broadcastDay, anime.broadcastTime);
-    const istDetails = getISTBroadcastDetails(anime.broadcastDay, anime.broadcastTime);
+    const countdown = countdownFromAiringAt(anime.nextEpisodeAt) ?? calculateAiringCountdown(anime.broadcastDay ?? null, anime.broadcastTime ?? null);
+    const istDetails = getISTBroadcastDetails(anime.broadcastDay ?? null, anime.broadcastTime ?? null);
 
     const badgeLabel = anime.nextEpisode ? `Ep ${anime.nextEpisode} ${countdown?.label}` : `Next episode ${countdown?.label}`;
 
@@ -279,10 +170,10 @@ export default function AiringSchedulePage() {
             </div>
           )}
         </div>
-        
+
         <div className="card-body">
           <h4 className="card-title" title={anime.name}>{anime.name}</h4>
-          
+
           <div className="card-schedule-info">
             <div className="info-row">
               <Clock size={12} className="meta-icon" />
@@ -299,15 +190,15 @@ export default function AiringSchedulePage() {
               <span className="progress-value">{anime.episodesWatched} episodes</span>
             </div>
             <div className="progress-track">
-              <div 
-                className="progress-fill" 
+              <div
+                className="progress-fill"
                 style={{ width: `${Math.min(100, (anime.episodesWatched / 12) * 100)}%` }}
               ></div>
             </div>
           </div>
 
           <div className="card-controls">
-            <button 
+            <button
               onClick={() => handleUpdateEpisode(anime.id, anime.episodesWatched, -1)}
               className="control-btn"
               disabled={anime.episodesWatched === 0}
@@ -316,7 +207,7 @@ export default function AiringSchedulePage() {
               <Minus size={14} />
             </button>
             <span className="control-count">{anime.episodesWatched}</span>
-            <button 
+            <button
               onClick={() => handleUpdateEpisode(anime.id, anime.episodesWatched, 1)}
               className="control-btn increment"
               title="Increment episodes"
@@ -329,7 +220,7 @@ export default function AiringSchedulePage() {
     );
   };
 
-  const renderPopularCard = (show: PopularShow) => {
+  const renderPopularCard = (show: PopularAnime) => {
     const isAlreadyTracked = trackedAnime.some(anime => anime.malId === show.mal_id);
     const broadcastDay = show.broadcast?.day || null;
     const broadcastTime = show.broadcast?.time || null;
@@ -360,12 +251,12 @@ export default function AiringSchedulePage() {
             <span className="card-score-badge">⭐ {show.score}</span>
           )}
         </div>
-        
+
         <div className="card-body">
           <h4 className="card-title" title={show.title_english || show.title}>
             {show.title_english || show.title}
           </h4>
-          
+
           <div className="card-schedule-info">
             <div className="info-row">
               <Clock size={12} className="meta-icon" />
@@ -382,7 +273,7 @@ export default function AiringSchedulePage() {
                 <Check size={14} /> Already Tracking
               </div>
             ) : (
-              <button 
+              <button
                 onClick={() => handleAddPopularShow(show)}
                 disabled={isAdding === String(show.mal_id)}
                 className="btn-discover-track"
@@ -400,10 +291,10 @@ export default function AiringSchedulePage() {
               </button>
             )}
             {show.mal_id && (
-              <a 
-                href={`https://myanimelist.net/anime/${show.mal_id}`} 
-                target="_blank" 
-                rel="noreferrer" 
+              <a
+                href={`https://myanimelist.net/anime/${show.mal_id}`}
+                target="_blank"
+                rel="noreferrer"
                 className="btn-discover-mal"
                 title="View on MyAnimeList"
               >
@@ -444,7 +335,7 @@ export default function AiringSchedulePage() {
           <h1 className="hero-title">Airing Schedule</h1>
           <p className="hero-subtitle">Track upcoming episodes, countdowns, and seasonal releases in real-time</p>
         </div>
-        
+
         {/* Decorative Floating Anime Shape */}
         <div className="hero-decoration">
           <PlayCircle size={180} />
@@ -455,7 +346,7 @@ export default function AiringSchedulePage() {
       <nav className="sticky-filter-bar animate-fade-in">
         <div className="filter-bar-inner">
           <div className="filter-tabs">
-            <button 
+            <button
               onClick={() => setActiveTab('today')}
               className={`filter-tab-btn ${activeTab === 'today' ? 'active' : ''}`}
             >
@@ -463,7 +354,7 @@ export default function AiringSchedulePage() {
               <span>Today</span>
               {todayShows.length > 0 && <span className="badge-count">{todayShows.length}</span>}
             </button>
-            <button 
+            <button
               onClick={() => setActiveTab('week')}
               className={`filter-tab-btn ${activeTab === 'week' ? 'active' : ''}`}
             >
@@ -471,7 +362,7 @@ export default function AiringSchedulePage() {
               <span>This Week</span>
               {airingTrackedShows.length > 0 && <span className="badge-count">{airingTrackedShows.length}</span>}
             </button>
-            <button 
+            <button
               onClick={() => setActiveTab('upcoming')}
               className={`filter-tab-btn ${activeTab === 'upcoming' ? 'active' : ''}`}
             >
@@ -479,7 +370,7 @@ export default function AiringSchedulePage() {
               <span>Upcoming</span>
               {upcomingShows.length > 0 && <span className="badge-count">{upcomingShows.length}</span>}
             </button>
-            <button 
+            <button
               onClick={() => setActiveTab('popular')}
               className={`filter-tab-btn ${activeTab === 'popular' ? 'active' : ''}`}
             >
@@ -504,7 +395,7 @@ export default function AiringSchedulePage() {
           </div>
         ) : (
           <div className="airing-results-container">
-            
+
             {/* 1. TODAY TAB */}
             {activeTab === 'today' && (
               <>
@@ -531,11 +422,11 @@ export default function AiringSchedulePage() {
                 {airingTrackedShows.length > 0 ? (
                   <div className="weekly-schedule-layout">
                     {weekdays.map(day => {
-                      const showsForDay = airingTrackedShows.filter(anime => 
-                        getLocalBroadcastDay(anime.broadcastDay, anime.broadcastTime) === day
+                      const showsForDay = airingTrackedShows.filter(anime =>
+                        getLocalBroadcastDay(anime.broadcastDay ?? null, anime.broadcastTime ?? null) === day
                       );
                       const isToday = currentLocalDay === day;
-                      
+
                       return (
                         <div key={day} className={`weekly-day-group ${isToday ? 'current-day-highlight' : ''}`}>
                           <h3 className="weekly-day-header">
@@ -543,7 +434,7 @@ export default function AiringSchedulePage() {
                             {isToday && <span className="today-badge">TODAY</span>}
                             <span className="day-shows-count">{showsForDay.length} shows</span>
                           </h3>
-                          
+
                           {showsForDay.length > 0 ? (
                             <div className="airing-cards-grid">
                               {showsForDay.map(anime => renderAiringCard(anime))}
