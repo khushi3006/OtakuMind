@@ -1,3 +1,6 @@
+// Idempotent mirror of prisma/migrations/20260606010000_add_airing_cache.
+// Run via: npx tsx scripts/migrate-add-airing-cache.ts
+// Then: npx prisma migrate resolve --applied 20260606010000_add_airing_cache
 import { db } from '../lib/db';
 
 async function main() {
