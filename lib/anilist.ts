@@ -45,12 +45,37 @@ export async function enrichWithAiring<
 
   return rows.map((r) => {
     const c = r.airing && r.malId ? cache.get(r.malId) : undefined;
+    const nextEpisode = c?.nextEpisode ?? null;
+    const nextEpisodeAt = c?.nextEpisodeAt ?? null;
+    const broadcastDay = c?.broadcastDay ?? r.broadcastDay ?? null;
+    const broadcastTime = c?.broadcastTime ?? r.broadcastTime ?? null;
+
+    // Re-evaluate the stored `airing` flag against fresh cache data. The flag is
+    // captured at add-time and never updated, so it goes stale: an
+    // announced-but-unscheduled title (no next episode, no broadcast slot) or a
+    // show that has since finished keeps claiming to be airing, leaving clients
+    // stuck on a "next episode" placeholder for data that will never arrive.
+    //
+    // Only override when the cache has DEFINITIVELY resolved this show (`c`
+    // present). A cache miss (c undefined → still warming) leaves the flag alone
+    // so genuinely-airing rows still fill in on the next read. Once resolved, a
+    // row counts as airing only if it isn't finished AND has something to count
+    // down to — a next episode or a weekly broadcast slot. (Finished shows keep
+    // a lingering Jikan broadcast day/time, so the releaseStatus guard is what
+    // turns those off.)
+    let airing = r.airing;
+    if (c) {
+      const hasCountdown = nextEpisode != null || Boolean(broadcastDay && broadcastTime);
+      airing = c.releaseStatus !== 'finished' && hasCountdown;
+    }
+
     return {
       ...r,
-      nextEpisode: c?.nextEpisode ?? null,
-      nextEpisodeAt: c?.nextEpisodeAt ?? null,
-      broadcastDay: c?.broadcastDay ?? r.broadcastDay ?? null,
-      broadcastTime: c?.broadcastTime ?? r.broadcastTime ?? null,
+      airing,
+      nextEpisode,
+      nextEpisodeAt,
+      broadcastDay,
+      broadcastTime,
       broadcastTimezone: c?.broadcastTimezone ?? r.broadcastTimezone ?? null,
       broadcastString: c?.broadcastString ?? r.broadcastString ?? null,
       airingStart: c?.airingStart ?? r.airingStart ?? null,

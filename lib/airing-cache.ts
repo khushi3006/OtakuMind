@@ -16,6 +16,8 @@ export interface AiringRow {
   broadcastTimezone: string | null;
   broadcastString: string | null;
   airingStart: string | null;
+  /** 'releasing' | 'finished' | 'unknown' — drives whether to keep the airing flag. */
+  releaseStatus: string;
 }
 
 const ANILIST_ENDPOINT = 'https://graphql.anilist.co';
@@ -103,6 +105,7 @@ export async function getAiringForMalIds(
       broadcastTimezone: r.broadcastTimezone,
       broadcastString: r.broadcastString,
       airingStart: r.airingStart,
+      releaseStatus: r.releaseStatus,
     });
     const expired = now - r.syncedAt.getTime() >= STALE_TTL_MS;
     const aired = r.nextEpisodeAt != null && r.nextEpisodeAt * 1000 <= now;
