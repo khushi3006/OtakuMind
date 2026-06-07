@@ -288,6 +288,17 @@ export default function SignupPage() {
             Privacy Policy
           </Link>
         </p>
+        <p className="auth-credit">
+          Designed &amp; developed by{' '}
+          <a
+            href="https://thekhushikumari.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="auth-credit-link"
+          >
+            Khushi Kumari
+          </a>
+        </p>
       </div>
     </div>
   );

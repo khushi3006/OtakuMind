@@ -4732,4 +4732,23 @@ body:has(.dashboard-home) {
   text-decoration: underline;
 }
 
+.auth-credit {
+  text-align: center;
+  margin-top: 0.65rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+.auth-credit-link {
+  color: var(--text-secondary);
+  font-weight: 600;
+  transition: color 0.2s;
+}
+
+.auth-credit-link:hover {
+  color: var(--accent-color);
+  text-decoration: underline;
+}
+
 
