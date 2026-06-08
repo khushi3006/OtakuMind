@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { errorMessage } from '@/lib/api-error';
+import { getFollowState } from '@/lib/visibility';
 import type { Prisma } from '@/prisma/generated/client';
 
 const ALLOWED_LIMITS = [20, 50, 100] as const;
@@ -32,7 +33,11 @@ export async function GET(
 
     const isSelf = owner.id === meId;
     if (!isSelf && !owner.isPublic) {
-      return NextResponse.json({ error: 'This profile is private' }, { status: 403 });
+      // A private list is still viewable to mutual followers (both follow each other).
+      const { isFollowing, isFollowedBy } = await getFollowState(meId, owner.id);
+      if (!(isFollowing && isFollowedBy)) {
+        return NextResponse.json({ error: 'This profile is private' }, { status: 403 });
+      }
     }
 
     const { searchParams } = new URL(request.url);

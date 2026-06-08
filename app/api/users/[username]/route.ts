@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { errorMessage } from '@/lib/api-error';
+import { getFollowState, canViewList } from '@/lib/visibility';
 
 export async function GET(
   request: Request,
@@ -35,19 +36,13 @@ export async function GET(
     }
 
     const isSelf = user.id === meId;
-    const canViewList = isSelf || user.isPublic;
-
-    // Whether the viewer follows this user.
-    const follow = isSelf
-      ? null
-      : await db.follow.findUnique({
-          where: { followerId_followingId: { followerId: meId, followingId: user.id } },
-          select: { id: true },
-        });
+    // Mutual follow (you each follow the other) unlocks an otherwise-private list.
+    const { isFollowing, isFollowedBy } = await getFollowState(meId, user.id);
+    const canView = canViewList({ isSelf, isPublic: user.isPublic, isFollowing, isFollowedBy });
 
     // Anime counts per status (only surfaced when the list is viewable).
     const counts = { watching: 0, completed: 0, dropped: 0, total: 0 };
-    if (canViewList) {
+    if (canView) {
       const grouped = await db.anime.groupBy({
         by: ['status'],
         where: { userId: user.id },
@@ -73,8 +68,8 @@ export async function GET(
         followersCount: user._count.followers,
         followingCount: user._count.following,
         isSelf,
-        isFollowing: Boolean(follow),
-        canViewList,
+        isFollowing,
+        canViewList: canView,
         animeCounts: counts,
       },
     });
