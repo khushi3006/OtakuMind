@@ -39,7 +39,9 @@ export async function PUT(request: Request) {
     }
 
     if (name !== undefined) {
-      const trimmed = String(name).trim();
+      // A JSON `null` clears the field. Guard before String() — String(null) is the literal
+      // "null", which is truthy and would be stored as a 4-char name instead of clearing it.
+      const trimmed = name === null ? '' : String(name).trim();
       if (trimmed.length > MAX_NAME) {
         return NextResponse.json({ error: `Name must be at most ${MAX_NAME} characters` }, { status: 400 });
       }
@@ -47,7 +49,9 @@ export async function PUT(request: Request) {
     }
 
     if (bio !== undefined) {
-      const trimmed = String(bio).trim();
+      // A JSON `null` clears the field. Guard before String() — String(null) is the literal
+      // "null", which is truthy and would be stored as a 4-char bio instead of clearing it.
+      const trimmed = bio === null ? '' : String(bio).trim();
       if (trimmed.length > MAX_BIO) {
         return NextResponse.json({ error: `Bio must be at most ${MAX_BIO} characters` }, { status: 400 });
       }
