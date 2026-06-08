@@ -107,6 +107,16 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Require an explicit typed confirmation so an account can't be deleted by an
+    // accidental or unconfirmed request. The client must send { confirmation: "DELETE" }.
+    const body = await request.json().catch(() => null);
+    if (!body || body.confirmation !== 'DELETE') {
+      return NextResponse.json(
+        { error: 'Type DELETE to confirm account deletion' },
+        { status: 400 },
+      );
+    }
+
     try {
       // Cascade deletes the user's Anime and Follow rows (onDelete: Cascade).
       await db.user.delete({ where: { id: session.userId } });

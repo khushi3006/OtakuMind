@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
-import { LayoutDashboard, CheckCircle2, PlayCircle, LogOut, User, Menu, X, Lock, Loader2, Eye, EyeOff, Users } from 'lucide-react';
+import { LayoutDashboard, CheckCircle2, PlayCircle, LogOut, User, Menu, X, Lock, Loader2, Eye, EyeOff, Users, Trash2 } from 'lucide-react';
 import Logo from './Logo';
 import Modal from './Modal';
 
@@ -24,6 +24,12 @@ export default function Navbar() {
   // Custom Profile & Dropdown States
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+
+  // Delete Account States
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   // Change Password Form States
   const [currentPassword, setCurrentPassword] = useState('');
@@ -107,6 +113,43 @@ export default function Navbar() {
       }
     } catch (err) {
       console.error('Logout failed:', err);
+    }
+  };
+
+  const closeDeleteModal = () => {
+    if (isDeletingAccount) return;
+    setIsDeleteModalOpen(false);
+    setDeleteConfirmText('');
+    setDeleteError('');
+  };
+
+  const handleDeleteAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    // Belt-and-suspenders: the submit button is disabled until this matches, but
+    // guard here too so the destructive request can never fire without confirmation.
+    if (deleteConfirmText !== 'DELETE') return;
+
+    setDeleteError('');
+    setIsDeletingAccount(true);
+    try {
+      const res = await fetch('/api/users/me', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmation: 'DELETE' }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setDeleteError(data.error || 'Failed to delete account');
+        setIsDeletingAccount(false);
+        return;
+      }
+      // Account gone and cookie cleared server-side — drop local session and leave.
+      setUser(null);
+      router.refresh();
+      router.push('/login');
+    } catch (err) {
+      setDeleteError('An unexpected error occurred');
+      setIsDeletingAccount(false);
     }
   };
 
@@ -266,7 +309,18 @@ export default function Navbar() {
                       <span>Reset Password</span>
                     </button>
 
-                    <button 
+                    <button
+                      onClick={() => {
+                        setIsDropdownOpen(false);
+                        setIsDeleteModalOpen(true);
+                      }}
+                      className="dropdown-menu-item danger-item"
+                    >
+                      <Trash2 size={15} />
+                      <span>Delete Account</span>
+                    </button>
+
+                    <button
                       onClick={() => {
                         setIsDropdownOpen(false);
                         handleLogout();
@@ -356,6 +410,17 @@ export default function Navbar() {
               >
                 <Lock size={16} />
                 <span style={{ fontSize: '0.9rem' }}>Reset Password</span>
+              </button>
+              <button
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  setIsDeleteModalOpen(true);
+                }}
+                className="dropdown-menu-item danger-item"
+                style={{ width: '100%', padding: '0.75rem 0.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-color)' }}
+              >
+                <Trash2 size={16} />
+                <span style={{ fontSize: '0.9rem' }}>Delete Account</span>
               </button>
             </div>
 
@@ -522,6 +587,66 @@ export default function Navbar() {
                 </>
               ) : (
                 <span>Change Password</span>
+              )}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Delete Account Modal */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={closeDeleteModal}
+        title="Delete Account"
+      >
+        <form onSubmit={handleDeleteAccount} className="delete-account-form">
+          {deleteError && <div className="feedback-msg error">{deleteError}</div>}
+
+          <p style={{ margin: '0 0 1rem', color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.5 }}>
+            This permanently deletes your profile, anime list, and follows. This action
+            cannot be undone.
+          </p>
+
+          <div className="form-group">
+            <label htmlFor="deleteConfirm">
+              Type <strong>DELETE</strong> to confirm
+            </label>
+            <input
+              type="text"
+              id="deleteConfirm"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder="DELETE"
+              autoComplete="off"
+              autoCapitalize="characters"
+              spellCheck={false}
+              disabled={isDeletingAccount}
+            />
+          </div>
+
+          <div className="modal-actions" style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem' }}>
+            <button
+              type="button"
+              className="modal-btn secondary"
+              onClick={closeDeleteModal}
+              disabled={isDeletingAccount}
+              style={{ flex: 1 }}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="modal-btn danger"
+              disabled={isDeletingAccount || deleteConfirmText !== 'DELETE'}
+              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+            >
+              {isDeletingAccount ? (
+                <>
+                  <Loader2 size={16} className="spin" />
+                  <span>Deleting...</span>
+                </>
+              ) : (
+                <span>Delete Account</span>
               )}
             </button>
           </div>
