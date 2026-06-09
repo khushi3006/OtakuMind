@@ -75,7 +75,7 @@ export default function Navbar() {
         } else {
           setUser(null);
         }
-      } catch (err) {
+      } catch {
         setUser(null);
       } finally {
         setLoading(false);
@@ -163,7 +163,7 @@ export default function Navbar() {
       setUser(null);
       router.refresh();
       router.push('/login');
-    } catch (err) {
+    } catch {
       setDeleteError('An unexpected error occurred');
       setIsDeletingAccount(false);
     }
@@ -216,7 +216,7 @@ export default function Navbar() {
           setSuccessMessage('');
         }, 1800);
       }
-    } catch (err) {
+    } catch {
       setErrorMessage('An unexpected error occurred');
     } finally {
       setIsSubmitting(false);

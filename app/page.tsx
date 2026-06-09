@@ -977,6 +977,7 @@ export default function Home() {
                   className={`suggestion-item ${isAdding === String(sugg.mal_id) ? 'is-adding' : ''}`}
                   onClick={() => handleAddAnime(sugg)}
                 >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={sugg.images?.jpg?.image_url} alt="" className="sugg-img" />
                   <div className="sugg-info">
                     <h4>{sugg.title_english || sugg.title}</h4>

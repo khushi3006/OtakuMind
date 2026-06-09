@@ -45,12 +45,16 @@ export default function OriginalListPage() {
 
   const hasClientResults = searchQuery ? clientFiltered.length > 0 : true;
 
+  // Reset the debounced term during render when the search is cleared or the
+  // current page already matches, so a stale term never re-enables the server
+  // search before the next debounce fires.
+  if ((!searchQuery || hasClientResults) && debouncedSearch !== "") {
+    setDebouncedSearch("");
+  }
+
   // Debounce the search term that drives the server-side fallback search.
   useEffect(() => {
-    if (!searchQuery || hasClientResults) {
-      setDebouncedSearch("");
-      return;
-    }
+    if (!searchQuery || hasClientResults) return;
     const timeout = setTimeout(() => setDebouncedSearch(searchQuery), 500);
     return () => clearTimeout(timeout);
   }, [searchQuery, hasClientResults]);

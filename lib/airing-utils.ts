@@ -73,8 +73,7 @@ export function getISTBroadcastDetails(
  */
 export function calculateAiringCountdown(
   broadcastDay: string | null,
-  broadcastTime: string | null,
-  _broadcastTimezone: string | null = 'Asia/Tokyo'
+  broadcastTime: string | null
 ): CountdownResult | null {
   if (!broadcastDay || !broadcastTime) return null;
 

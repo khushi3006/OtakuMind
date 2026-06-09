@@ -12,7 +12,6 @@ const WHITE_BG = 'FFFFFFFF';
 const LIGHT_GRAY_BORDER = 'FFE2E8F0';
 
 const titleFont = { name: FONT_NAME, size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
-const subtitleFont = { name: FONT_NAME, size: 10, italic: true, color: { argb: 'FFD3D3D3' } };
 const sectionHeaderFont = { name: FONT_NAME, size: 12, bold: true, color: { argb: 'FF3A5A40' } };
 const tableHeaderFont = { name: FONT_NAME, size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
 const dataFont = { name: FONT_NAME, size: 10, color: { argb: 'FF2D3748' } };
