@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { AlertCircle, Loader2, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import Logo from '@/components/Logo';
@@ -10,6 +11,7 @@ const RESEND_SECONDS = 60;
 
 export default function SignupPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const [step, setStep] = useState<'details' | 'otp'>('details');
   const [name, setName] = useState('');
@@ -76,6 +78,9 @@ export default function SignupPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Verification failed');
 
+      // Same as login: drop queries cached while logged out (the 401'd /me never
+      // refetches by itself), so entitlement & data load fresh after the redirect.
+      queryClient.clear();
       router.refresh();
       router.push('/');
     } catch (err) {

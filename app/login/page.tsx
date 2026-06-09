@@ -2,6 +2,7 @@
 
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
 import Logo from '@/components/Logo';
@@ -9,6 +10,7 @@ import { errorMessage } from '@/lib/api-error';
 
 function LoginForm() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const redirectPath = searchParams.get('redirect') || '/';
 
@@ -39,7 +41,10 @@ function LoginForm() {
         throw new Error(data.error || 'Login failed');
       }
 
-      // Success! Refresh router and redirect
+      // Success! Drop every cached query — /api/auth/me 401'd while logged out and 4xx
+      // errors never refetch on their own, which would leave the entitlement (and any
+      // previous user's data) stale after this client-side navigation.
+      queryClient.clear();
       router.refresh();
       router.push(redirectPath);
     } catch (err: unknown) {

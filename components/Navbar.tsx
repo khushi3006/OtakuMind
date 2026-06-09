@@ -8,6 +8,7 @@ import Logo from './Logo';
 import Modal from './Modal';
 import PaywallModal from './PaywallModal';
 import { useEntitlement } from '@/lib/query/hooks/auth';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface UserSession {
   id: number;
@@ -30,6 +31,7 @@ export default function Navbar() {
   // Voluntary upgrade entry point (mirrors mobile's "Membership" settings row). Only trial
   // users see it: owners have nothing to buy, and expired users are behind EntitlementGate.
   const [isMembershipOpen, setIsMembershipOpen] = useState(false);
+  const queryClient = useQueryClient();
   const { data: entitlement } = useEntitlement();
   const showMembership = entitlement?.reason === 'trial';
 
@@ -116,6 +118,9 @@ export default function Navbar() {
       const res = await fetch('/api/auth/logout', { method: 'POST' });
       if (res.ok) {
         setUser(null);
+        // Drop the signed-out user's cached queries so a later login in this tab
+        // (possibly as someone else) starts from a clean cache.
+        queryClient.clear();
         router.refresh();
         router.push('/login');
       }
