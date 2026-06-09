@@ -1,6 +1,7 @@
 import { NextResponse, after } from 'next/server';
 import { errorMessage } from '@/lib/api-error';
 import { getAiringForMalIds, refreshAniList } from '@/lib/airing-cache';
+import { requireEntitlement } from '@/lib/require-entitlement';
 
 interface PopularAnime {
   mal_id: number;
@@ -27,8 +28,11 @@ let popularCache: PopularPayload | null = null;
 let popularCacheTime = 0;
 const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const gate = await requireEntitlement(request);
+    if (!gate.ok) return gate.response;
+
     const now = Date.now();
 
     if (popularCache && (now - popularCacheTime < CACHE_DURATION)) {

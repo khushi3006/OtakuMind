@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { errorMessage } from '@/lib/api-error';
+import { requireEntitlement } from '@/lib/require-entitlement';
 
 interface CacheEntry {
   data: unknown;
@@ -12,6 +13,9 @@ const CACHE_TTL = 1000 * 60 * 30; // 30 minutes Time-To-Live
 
 export async function GET(request: Request) {
   try {
+    const gate = await requireEntitlement(request);
+    if (!gate.ok) return gate.response;
+
     const { searchParams } = new URL(request.url);
     const q = searchParams.get('q');
     

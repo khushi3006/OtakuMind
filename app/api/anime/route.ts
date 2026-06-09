@@ -7,7 +7,7 @@ import { planSeasons } from '@/lib/season-reassign';
 import type { Prisma } from '@/prisma/generated/client';
 import { withDeadlockRetry } from '@/lib/deadlock-retry';
 import { WATCH_ORDER_TRANSACTION_OPTIONS } from '@/lib/transaction-options';
-import { getSession } from '@/lib/auth';
+import { requireEntitlement } from '@/lib/require-entitlement';
 import { enrichWithAiring } from '@/lib/anilist';
 
 const ALLOWED_LIMITS = [20, 50, 100] as const;
@@ -21,10 +21,9 @@ function isSchemaValidationError(error: unknown) {
 
 export async function GET(request: Request) {
   try {
-    const session = await getSession(request);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const gate = await requireEntitlement(request);
+    if (!gate.ok) return gate.response;
+    const session = gate.session;
     const userId = session.userId;
 
     const { searchParams } = new URL(request.url);
@@ -130,10 +129,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const session = await getSession(request);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const gate = await requireEntitlement(request);
+    if (!gate.ok) return gate.response;
+    const session = gate.session;
     const userId = session.userId;
 
     const body = await request.json();

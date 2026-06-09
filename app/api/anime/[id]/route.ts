@@ -5,7 +5,7 @@ import { WATCH_ORDER_TRANSACTION_OPTIONS } from '@/lib/transaction-options';
 import { extractSeasonNumber, extractPartNumber } from '@/lib/normalize';
 import { resolveFranchise, findFranchiseRows, parkRows, applyFinalSeasons } from '@/lib/franchise-resolve';
 import { planSeasons } from '@/lib/season-reassign';
-import { getSession } from '@/lib/auth';
+import { requireEntitlement } from '@/lib/require-entitlement';
 
 function isSchemaValidationError(error: unknown) {
   return error instanceof Error && (
@@ -19,10 +19,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getSession(request);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const gate = await requireEntitlement(request);
+    if (!gate.ok) return gate.response;
+    const session = gate.session;
     const userId = session.userId;
 
     const { id } = await params;
@@ -280,10 +279,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getSession(request);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const gate = await requireEntitlement(request);
+    if (!gate.ok) return gate.response;
+    const session = gate.session;
     const userId = session.userId;
 
     const { id } = await params;

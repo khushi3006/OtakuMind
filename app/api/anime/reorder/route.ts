@@ -3,7 +3,7 @@ import { db } from '@/lib/db';
 import { normalizeWatchingOrder, updateWatchOrderItems } from '@/lib/watch-order';
 import { withDeadlockRetry } from '@/lib/deadlock-retry';
 import { WATCH_ORDER_TRANSACTION_OPTIONS } from '@/lib/transaction-options';
-import { getSession } from '@/lib/auth';
+import { requireEntitlement } from '@/lib/require-entitlement';
 
 /**
  * PUT /api/anime/reorder
@@ -12,10 +12,9 @@ import { getSession } from '@/lib/auth';
  */
 export async function PUT(request: Request) {
   try {
-    const session = await getSession(request);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const gate = await requireEntitlement(request);
+    if (!gate.ok) return gate.response;
+    const session = gate.session;
     const userId = session.userId;
 
     const body = await request.json();

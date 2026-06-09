@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getSession, removeSessionCookie } from '@/lib/auth';
+import { requireEntitlement } from '@/lib/require-entitlement';
 import { isValidUsername } from '@/lib/username';
 import { errorCode, errorMessage } from '@/lib/api-error';
 
@@ -9,10 +10,9 @@ const MAX_BIO = 280;
 
 export async function PUT(request: Request) {
   try {
-    const session = await getSession(request);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const gate = await requireEntitlement(request);
+    if (!gate.ok) return gate.response;
+    const session = gate.session;
     const userId = session.userId;
 
     const body = await request.json();

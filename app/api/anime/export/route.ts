@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import ExcelJS from 'exceljs';
-import { getSession } from '@/lib/auth';
+import { requireEntitlement } from '@/lib/require-entitlement';
 import { errorMessage } from '@/lib/api-error';
 
 const FONT_NAME = 'Segoe UI';
@@ -34,10 +34,9 @@ function isSchemaValidationError(error: unknown) {
 
 export async function GET(request: Request) {
   try {
-    const session = await getSession(request);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const gate = await requireEntitlement(request);
+    if (!gate.ok) return gate.response;
+    const session = gate.session;
     const userId = session.userId;
 
     // 1. Fetch data from DB

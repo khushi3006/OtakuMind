@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getSession } from '@/lib/auth';
+import { requireEntitlement } from '@/lib/require-entitlement';
 import { errorMessage } from '@/lib/api-error';
 
 export async function GET(request: Request) {
   try {
-    const session = await getSession(request);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const gate = await requireEntitlement(request);
+    if (!gate.ok) return gate.response;
+    const session = gate.session;
     const userId = session.userId;
 
     // Use raw SQL for efficient distinct count instead of findMany + .length
