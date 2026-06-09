@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
+import { BadgeCheck, Loader2 } from 'lucide-react';
 import Modal from '@/components/Modal';
 
 // Minimal shape of the global injected by Razorpay's checkout.js.
@@ -30,10 +30,18 @@ interface PaywallModalProps {
   onClose: () => void;
   /** Hard-gate mode: cannot be dismissed and shows the trial-ended copy. */
   forced?: boolean;
+  /** Already a Lifetime member (purchased/grandfathered): show a confirmation, not the buy CTA. */
+  owned?: boolean;
   trialEndsAt?: string | null;
 }
 
-export default function PaywallModal({ isOpen, onClose, forced = false, trialEndsAt }: PaywallModalProps) {
+export default function PaywallModal({
+  isOpen,
+  onClose,
+  forced = false,
+  owned = false,
+  trialEndsAt,
+}: PaywallModalProps) {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -136,6 +144,11 @@ export default function PaywallModal({ isOpen, onClose, forced = false, trialEnd
     }
   };
 
+  // Mirrors mobile's MembershipSheet: an owner sees a thank-you confirmation instead of the
+  // checkout. Only reachable from the voluntary modal — the forced gate only mounts when the
+  // entitlement is inactive, so an owner can never reach it.
+  const showOwned = owned && !forced;
+
   const headline = forced ? 'Your free trial has ended' : 'OtakuMind Lifetime';
 
   const ghostLinkStyle = {
@@ -152,7 +165,7 @@ export default function PaywallModal({ isOpen, onClose, forced = false, trialEnd
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={mode === 'delete' ? 'Delete Account' : 'OtakuMind Lifetime'}
+      title={mode === 'delete' ? 'Delete Account' : showOwned ? 'Membership' : 'OtakuMind Lifetime'}
       dismissable={!forced}>
       {mode === 'delete' ? (
         <form onSubmit={onDelete} className="delete-account-form">
@@ -205,6 +218,22 @@ export default function PaywallModal({ isOpen, onClose, forced = false, trialEnd
             </button>
           </div>
         </form>
+      ) : showOwned ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <BadgeCheck size={22} style={{ color: 'var(--accent-color)', flexShrink: 0 }} />
+            <h4 style={{ margin: 0 }}>OtakuMind Lifetime</h4>
+          </div>
+          <p style={{ margin: 0, opacity: 0.8 }}>
+            You’re a Lifetime member. Thank you for supporting OtakuMind.
+          </p>
+          <p style={{ margin: 0, opacity: 0.8 }}>
+            Track unlimited anime, airing countdowns, your social graph, and Excel export.
+          </p>
+          <button className="auth-button" onClick={onClose}>
+            Done
+          </button>
+        </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <h4 style={{ margin: 0 }}>{headline}</h4>

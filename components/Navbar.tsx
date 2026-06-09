@@ -28,12 +28,15 @@ export default function Navbar() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
-  // Voluntary upgrade entry point (mirrors mobile's "Membership" settings row). Only trial
-  // users see it: owners have nothing to buy, and expired users are behind EntitlementGate.
+  // Voluntary membership entry point (mirrors mobile's "Membership" settings row). Trial users
+  // get the upgrade CTA; owners (purchased/grandfathered) get an "already a member" confirmation.
+  // Expired users are behind the forced EntitlementGate, so they never need this row.
   const [isMembershipOpen, setIsMembershipOpen] = useState(false);
   const queryClient = useQueryClient();
   const { data: entitlement } = useEntitlement();
-  const showMembership = entitlement?.reason === 'trial';
+  const ownsLifetime =
+    entitlement?.reason === 'purchased' || entitlement?.reason === 'grandfathered';
+  const showMembership = ownsLifetime || entitlement?.reason === 'trial';
 
   // Delete Account States
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -496,10 +499,12 @@ export default function Navbar() {
         </>
       )}
 
-      {/* Voluntary upgrade modal — same checkout as the forced gate, but dismissable */}
+      {/* Voluntary membership modal — checkout for trial users, an "already a member"
+          confirmation for owners. Same component as the forced gate, but dismissable. */}
       <PaywallModal
         isOpen={isMembershipOpen}
         onClose={() => setIsMembershipOpen(false)}
+        owned={ownsLifetime}
         trialEndsAt={entitlement?.trialEndsAt ?? null}
       />
 
