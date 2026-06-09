@@ -4459,55 +4459,39 @@ textarea.form-input { resize: vertical; min-height: 70px; font-family: var(--fon
   .anime-poster-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.8rem; }
 }
 
-/* Custom Scrollable Layout for Dashboard to keep header/search/tabs fixed on all devices */
-html:has(.dashboard-home),
-body:has(.dashboard-home) {
-  overflow: hidden !important;
-  height: 100% !important;
-}
-
+/* Dashboard home scrolls as a whole page; the navbar stays sticky at the top */
 .dashboard-home {
-  height: calc(100vh - 65px) !important;
   box-sizing: border-box !important;
-  overflow: hidden !important;
-  display: flex !important;
-  flex-direction: column !important;
 }
 
 /* Ensure padding matches responsiveness */
 @media (max-width: 767px) {
   .dashboard-home {
-    padding: 1.25rem 1rem 0.5rem !important;
+    padding: 1.25rem 1rem 2rem !important;
   }
 }
 @media (min-width: 768px) {
   .dashboard-home {
-    padding: 1.5rem 2rem 0.5rem !important;
+    padding: 1.5rem 2rem 2.5rem !important;
   }
 }
 
 .dashboard-home .header {
   margin-bottom: 1.25rem !important;
   padding-bottom: 0.75rem !important;
-  flex-shrink: 0 !important;
 }
 
 .dashboard-home .search-section {
   margin-bottom: 1rem !important;
-  flex-shrink: 0 !important;
 }
 
 .dashboard-home .tabs-row {
   margin-bottom: 1rem !important;
-  flex-shrink: 0 !important;
   background: var(--bg-color) !important;
 }
 
-/* Make lists-container the ONLY scrollable container */
+/* List grows with the page instead of scrolling on its own */
 .dashboard-home .lists-container {
-  flex: 1 !important;
-  overflow-y: auto !important;
-  min-height: 0 !important;
   padding-right: 0.25rem !important; /* spacing for scrollbar on mobile */
 }
 
@@ -4524,32 +4508,13 @@ body:has(.dashboard-home) {
   overflow: visible !important;
 }
 
-/* Sticky headers at the top of the scrollable lists-container */
+/* Keep column labels visible while scrolling, pinned just below the sticky navbar */
 .dashboard-home .compact-list-header {
   position: sticky !important;
-  top: 0 !important;
+  top: 65px !important;
   z-index: 10 !important;
   background: var(--surface) !important;
 }
-
-/* Scrollbar styles for the lists-container */
-.dashboard-home .lists-container::-webkit-scrollbar {
-  width: 6px !important;
-}
-
-.dashboard-home .lists-container::-webkit-scrollbar-track {
-  background: transparent !important;
-}
-
-.dashboard-home .lists-container::-webkit-scrollbar-thumb {
-  background: var(--border-color) !important;
-  border-radius: 3px !important;
-}
-
-.dashboard-home .lists-container::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted) !important;
-}
-
 
 
 
