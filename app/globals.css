@@ -3430,7 +3430,10 @@ button {
     align-items: stretch !important;
     padding: 1.25rem 1.15rem !important;
     gap: 0.85rem !important;
-    position: relative !important;
+    /* No !important: @hello-pangea/dnd positions the dragged row with inline
+       `position: fixed` and that must win, or the drag clone renders far from
+       the cursor. The absolute .col-drag-handle stays anchored either way. */
+    position: relative;
     border-radius: var(--radius-md);
     margin-bottom: 0.75rem;
     border: 1px solid var(--border-color);
