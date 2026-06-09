@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import Modal from '@/components/Modal';
-import { qk } from '@/lib/query/keys';
 
 // Minimal shape of the global injected by Razorpay's checkout.js.
 declare global {
@@ -67,7 +66,10 @@ export default function PaywallModal({ isOpen, onClose, forced = false, trialEnd
             body: JSON.stringify(resp),
           });
           if (verifyRes.ok) {
-            await queryClient.invalidateQueries({ queryKey: qk.me });
+            // Refetch everything (not just `me`): while expired, the data queries cached 403s,
+            // so they must reload now that the user is entitled — otherwise the page looks empty
+            // until a manual refresh.
+            await queryClient.invalidateQueries();
             onClose();
           } else {
             setError('Payment could not be verified. If you were charged, it will unlock shortly.');
