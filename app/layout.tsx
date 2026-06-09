@@ -9,6 +9,7 @@ export const metadata: Metadata = {
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import QueryProvider from "@/components/QueryProvider";
+import EntitlementGate from "@/components/EntitlementGate";
 
 export default function RootLayout({
   children,
@@ -23,6 +24,7 @@ export default function RootLayout({
           <Navbar />
           {children}
           <Footer />
+          <EntitlementGate />
         </QueryProvider>
       </body>
     </html>
