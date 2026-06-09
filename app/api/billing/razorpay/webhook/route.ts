@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createHmac } from 'crypto';
+import { createHmac, timingSafeEqual } from 'crypto';
 import { db } from '@/lib/db';
 import { errorMessage } from '@/lib/api-error';
 
@@ -8,7 +8,9 @@ export async function POST(request: Request) {
     const raw = await request.text(); // raw body required for signature verification
     const signature = request.headers.get('x-razorpay-signature') ?? '';
     const expected = createHmac('sha256', process.env.RAZORPAY_WEBHOOK_SECRET!).update(raw).digest('hex');
-    if (expected !== signature) {
+    const expectedBuf = Buffer.from(expected);
+    const signatureBuf = Buffer.from(signature);
+    if (expectedBuf.length !== signatureBuf.length || !timingSafeEqual(expectedBuf, signatureBuf)) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 

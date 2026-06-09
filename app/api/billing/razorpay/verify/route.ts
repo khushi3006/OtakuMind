@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createHmac } from 'crypto';
+import { createHmac, timingSafeEqual } from 'crypto';
 import { db } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { errorMessage } from '@/lib/api-error';
@@ -21,7 +21,9 @@ export async function POST(request: Request) {
     const expected = createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
       .digest('hex');
-    if (expected !== razorpay_signature) {
+    const expectedBuf = Buffer.from(expected);
+    const signatureBuf = Buffer.from(razorpay_signature);
+    if (expectedBuf.length !== signatureBuf.length || !timingSafeEqual(expectedBuf, signatureBuf)) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 

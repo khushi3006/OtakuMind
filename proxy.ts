@@ -33,8 +33,12 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // 3. Protect API routes (except auth endpoints)
-  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/auth/')) {
+  // 3. Protect API routes (except auth endpoints and server-to-server billing webhooks,
+  //    which authenticate via their own provider secret rather than a session cookie).
+  const isBillingWebhook =
+    pathname.startsWith('/api/billing/razorpay/webhook') ||
+    pathname.startsWith('/api/billing/revenuecat-webhook');
+  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/auth/') && !isBillingWebhook) {
     if (!session) {
       return NextResponse.json(
         { error: 'Unauthorized. Please log in.' },
