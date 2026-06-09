@@ -33,12 +33,14 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // 3. Protect API routes (except auth endpoints and server-to-server billing webhooks,
-  //    which authenticate via their own provider secret rather than a session cookie).
-  const isBillingWebhook =
+  // 3. Protect API routes (except auth endpoints and server-to-server callers — billing
+  //    webhooks and Vercel cron — which authenticate via their own secret rather than a
+  //    session cookie; each of those routes enforces its secret itself).
+  const isServerToServer =
     pathname.startsWith('/api/billing/razorpay/webhook') ||
-    pathname.startsWith('/api/billing/revenuecat-webhook');
-  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/auth/') && !isBillingWebhook) {
+    pathname.startsWith('/api/billing/revenuecat-webhook') ||
+    pathname.startsWith('/api/cron/');
+  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/auth/') && !isServerToServer) {
     if (!session) {
       return NextResponse.json(
         { error: 'Unauthorized. Please log in.' },
