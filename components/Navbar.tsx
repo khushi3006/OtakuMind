@@ -3,9 +3,11 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
-import { LayoutDashboard, CheckCircle2, PlayCircle, LogOut, User, Menu, X, Lock, Loader2, Eye, EyeOff, Users, Trash2 } from 'lucide-react';
+import { LayoutDashboard, CheckCircle2, PlayCircle, LogOut, User, Menu, X, Lock, Loader2, Eye, EyeOff, Users, Trash2, Crown } from 'lucide-react';
 import Logo from './Logo';
 import Modal from './Modal';
+import PaywallModal from './PaywallModal';
+import { useEntitlement } from '@/lib/query/hooks/auth';
 
 interface UserSession {
   id: number;
@@ -24,6 +26,12 @@ export default function Navbar() {
   // Custom Profile & Dropdown States
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+
+  // Voluntary upgrade entry point (mirrors mobile's "Membership" settings row). Only trial
+  // users see it: owners have nothing to buy, and expired users are behind EntitlementGate.
+  const [isMembershipOpen, setIsMembershipOpen] = useState(false);
+  const { data: entitlement } = useEntitlement();
+  const showMembership = entitlement?.reason === 'trial';
 
   // Delete Account States
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -309,6 +317,19 @@ export default function Navbar() {
                       <span>Reset Password</span>
                     </button>
 
+                    {showMembership && (
+                      <button
+                        onClick={() => {
+                          setIsDropdownOpen(false);
+                          setIsMembershipOpen(true);
+                        }}
+                        className="dropdown-menu-item"
+                      >
+                        <Crown size={15} />
+                        <span>Membership</span>
+                      </button>
+                    )}
+
                     <button
                       onClick={() => {
                         setIsDropdownOpen(false);
@@ -411,6 +432,19 @@ export default function Navbar() {
                 <Lock size={16} />
                 <span style={{ fontSize: '0.9rem' }}>Reset Password</span>
               </button>
+              {showMembership && (
+                <button
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    setIsMembershipOpen(true);
+                  }}
+                  className="dropdown-menu-item"
+                  style={{ width: '100%', padding: '0.75rem 0.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-color)' }}
+                >
+                  <Crown size={16} />
+                  <span style={{ fontSize: '0.9rem' }}>Membership</span>
+                </button>
+              )}
               <button
                 onClick={() => {
                   setIsMenuOpen(false);
@@ -456,6 +490,13 @@ export default function Navbar() {
           </div>
         </>
       )}
+
+      {/* Voluntary upgrade modal — same checkout as the forced gate, but dismissable */}
+      <PaywallModal
+        isOpen={isMembershipOpen}
+        onClose={() => setIsMembershipOpen(false)}
+        trialEndsAt={entitlement?.trialEndsAt ?? null}
+      />
 
       {/* Change Password Modal */}
       <Modal
