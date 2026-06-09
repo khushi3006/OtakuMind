@@ -13,10 +13,26 @@ export interface Me {
   followingCount: number;
 }
 
+export interface WebEntitlement {
+  active: boolean;
+  reason: 'grandfathered' | 'purchased' | 'trial' | 'expired';
+  trialEndsAt: string | null;
+}
+
+type MeResponse = { user: Me; entitlement?: WebEntitlement };
+
 export function useMe() {
   return useQuery({
     queryKey: qk.me,
-    queryFn: () => apiFetch<{ user: Me }>('/api/auth/me'),
+    queryFn: () => apiFetch<MeResponse>('/api/auth/me'),
     select: (d) => d.user,
+  });
+}
+
+export function useEntitlement() {
+  return useQuery({
+    queryKey: qk.me,
+    queryFn: () => apiFetch<MeResponse>('/api/auth/me'),
+    select: (d) => d.entitlement ?? null,
   });
 }
