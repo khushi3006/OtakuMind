@@ -130,7 +130,10 @@ exports.Prisma.UserScalarFieldEnum = {
   name: 'name',
   bio: 'bio',
   isPublic: 'isPublic',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  hasLifetime: 'hasLifetime',
+  lifetimePurchasedAt: 'lifetimePurchasedAt',
+  grandfathered: 'grandfathered'
 };
 
 exports.Prisma.PendingSignupScalarFieldEnum = {

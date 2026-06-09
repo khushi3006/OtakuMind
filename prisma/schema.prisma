@@ -18,6 +18,10 @@ model User {
   bio       String?
   isPublic  Boolean  @default(true)
   createdAt DateTime @default(now())
+  // Paid plan — account-wide entitlement (14-day trial + ₹299 lifetime).
+  hasLifetime         Boolean   @default(false) // a real purchase happened (Apple IAP or Razorpay)
+  lifetimePurchasedAt DateTime?
+  grandfathered       Boolean   @default(false) // free, pre-launch account
   animes    Anime[]
 
   // Social graph (self-referential many-to-many through Follow)

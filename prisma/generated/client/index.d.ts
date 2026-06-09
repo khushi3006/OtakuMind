@@ -1452,6 +1452,9 @@ export namespace Prisma {
     bio: string | null
     isPublic: boolean | null
     createdAt: Date | null
+    hasLifetime: boolean | null
+    lifetimePurchasedAt: Date | null
+    grandfathered: boolean | null
   }
 
   export type UserMaxAggregateOutputType = {
@@ -1463,6 +1466,9 @@ export namespace Prisma {
     bio: string | null
     isPublic: boolean | null
     createdAt: Date | null
+    hasLifetime: boolean | null
+    lifetimePurchasedAt: Date | null
+    grandfathered: boolean | null
   }
 
   export type UserCountAggregateOutputType = {
@@ -1474,6 +1480,9 @@ export namespace Prisma {
     bio: number
     isPublic: number
     createdAt: number
+    hasLifetime: number
+    lifetimePurchasedAt: number
+    grandfathered: number
     _all: number
   }
 
@@ -1495,6 +1504,9 @@ export namespace Prisma {
     bio?: true
     isPublic?: true
     createdAt?: true
+    hasLifetime?: true
+    lifetimePurchasedAt?: true
+    grandfathered?: true
   }
 
   export type UserMaxAggregateInputType = {
@@ -1506,6 +1518,9 @@ export namespace Prisma {
     bio?: true
     isPublic?: true
     createdAt?: true
+    hasLifetime?: true
+    lifetimePurchasedAt?: true
+    grandfathered?: true
   }
 
   export type UserCountAggregateInputType = {
@@ -1517,6 +1532,9 @@ export namespace Prisma {
     bio?: true
     isPublic?: true
     createdAt?: true
+    hasLifetime?: true
+    lifetimePurchasedAt?: true
+    grandfathered?: true
     _all?: true
   }
 
@@ -1615,6 +1633,9 @@ export namespace Prisma {
     bio: string | null
     isPublic: boolean
     createdAt: Date
+    hasLifetime: boolean
+    lifetimePurchasedAt: Date | null
+    grandfathered: boolean
     _count: UserCountAggregateOutputType | null
     _avg: UserAvgAggregateOutputType | null
     _sum: UserSumAggregateOutputType | null
@@ -1645,6 +1666,9 @@ export namespace Prisma {
     bio?: boolean
     isPublic?: boolean
     createdAt?: boolean
+    hasLifetime?: boolean
+    lifetimePurchasedAt?: boolean
+    grandfathered?: boolean
     animes?: boolean | User$animesArgs<ExtArgs>
     following?: boolean | User$followingArgs<ExtArgs>
     followers?: boolean | User$followersArgs<ExtArgs>
@@ -1661,6 +1685,9 @@ export namespace Prisma {
     bio?: boolean
     isPublic?: boolean
     createdAt?: boolean
+    hasLifetime?: boolean
+    lifetimePurchasedAt?: boolean
+    grandfathered?: boolean
   }, ExtArgs["result"]["user"]>
 
   export type UserSelectScalar = {
@@ -1672,6 +1699,9 @@ export namespace Prisma {
     bio?: boolean
     isPublic?: boolean
     createdAt?: boolean
+    hasLifetime?: boolean
+    lifetimePurchasedAt?: boolean
+    grandfathered?: boolean
   }
 
   export type UserInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -1700,6 +1730,9 @@ export namespace Prisma {
       bio: string | null
       isPublic: boolean
       createdAt: Date
+      hasLifetime: boolean
+      lifetimePurchasedAt: Date | null
+      grandfathered: boolean
     }, ExtArgs["result"]["user"]>
     composites: {}
   }
@@ -2105,6 +2138,9 @@ export namespace Prisma {
     readonly bio: FieldRef<"User", 'String'>
     readonly isPublic: FieldRef<"User", 'Boolean'>
     readonly createdAt: FieldRef<"User", 'DateTime'>
+    readonly hasLifetime: FieldRef<"User", 'Boolean'>
+    readonly lifetimePurchasedAt: FieldRef<"User", 'DateTime'>
+    readonly grandfathered: FieldRef<"User", 'Boolean'>
   }
     
 
@@ -8542,7 +8578,10 @@ export namespace Prisma {
     name: 'name',
     bio: 'bio',
     isPublic: 'isPublic',
-    createdAt: 'createdAt'
+    createdAt: 'createdAt',
+    hasLifetime: 'hasLifetime',
+    lifetimePurchasedAt: 'lifetimePurchasedAt',
+    grandfathered: 'grandfathered'
   };
 
   export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
@@ -8770,6 +8809,9 @@ export namespace Prisma {
     bio?: StringNullableFilter<"User"> | string | null
     isPublic?: BoolFilter<"User"> | boolean
     createdAt?: DateTimeFilter<"User"> | Date | string
+    hasLifetime?: BoolFilter<"User"> | boolean
+    lifetimePurchasedAt?: DateTimeNullableFilter<"User"> | Date | string | null
+    grandfathered?: BoolFilter<"User"> | boolean
     animes?: AnimeListRelationFilter
     following?: FollowListRelationFilter
     followers?: FollowListRelationFilter
@@ -8785,6 +8827,9 @@ export namespace Prisma {
     bio?: SortOrderInput | SortOrder
     isPublic?: SortOrder
     createdAt?: SortOrder
+    hasLifetime?: SortOrder
+    lifetimePurchasedAt?: SortOrderInput | SortOrder
+    grandfathered?: SortOrder
     animes?: AnimeOrderByRelationAggregateInput
     following?: FollowOrderByRelationAggregateInput
     followers?: FollowOrderByRelationAggregateInput
@@ -8803,6 +8848,9 @@ export namespace Prisma {
     bio?: StringNullableFilter<"User"> | string | null
     isPublic?: BoolFilter<"User"> | boolean
     createdAt?: DateTimeFilter<"User"> | Date | string
+    hasLifetime?: BoolFilter<"User"> | boolean
+    lifetimePurchasedAt?: DateTimeNullableFilter<"User"> | Date | string | null
+    grandfathered?: BoolFilter<"User"> | boolean
     animes?: AnimeListRelationFilter
     following?: FollowListRelationFilter
     followers?: FollowListRelationFilter
@@ -8818,6 +8866,9 @@ export namespace Prisma {
     bio?: SortOrderInput | SortOrder
     isPublic?: SortOrder
     createdAt?: SortOrder
+    hasLifetime?: SortOrder
+    lifetimePurchasedAt?: SortOrderInput | SortOrder
+    grandfathered?: SortOrder
     _count?: UserCountOrderByAggregateInput
     _avg?: UserAvgOrderByAggregateInput
     _max?: UserMaxOrderByAggregateInput
@@ -8837,6 +8888,9 @@ export namespace Prisma {
     bio?: StringNullableWithAggregatesFilter<"User"> | string | null
     isPublic?: BoolWithAggregatesFilter<"User"> | boolean
     createdAt?: DateTimeWithAggregatesFilter<"User"> | Date | string
+    hasLifetime?: BoolWithAggregatesFilter<"User"> | boolean
+    lifetimePurchasedAt?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
+    grandfathered?: BoolWithAggregatesFilter<"User"> | boolean
   }
 
   export type PendingSignupWhereInput = {
@@ -9314,6 +9368,9 @@ export namespace Prisma {
     bio?: string | null
     isPublic?: boolean
     createdAt?: Date | string
+    hasLifetime?: boolean
+    lifetimePurchasedAt?: Date | string | null
+    grandfathered?: boolean
     animes?: AnimeCreateNestedManyWithoutUserInput
     following?: FollowCreateNestedManyWithoutFollowerInput
     followers?: FollowCreateNestedManyWithoutFollowingInput
@@ -9329,6 +9386,9 @@ export namespace Prisma {
     bio?: string | null
     isPublic?: boolean
     createdAt?: Date | string
+    hasLifetime?: boolean
+    lifetimePurchasedAt?: Date | string | null
+    grandfathered?: boolean
     animes?: AnimeUncheckedCreateNestedManyWithoutUserInput
     following?: FollowUncheckedCreateNestedManyWithoutFollowerInput
     followers?: FollowUncheckedCreateNestedManyWithoutFollowingInput
@@ -9343,6 +9403,9 @@ export namespace Prisma {
     bio?: NullableStringFieldUpdateOperationsInput | string | null
     isPublic?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    hasLifetime?: BoolFieldUpdateOperationsInput | boolean
+    lifetimePurchasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    grandfathered?: BoolFieldUpdateOperationsInput | boolean
     animes?: AnimeUpdateManyWithoutUserNestedInput
     following?: FollowUpdateManyWithoutFollowerNestedInput
     followers?: FollowUpdateManyWithoutFollowingNestedInput
@@ -9358,6 +9421,9 @@ export namespace Prisma {
     bio?: NullableStringFieldUpdateOperationsInput | string | null
     isPublic?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    hasLifetime?: BoolFieldUpdateOperationsInput | boolean
+    lifetimePurchasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    grandfathered?: BoolFieldUpdateOperationsInput | boolean
     animes?: AnimeUncheckedUpdateManyWithoutUserNestedInput
     following?: FollowUncheckedUpdateManyWithoutFollowerNestedInput
     followers?: FollowUncheckedUpdateManyWithoutFollowingNestedInput
@@ -9373,6 +9439,9 @@ export namespace Prisma {
     bio?: string | null
     isPublic?: boolean
     createdAt?: Date | string
+    hasLifetime?: boolean
+    lifetimePurchasedAt?: Date | string | null
+    grandfathered?: boolean
   }
 
   export type UserUpdateManyMutationInput = {
@@ -9383,6 +9452,9 @@ export namespace Prisma {
     bio?: NullableStringFieldUpdateOperationsInput | string | null
     isPublic?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    hasLifetime?: BoolFieldUpdateOperationsInput | boolean
+    lifetimePurchasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    grandfathered?: BoolFieldUpdateOperationsInput | boolean
   }
 
   export type UserUncheckedUpdateManyInput = {
@@ -9394,6 +9466,9 @@ export namespace Prisma {
     bio?: NullableStringFieldUpdateOperationsInput | string | null
     isPublic?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    hasLifetime?: BoolFieldUpdateOperationsInput | boolean
+    lifetimePurchasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    grandfathered?: BoolFieldUpdateOperationsInput | boolean
   }
 
   export type PendingSignupCreateInput = {
@@ -9955,6 +10030,17 @@ export namespace Prisma {
     not?: NestedDateTimeFilter<$PrismaModel> | Date | string
   }
 
+  export type DateTimeNullableFilter<$PrismaModel = never> = {
+    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel> | null
+    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    not?: NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
+  }
+
   export type AnimeListRelationFilter = {
     every?: AnimeWhereInput
     some?: AnimeWhereInput
@@ -9999,6 +10085,9 @@ export namespace Prisma {
     bio?: SortOrder
     isPublic?: SortOrder
     createdAt?: SortOrder
+    hasLifetime?: SortOrder
+    lifetimePurchasedAt?: SortOrder
+    grandfathered?: SortOrder
   }
 
   export type UserAvgOrderByAggregateInput = {
@@ -10014,6 +10103,9 @@ export namespace Prisma {
     bio?: SortOrder
     isPublic?: SortOrder
     createdAt?: SortOrder
+    hasLifetime?: SortOrder
+    lifetimePurchasedAt?: SortOrder
+    grandfathered?: SortOrder
   }
 
   export type UserMinOrderByAggregateInput = {
@@ -10025,6 +10117,9 @@ export namespace Prisma {
     bio?: SortOrder
     isPublic?: SortOrder
     createdAt?: SortOrder
+    hasLifetime?: SortOrder
+    lifetimePurchasedAt?: SortOrder
+    grandfathered?: SortOrder
   }
 
   export type UserSumOrderByAggregateInput = {
@@ -10105,6 +10200,20 @@ export namespace Prisma {
     _max?: NestedDateTimeFilter<$PrismaModel>
   }
 
+  export type DateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel> | null
+    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    not?: NestedDateTimeNullableWithAggregatesFilter<$PrismaModel> | Date | string | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedDateTimeNullableFilter<$PrismaModel>
+    _max?: NestedDateTimeNullableFilter<$PrismaModel>
+  }
+
   export type PendingSignupCountOrderByAggregateInput = {
     id?: SortOrder
     email?: SortOrder
@@ -10154,17 +10263,6 @@ export namespace Prisma {
     attempts?: SortOrder
   }
 
-  export type DateTimeNullableFilter<$PrismaModel = never> = {
-    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel> | null
-    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
-    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
-    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    not?: NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
-  }
-
   export type UserRelationFilter = {
     is?: UserWhereInput
     isNot?: UserWhereInput
@@ -10205,20 +10303,6 @@ export namespace Prisma {
   export type PasswordResetTokenSumOrderByAggregateInput = {
     id?: SortOrder
     userId?: SortOrder
-  }
-
-  export type DateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel> | null
-    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
-    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
-    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    not?: NestedDateTimeNullableWithAggregatesFilter<$PrismaModel> | Date | string | null
-    _count?: NestedIntNullableFilter<$PrismaModel>
-    _min?: NestedDateTimeNullableFilter<$PrismaModel>
-    _max?: NestedDateTimeNullableFilter<$PrismaModel>
   }
 
   export type FollowFollowerIdFollowingIdCompoundUniqueInput = {
@@ -10582,6 +10666,10 @@ export namespace Prisma {
     set?: Date | string
   }
 
+  export type NullableDateTimeFieldUpdateOperationsInput = {
+    set?: Date | string | null
+  }
+
   export type AnimeUpdateManyWithoutUserNestedInput = {
     create?: XOR<AnimeCreateWithoutUserInput, AnimeUncheckedCreateWithoutUserInput> | AnimeCreateWithoutUserInput[] | AnimeUncheckedCreateWithoutUserInput[]
     connectOrCreate?: AnimeCreateOrConnectWithoutUserInput | AnimeCreateOrConnectWithoutUserInput[]
@@ -10708,10 +10796,6 @@ export namespace Prisma {
     connect?: UserWhereUniqueInput
   }
 
-  export type NullableDateTimeFieldUpdateOperationsInput = {
-    set?: Date | string | null
-  }
-
   export type UserUpdateOneRequiredWithoutPasswordResetTokensNestedInput = {
     create?: XOR<UserCreateWithoutPasswordResetTokensInput, UserUncheckedCreateWithoutPasswordResetTokensInput>
     connectOrCreate?: UserCreateOrConnectWithoutPasswordResetTokensInput
@@ -10825,6 +10909,17 @@ export namespace Prisma {
     not?: NestedDateTimeFilter<$PrismaModel> | Date | string
   }
 
+  export type NestedDateTimeNullableFilter<$PrismaModel = never> = {
+    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel> | null
+    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    not?: NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
+  }
+
   export type NestedIntWithAggregatesFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel>
     in?: number[] | ListIntFieldRefInput<$PrismaModel>
@@ -10917,17 +11012,6 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedDateTimeFilter<$PrismaModel>
     _max?: NestedDateTimeFilter<$PrismaModel>
-  }
-
-  export type NestedDateTimeNullableFilter<$PrismaModel = never> = {
-    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel> | null
-    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
-    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
-    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    not?: NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
   }
 
   export type NestedDateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {
@@ -11242,6 +11326,9 @@ export namespace Prisma {
     bio?: string | null
     isPublic?: boolean
     createdAt?: Date | string
+    hasLifetime?: boolean
+    lifetimePurchasedAt?: Date | string | null
+    grandfathered?: boolean
     animes?: AnimeCreateNestedManyWithoutUserInput
     following?: FollowCreateNestedManyWithoutFollowerInput
     followers?: FollowCreateNestedManyWithoutFollowingInput
@@ -11256,6 +11343,9 @@ export namespace Prisma {
     bio?: string | null
     isPublic?: boolean
     createdAt?: Date | string
+    hasLifetime?: boolean
+    lifetimePurchasedAt?: Date | string | null
+    grandfathered?: boolean
     animes?: AnimeUncheckedCreateNestedManyWithoutUserInput
     following?: FollowUncheckedCreateNestedManyWithoutFollowerInput
     followers?: FollowUncheckedCreateNestedManyWithoutFollowingInput
@@ -11285,6 +11375,9 @@ export namespace Prisma {
     bio?: NullableStringFieldUpdateOperationsInput | string | null
     isPublic?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    hasLifetime?: BoolFieldUpdateOperationsInput | boolean
+    lifetimePurchasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    grandfathered?: BoolFieldUpdateOperationsInput | boolean
     animes?: AnimeUpdateManyWithoutUserNestedInput
     following?: FollowUpdateManyWithoutFollowerNestedInput
     followers?: FollowUpdateManyWithoutFollowingNestedInput
@@ -11299,6 +11392,9 @@ export namespace Prisma {
     bio?: NullableStringFieldUpdateOperationsInput | string | null
     isPublic?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    hasLifetime?: BoolFieldUpdateOperationsInput | boolean
+    lifetimePurchasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    grandfathered?: BoolFieldUpdateOperationsInput | boolean
     animes?: AnimeUncheckedUpdateManyWithoutUserNestedInput
     following?: FollowUncheckedUpdateManyWithoutFollowerNestedInput
     followers?: FollowUncheckedUpdateManyWithoutFollowingNestedInput
@@ -11312,6 +11408,9 @@ export namespace Prisma {
     bio?: string | null
     isPublic?: boolean
     createdAt?: Date | string
+    hasLifetime?: boolean
+    lifetimePurchasedAt?: Date | string | null
+    grandfathered?: boolean
     animes?: AnimeCreateNestedManyWithoutUserInput
     followers?: FollowCreateNestedManyWithoutFollowingInput
     passwordResetTokens?: PasswordResetTokenCreateNestedManyWithoutUserInput
@@ -11326,6 +11425,9 @@ export namespace Prisma {
     bio?: string | null
     isPublic?: boolean
     createdAt?: Date | string
+    hasLifetime?: boolean
+    lifetimePurchasedAt?: Date | string | null
+    grandfathered?: boolean
     animes?: AnimeUncheckedCreateNestedManyWithoutUserInput
     followers?: FollowUncheckedCreateNestedManyWithoutFollowingInput
     passwordResetTokens?: PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
@@ -11344,6 +11446,9 @@ export namespace Prisma {
     bio?: string | null
     isPublic?: boolean
     createdAt?: Date | string
+    hasLifetime?: boolean
+    lifetimePurchasedAt?: Date | string | null
+    grandfathered?: boolean
     animes?: AnimeCreateNestedManyWithoutUserInput
     following?: FollowCreateNestedManyWithoutFollowerInput
     passwordResetTokens?: PasswordResetTokenCreateNestedManyWithoutUserInput
@@ -11358,6 +11463,9 @@ export namespace Prisma {
     bio?: string | null
     isPublic?: boolean
     createdAt?: Date | string
+    hasLifetime?: boolean
+    lifetimePurchasedAt?: Date | string | null
+    grandfathered?: boolean
     animes?: AnimeUncheckedCreateNestedManyWithoutUserInput
     following?: FollowUncheckedCreateNestedManyWithoutFollowerInput
     passwordResetTokens?: PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
@@ -11387,6 +11495,9 @@ export namespace Prisma {
     bio?: NullableStringFieldUpdateOperationsInput | string | null
     isPublic?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    hasLifetime?: BoolFieldUpdateOperationsInput | boolean
+    lifetimePurchasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    grandfathered?: BoolFieldUpdateOperationsInput | boolean
     animes?: AnimeUpdateManyWithoutUserNestedInput
     followers?: FollowUpdateManyWithoutFollowingNestedInput
     passwordResetTokens?: PasswordResetTokenUpdateManyWithoutUserNestedInput
@@ -11401,6 +11512,9 @@ export namespace Prisma {
     bio?: NullableStringFieldUpdateOperationsInput | string | null
     isPublic?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    hasLifetime?: BoolFieldUpdateOperationsInput | boolean
+    lifetimePurchasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    grandfathered?: BoolFieldUpdateOperationsInput | boolean
     animes?: AnimeUncheckedUpdateManyWithoutUserNestedInput
     followers?: FollowUncheckedUpdateManyWithoutFollowingNestedInput
     passwordResetTokens?: PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
@@ -11425,6 +11539,9 @@ export namespace Prisma {
     bio?: NullableStringFieldUpdateOperationsInput | string | null
     isPublic?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    hasLifetime?: BoolFieldUpdateOperationsInput | boolean
+    lifetimePurchasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    grandfathered?: BoolFieldUpdateOperationsInput | boolean
     animes?: AnimeUpdateManyWithoutUserNestedInput
     following?: FollowUpdateManyWithoutFollowerNestedInput
     passwordResetTokens?: PasswordResetTokenUpdateManyWithoutUserNestedInput
@@ -11439,6 +11556,9 @@ export namespace Prisma {
     bio?: NullableStringFieldUpdateOperationsInput | string | null
     isPublic?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    hasLifetime?: BoolFieldUpdateOperationsInput | boolean
+    lifetimePurchasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    grandfathered?: BoolFieldUpdateOperationsInput | boolean
     animes?: AnimeUncheckedUpdateManyWithoutUserNestedInput
     following?: FollowUncheckedUpdateManyWithoutFollowerNestedInput
     passwordResetTokens?: PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
@@ -11452,6 +11572,9 @@ export namespace Prisma {
     bio?: string | null
     isPublic?: boolean
     createdAt?: Date | string
+    hasLifetime?: boolean
+    lifetimePurchasedAt?: Date | string | null
+    grandfathered?: boolean
     following?: FollowCreateNestedManyWithoutFollowerInput
     followers?: FollowCreateNestedManyWithoutFollowingInput
     passwordResetTokens?: PasswordResetTokenCreateNestedManyWithoutUserInput
@@ -11466,6 +11589,9 @@ export namespace Prisma {
     bio?: string | null
     isPublic?: boolean
     createdAt?: Date | string
+    hasLifetime?: boolean
+    lifetimePurchasedAt?: Date | string | null
+    grandfathered?: boolean
     following?: FollowUncheckedCreateNestedManyWithoutFollowerInput
     followers?: FollowUncheckedCreateNestedManyWithoutFollowingInput
     passwordResetTokens?: PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
@@ -11495,6 +11621,9 @@ export namespace Prisma {
     bio?: NullableStringFieldUpdateOperationsInput | string | null
     isPublic?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    hasLifetime?: BoolFieldUpdateOperationsInput | boolean
+    lifetimePurchasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    grandfathered?: BoolFieldUpdateOperationsInput | boolean
     following?: FollowUpdateManyWithoutFollowerNestedInput
     followers?: FollowUpdateManyWithoutFollowingNestedInput
     passwordResetTokens?: PasswordResetTokenUpdateManyWithoutUserNestedInput
@@ -11509,6 +11638,9 @@ export namespace Prisma {
     bio?: NullableStringFieldUpdateOperationsInput | string | null
     isPublic?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    hasLifetime?: BoolFieldUpdateOperationsInput | boolean
+    lifetimePurchasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    grandfathered?: BoolFieldUpdateOperationsInput | boolean
     following?: FollowUncheckedUpdateManyWithoutFollowerNestedInput
     followers?: FollowUncheckedUpdateManyWithoutFollowingNestedInput
     passwordResetTokens?: PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
