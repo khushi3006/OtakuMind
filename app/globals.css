@@ -4914,3 +4914,38 @@ textarea.form-input { resize: vertical; min-height: 70px; font-family: var(--fon
   font-size: 0.9rem;
   color: var(--text-secondary);
 }
+
+.auth-social-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.apple-signin-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  height: 44px;
+  border: none;
+  border-radius: 999px;
+  background: #000;
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.apple-signin-btn:hover:not(:disabled) {
+  background: #1d1d1f;
+}
+
+.apple-signin-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

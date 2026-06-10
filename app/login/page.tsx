@@ -6,7 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
 import Logo from '@/components/Logo';
-import GoogleSignInButton from '@/components/GoogleSignInButton';
+import SocialAuthButtons from '@/components/SocialAuthButtons';
 import { errorMessage } from '@/lib/api-error';
 
 function LoginForm() {
@@ -144,7 +144,7 @@ function LoginForm() {
         </button>
       </form>
 
-      <GoogleSignInButton
+      <SocialAuthButtons
         mode="login"
         redirectPath={redirectPath}
         disabled={isLoading}

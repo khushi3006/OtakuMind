@@ -32,6 +32,7 @@ The Prisma client is generated to a **custom path** (`prisma/generated/client`),
 - `DATABASE_URL` — PostgreSQL (Neon) connection string. Required. (`.env`, `.env.development`, `.env.production`)
 - `JWT_SECRET` — HMAC key for session tokens. Has an insecure hardcoded fallback in `lib/jwt.ts`; set it explicitly in any real environment.
 - `GOOGLE_CLIENT_ID` / `NEXT_PUBLIC_GOOGLE_CLIENT_ID` — the Google **web** OAuth client id (same value in both). The server var is the allowed idToken audience(s) for `POST /api/auth/google` (comma-separated; shared by the iOS app and the website). The `NEXT_PUBLIC_` copy powers the website's Google Identity Services button (`components/GoogleSignInButton.tsx`) on `/login`/`/signup` — the site origin must be an "Authorized JavaScript origin" on that client in the Google Cloud console.
+- `APPLE_CLIENT_ID` / `NEXT_PUBLIC_APPLE_CLIENT_ID` — Apple sign-in audiences. The server var is the allowed identityToken audience(s) for `POST /api/auth/apple`: the iOS bundle id (`com.otakumind.app`, the default if unset) plus the web **Services ID** (`com.otakumind.web`). The `NEXT_PUBLIC_` var is that Services ID, powering the website's Apple button (`components/AppleSignInButton.tsx`, Sign in with Apple JS popup). Apple only accepts the HTTPS return URLs registered on the Services ID (`/login`, `/signup` on the production domain), so the web Apple popup cannot be tested on localhost. Both web buttons render via `components/SocialAuthButtons.tsx` and no-op when their `NEXT_PUBLIC_` var is unset.
 
 ## Architecture
 

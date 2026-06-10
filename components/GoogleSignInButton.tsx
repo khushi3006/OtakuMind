@@ -1,22 +1,18 @@
 "use client";
 
 /**
- * "Continue with Google" for the web auth pages — the browser counterpart of the
- * mobile app's SocialAuthButtons. Renders the official Google Identity Services
- * (GIS) button, which yields a Google ID token; that token is POSTed to the same
- * /api/auth/google route the iOS app uses. The token's audience is
- * NEXT_PUBLIC_GOOGLE_CLIENT_ID, which must be one of the GOOGLE_CLIENT_ID
- * audiences the route verifies against (in practice: the same web client id).
- * Renders nothing when NEXT_PUBLIC_GOOGLE_CLIENT_ID is unset, like the mobile
- * buttons when unconfigured.
+ * Google half of the web social sign-in (rendered by SocialAuthButtons).
+ * Renders the official Google Identity Services (GIS) button, which yields a
+ * Google ID token; that token is POSTed to the same /api/auth/google route the
+ * iOS app uses. The token's audience is NEXT_PUBLIC_GOOGLE_CLIENT_ID, which
+ * must be one of the GOOGLE_CLIENT_ID audiences the route verifies against
+ * (in practice: the same web client id). Renders nothing when unset.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import Script from 'next/script';
-import { useRouter } from 'next/navigation';
-import { useQueryClient } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
-import { errorMessage } from '@/lib/api-error';
+import { useSocialSignIn } from '@/lib/use-social-signin';
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
 const GSI_SRC = 'https://accounts.google.com/gsi/client';
@@ -62,41 +58,19 @@ export default function GoogleSignInButton({
   disabled,
   onError,
 }: Props) {
-  const router = useRouter();
-  const queryClient = useQueryClient();
   const buttonRef = useRef<HTMLDivElement>(null);
-  const postingRef = useRef(false);
-  const [isPosting, setIsPosting] = useState(false);
+  const { submit, isPosting } = useSocialSignIn({
+    endpoint: '/api/auth/google',
+    fallbackError: "Couldn't sign in with Google. Please try again.",
+    redirectPath,
+    onError,
+  });
 
   const handleCredential = useCallback(
-    async (response: { credential?: string }) => {
-      const idToken = response.credential;
-      if (!idToken || postingRef.current) return;
-      postingRef.current = true;
-      setIsPosting(true);
-      onError(null);
-
-      try {
-        const res = await fetch('/api/auth/google', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ idToken }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Google sign-in failed');
-
-        // Same as password login: drop queries cached while logged out (the 401'd
-        // /api/auth/me never refetches on its own) so data loads fresh post-redirect.
-        queryClient.clear();
-        router.refresh();
-        router.push(redirectPath);
-      } catch (err) {
-        onError(errorMessage(err, "Couldn't sign in with Google. Please try again."));
-        postingRef.current = false;
-        setIsPosting(false);
-      }
+    (response: { credential?: string }) => {
+      if (response.credential) void submit({ idToken: response.credential });
     },
-    [onError, queryClient, redirectPath, router],
+    [submit],
   );
 
   const renderButton = useCallback(() => {
@@ -125,7 +99,7 @@ export default function GoogleSignInButton({
   if (!GOOGLE_CLIENT_ID) return null;
 
   return (
-    <div className={`auth-social${disabled || isPosting ? ' auth-social-busy' : ''}`}>
+    <div className={disabled || isPosting ? 'auth-social-busy' : undefined}>
       <Script
         src={GSI_SRC}
         onReady={renderButton}
@@ -133,13 +107,6 @@ export default function GoogleSignInButton({
           onError("Couldn't load Google sign-in. Check your connection and try again.")
         }
       />
-      <div className="auth-social-divider">
-        <span className="auth-social-line" />
-        <span className="auth-social-text">
-          {mode === 'login' ? 'or continue with' : 'or sign up with'}
-        </span>
-        <span className="auth-social-line" />
-      </div>
       {isPosting && (
         <div className="auth-social-pending">
           <Loader2 size={18} className="spin" />

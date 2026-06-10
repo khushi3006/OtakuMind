@@ -6,7 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { AlertCircle, Loader2, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import Logo from '@/components/Logo';
-import GoogleSignInButton from '@/components/GoogleSignInButton';
+import SocialAuthButtons from '@/components/SocialAuthButtons';
 
 const RESEND_SECONDS = 60;
 
@@ -222,7 +222,7 @@ export default function SignupPage() {
             </button>
           </form>
 
-          <GoogleSignInButton mode="signup" disabled={isLoading} onError={setError} />
+          <SocialAuthButtons mode="signup" disabled={isLoading} onError={setError} />
           </>
         ) : (
           <form onSubmit={verifyOtp} className="auth-form">
