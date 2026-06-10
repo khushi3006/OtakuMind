@@ -3,7 +3,19 @@
 // 100% compatible with the Next.js Edge Runtime / Middleware.
 
 const encoder = new TextEncoder();
-const JWT_SECRET = process.env.JWT_SECRET || 'c59a35e8093d9b4dbcb9367d32c918a287fa3f7902d2948ca240f951e73e9112';
+
+// Sessions are signed with this HMAC key. In production it MUST come from the environment —
+// refuse to fall back to a committed default, which would let anyone forge a session for any
+// user (full account takeover). The dev-only fallback keeps local development frictionless.
+// NOTE: setting/rotating JWT_SECRET invalidates all existing sessions (everyone is logged out).
+const JWT_SECRET = (() => {
+  const fromEnv = process.env.JWT_SECRET;
+  if (fromEnv) return fromEnv;
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET is not set. Refusing to sign sessions with an insecure default in production.');
+  }
+  return 'c59a35e8093d9b4dbcb9367d32c918a287fa3f7902d2948ca240f951e73e9112';
+})();
 
 async function getCryptoKey(): Promise<CryptoKey> {
   return crypto.subtle.importKey(
