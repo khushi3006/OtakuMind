@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireEntitlement } from '@/lib/require-entitlement';
 import { errorMessage } from '@/lib/api-error';
+import { isBlockedEitherWay } from '@/lib/blocks';
 
 async function resolveTarget(username: string) {
   const handle = username.trim().toLowerCase();
@@ -29,6 +30,10 @@ export async function POST(
     }
     if (target.id === meId) {
       return NextResponse.json({ error: 'You cannot follow yourself' }, { status: 400 });
+    }
+    // Can't follow someone you've blocked, or who has blocked you.
+    if (await isBlockedEitherWay(meId, target.id)) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     // Idempotent: a duplicate follow is a no-op.

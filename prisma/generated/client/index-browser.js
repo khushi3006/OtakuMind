@@ -136,6 +136,23 @@ exports.Prisma.UserScalarFieldEnum = {
   grandfathered: 'grandfathered'
 };
 
+exports.Prisma.BlockScalarFieldEnum = {
+  id: 'id',
+  blockerId: 'blockerId',
+  blockedId: 'blockedId',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.ReportScalarFieldEnum = {
+  id: 'id',
+  reporterId: 'reporterId',
+  reportedUserId: 'reportedUserId',
+  reason: 'reason',
+  details: 'details',
+  status: 'status',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.PendingSignupScalarFieldEnum = {
   id: 'id',
   email: 'email',
@@ -238,6 +255,8 @@ exports.Prisma.JsonNullValueFilter = {
 
 exports.Prisma.ModelName = {
   User: 'User',
+  Block: 'Block',
+  Report: 'Report',
   PendingSignup: 'PendingSignup',
   PasswordResetToken: 'PasswordResetToken',
   Follow: 'Follow',

@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { requireEntitlement } from '@/lib/require-entitlement';
 import { errorMessage } from '@/lib/api-error';
 import { getFollowState, canViewList } from '@/lib/visibility';
+import { isBlockedEitherWay } from '@/lib/blocks';
 
 export async function GET(
   request: Request,
@@ -31,6 +32,12 @@ export async function GET(
     });
 
     if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // A block in either direction hides the profile entirely (managed via the Blocked Accounts
+    // screen, not here). Return the same 404 as a missing user so neither side leaks the other.
+    if (await isBlockedEitherWay(meId, user.id)) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 

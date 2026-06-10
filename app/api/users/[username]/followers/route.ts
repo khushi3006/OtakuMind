@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireEntitlement } from '@/lib/require-entitlement';
 import { errorMessage } from '@/lib/api-error';
+import { getBlockedUserIds } from '@/lib/blocks';
 
 const PAGE_SIZE = 20;
 
@@ -28,9 +29,13 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
 
+    // Hide accounts the viewer is in a block relationship with (either direction).
+    const blockedIds = await getBlockedUserIds(meId);
+    const where = { followingId: owner.id, followerId: { notIn: blockedIds } };
+
     const [rows, total] = await Promise.all([
       db.follow.findMany({
-        where: { followingId: owner.id },
+        where,
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * PAGE_SIZE,
         take: PAGE_SIZE,
@@ -47,7 +52,7 @@ export async function GET(
           },
         },
       }),
-      db.follow.count({ where: { followingId: owner.id } }),
+      db.follow.count({ where }),
     ]);
 
     const users = rows.map((r) => r.follower);

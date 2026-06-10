@@ -28,9 +28,48 @@ model User {
   following Follow[]  @relation("Follower")
   followers Follow[]  @relation("Following")
 
+  // Moderation (App Store UGC requirement): blocks I created / blocks against me, and reports.
+  blocksMade     Block[]  @relation("Blocker")
+  blocksAgainst  Block[]  @relation("Blocked")
+  reportsMade    Report[] @relation("Reporter")
+  reportsAgainst Report[] @relation("Reported")
+
   passwordResetTokens PasswordResetToken[]
 
   @@index([username])
+}
+
+// A directed block edge: the blocker no longer sees / can be contacted by the blocked
+// account (filtering is applied in both directions). Removing either user cascades.
+model Block {
+  id        Int      @id @default(autoincrement())
+  blockerId Int
+  blockedId Int
+  createdAt DateTime @default(now())
+
+  blocker User @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
+}
+
+// A user-submitted report of another account (objectionable content / abuse).
+model Report {
+  id             Int      @id @default(autoincrement())
+  reporterId     Int
+  reportedUserId Int
+  reason         String
+  details        String?
+  status         String   @default("open")
+  createdAt      DateTime @default(now())
+
+  reporter User @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reported User @relation("Reported", fields: [reportedUserId], references: [id], onDelete: Cascade)
+
+  @@index([reportedUserId])
+  @@index([status])
 }
 
 // Holds signup details + hashed OTP until the email is verified. No User row

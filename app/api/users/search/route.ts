@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireEntitlement } from '@/lib/require-entitlement';
 import { errorMessage } from '@/lib/api-error';
+import { getBlockedUserIds } from '@/lib/blocks';
 import type { Prisma } from '@/prisma/generated/client';
 
 const PAGE_SIZE = 20;
@@ -17,7 +18,9 @@ export async function GET(request: Request) {
     const q = (searchParams.get('q') || '').trim();
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
 
-    const where: Prisma.UserWhereInput = { NOT: { id: meId } };
+    // Hide accounts in a block relationship with the viewer (either direction).
+    const blockedIds = await getBlockedUserIds(meId);
+    const where: Prisma.UserWhereInput = { id: { notIn: [meId, ...blockedIds] } };
     if (q) {
       where.OR = [
         { username: { contains: q, mode: 'insensitive' } },

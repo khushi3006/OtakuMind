@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { requireEntitlement } from '@/lib/require-entitlement';
 import { errorMessage } from '@/lib/api-error';
 import { getFollowState } from '@/lib/visibility';
+import { isBlockedEitherWay } from '@/lib/blocks';
 import type { Prisma } from '@/prisma/generated/client';
 
 const ALLOWED_LIMITS = [20, 50, 100] as const;
@@ -27,6 +28,11 @@ export async function GET(
     });
 
     if (!owner) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // A block in either direction hides the list entirely (same 404 as a missing user).
+    if (await isBlockedEitherWay(meId, owner.id)) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
