@@ -31,6 +31,7 @@ The Prisma client is generated to a **custom path** (`prisma/generated/client`),
 
 - `DATABASE_URL` — PostgreSQL (Neon) connection string. Required. (`.env`, `.env.development`, `.env.production`)
 - `JWT_SECRET` — HMAC key for session tokens. Has an insecure hardcoded fallback in `lib/jwt.ts`; set it explicitly in any real environment.
+- `GOOGLE_CLIENT_ID` / `NEXT_PUBLIC_GOOGLE_CLIENT_ID` — the Google **web** OAuth client id (same value in both). The server var is the allowed idToken audience(s) for `POST /api/auth/google` (comma-separated; shared by the iOS app and the website). The `NEXT_PUBLIC_` copy powers the website's Google Identity Services button (`components/GoogleSignInButton.tsx`) on `/login`/`/signup` — the site origin must be an "Authorized JavaScript origin" on that client in the Google Cloud console.
 
 ## Architecture
 

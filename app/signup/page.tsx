@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { AlertCircle, Loader2, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import Logo from '@/components/Logo';
+import GoogleSignInButton from '@/components/GoogleSignInButton';
 
 const RESEND_SECONDS = 60;
 
@@ -125,6 +126,7 @@ export default function SignupPage() {
         </div>
 
         {step === 'details' ? (
+          <>
           <form onSubmit={startSignup} className="auth-form">
             {error && (
               <div className="auth-error">
@@ -219,6 +221,9 @@ export default function SignupPage() {
               )}
             </button>
           </form>
+
+          <GoogleSignInButton mode="signup" disabled={isLoading} onError={setError} />
+          </>
         ) : (
           <form onSubmit={verifyOtp} className="auth-form">
             {error && (

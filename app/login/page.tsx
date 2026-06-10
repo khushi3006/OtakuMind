@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
 import Logo from '@/components/Logo';
+import GoogleSignInButton from '@/components/GoogleSignInButton';
 import { errorMessage } from '@/lib/api-error';
 
 function LoginForm() {
@@ -142,6 +143,13 @@ function LoginForm() {
           )}
         </button>
       </form>
+
+      <GoogleSignInButton
+        mode="login"
+        redirectPath={redirectPath}
+        disabled={isLoading}
+        onError={setError}
+      />
 
       <div className="auth-footer">
         Don&apos;t have an account?

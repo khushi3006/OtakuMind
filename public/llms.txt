@@ -18,7 +18,7 @@
 ## Key pages
 
 - [Home / landing](https://otakumind.thekhushikumari.com/): what OtakuMind is and how it works.
-- [Sign up](https://otakumind.thekhushikumari.com/signup): create an account (free trial).
+- [Sign up](https://otakumind.thekhushikumari.com/signup): create an account (free trial) with email + password or Google sign-in.
 - [Public profiles](https://otakumind.thekhushikumari.com/users): user anime lists live at /users/<username> and are server-rendered for public profiles.
 - [Privacy policy](https://otakumind.thekhushikumari.com/privacy): applies to the website and the iOS app.
 
