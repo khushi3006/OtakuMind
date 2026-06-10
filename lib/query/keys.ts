@@ -11,4 +11,5 @@ export const qk = {
   userAnime: (username: string, status: string, page?: number) => ['user-anime', username, status, page ?? 1] as const,
   followers: (username: string) => ['followers', username] as const,
   following: (username: string) => ['following', username] as const,
+  blocks: ['blocks'] as const,
 };

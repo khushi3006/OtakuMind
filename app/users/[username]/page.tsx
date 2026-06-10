@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   Lock, Plus, Check, RefreshCw, Film, PlayCircle, XCircle, Settings, ChevronLeft, ChevronRight, ArrowLeft,
-  UserPlus, UserCheck, Loader2,
+  UserPlus, UserCheck, Loader2, MoreVertical, Flag, Ban,
 } from 'lucide-react';
 import Modal from '@/components/Modal';
 import Toast, { type ToastMessage } from '@/components/Toast';
@@ -19,8 +19,12 @@ import {
   useFollowers,
   useFollowing,
   useUpdateProfile,
+  useBlock,
+  useUnblock,
+  useReport,
   type ListAnime,
   type ListAnimePage,
+  type ReportReason,
 } from '@/lib/query/hooks/users';
 import { useCreateAnime } from '@/lib/query/hooks/anime';
 
@@ -30,6 +34,14 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: 'incomplete', label: 'Watching', icon: <PlayCircle size={16} /> },
   { key: 'completed', label: 'Completed', icon: <Check size={16} /> },
   { key: 'dropped', label: 'Dropped', icon: <XCircle size={16} /> },
+];
+
+const REPORT_REASONS: { key: ReportReason; label: string }[] = [
+  { key: 'spam', label: 'Spam' },
+  { key: 'harassment', label: 'Harassment or bullying' },
+  { key: 'inappropriate', label: 'Inappropriate content' },
+  { key: 'impersonation', label: 'Impersonation' },
+  { key: 'other', label: 'Something else' },
 ];
 
 function formatSeasonText(season: number, type: string): string {
@@ -72,6 +84,16 @@ export default function ProfilePage() {
   // Followers / Following modal
   const [showConnections, setShowConnections] = useState<null | 'followers' | 'following'>(null);
 
+  // Moderation (other users only): kebab menu, report modal, block confirm, post-block view.
+  const [showActions, setShowActions] = useState(false);
+  const [showReport, setShowReport] = useState(false);
+  const [reportReason, setReportReason] = useState<ReportReason | null>(null);
+  const [reportDetails, setReportDetails] = useState('');
+  const [reportError, setReportError] = useState<string | null>(null);
+  const [showBlockConfirm, setShowBlockConfirm] = useState(false);
+  const [blockError, setBlockError] = useState<string | null>(null);
+  const [blockedLocally, setBlockedLocally] = useState(false);
+
   const addToast = useCallback((message: string, type: 'success' | 'info' | 'warning' = 'info') => {
     const id = Math.random().toString(36).slice(2, 9);
     setToasts((prev) => [...prev, { id, message, type }]);
@@ -101,6 +123,9 @@ export default function ProfilePage() {
   const followMutation = useFollow(username);
   const createMutation = useCreateAnime();
   const updateProfile = useUpdateProfile();
+  const blockMutation = useBlock(username);
+  const unblockMutation = useUnblock();
+  const reportMutation = useReport(username);
 
   const followersQuery = useFollowers(username, showConnections === 'followers');
   const followingQuery = useFollowing(username, showConnections === 'following');
@@ -121,6 +146,51 @@ export default function ProfilePage() {
   const toggleFollow = () => {
     if (!profile || followMutation.isPending) return;
     followMutation.mutate(profile.isFollowing ? 'unfollow' : 'follow');
+  };
+
+  const openReport = () => {
+    setReportReason(null);
+    setReportDetails('');
+    setReportError(null);
+    setShowReport(true);
+  };
+
+  const submitReport = () => {
+    if (!reportReason || reportMutation.isPending) return;
+    setReportError(null);
+    reportMutation.mutate(
+      { reason: reportReason, details: reportDetails.trim() || undefined },
+      {
+        onSuccess: () => {
+          addToast('Report submitted. Thanks for letting us know.', 'success');
+          setShowReport(false);
+        },
+        onError: (e) => setReportError(e instanceof ApiError ? e.message : 'Could not submit the report.'),
+      },
+    );
+  };
+
+  const submitBlock = () => {
+    if (blockMutation.isPending) return;
+    setBlockError(null);
+    blockMutation.mutate(undefined, {
+      onSuccess: () => {
+        setShowBlockConfirm(false);
+        setBlockedLocally(true);
+      },
+      onError: (e) => setBlockError(e instanceof ApiError ? e.message : 'Could not block. Please try again.'),
+    });
+  };
+
+  const handleUnblock = () => {
+    if (unblockMutation.isPending) return;
+    unblockMutation.mutate(username, {
+      onSuccess: () => {
+        setBlockedLocally(false);
+        profileQuery.refetch();
+      },
+      onError: () => addToast('Could not unblock. Please try again.', 'warning'),
+    });
   };
 
   const handleAddToMyList = async (anime: ListAnime) => {
@@ -229,6 +299,26 @@ export default function ProfilePage() {
     );
   }
 
+  if (blockedLocally) {
+    return (
+      <main className="dashboard">
+        <button className="back-link" onClick={() => router.push('/users')}>
+          <ArrowLeft size={16} /> Discover
+        </button>
+        <div className="profile-locked animate-fade-in">
+          <Ban size={40} color="#a3b18a" />
+          <h3>You blocked @{profile.username}</h3>
+          <p>They can&apos;t find your profile or follow you, and you won&apos;t see theirs.</p>
+          <button className="btn-link" onClick={handleUnblock} disabled={unblockMutation.isPending}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.75rem' }}>
+            {unblockMutation.isPending ? <Loader2 size={16} className="spin" /> : null} Unblock
+          </button>
+        </div>
+        <Toast messages={toasts} onRemove={removeToast} />
+      </main>
+    );
+  }
+
   return (
     <main className="dashboard">
       <button className="back-link" onClick={() => router.push('/users')}>
@@ -263,34 +353,73 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        <div className="profile-action">
+        <div className="profile-action" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           {profile.isSelf ? (
             <button className="btn-edit-profile" onClick={openEdit}>
               <Settings size={16} /> Edit Profile
             </button>
           ) : (
-            <button
-              className={['follow-btn', profile.isFollowing ? 'following' : ''].filter(Boolean).join(' ')}
-              onClick={toggleFollow}
-              disabled={followMutation.isPending}
-              onMouseEnter={() => setFollowHovered(true)}
-              onMouseLeave={() => setFollowHovered(false)}
-              aria-pressed={profile.isFollowing}
-            >
-              {followMutation.isPending ? (
-                <Loader2 size={16} className="spin" />
-              ) : profile.isFollowing ? (
-                <>
-                  <UserCheck size={16} />
-                  <span>{followHovered ? 'Unfollow' : 'Following'}</span>
-                </>
-              ) : (
-                <>
-                  <UserPlus size={16} />
-                  <span>Follow</span>
-                </>
-              )}
-            </button>
+            <>
+              <button
+                className={['follow-btn', profile.isFollowing ? 'following' : ''].filter(Boolean).join(' ')}
+                onClick={toggleFollow}
+                disabled={followMutation.isPending}
+                onMouseEnter={() => setFollowHovered(true)}
+                onMouseLeave={() => setFollowHovered(false)}
+                aria-pressed={profile.isFollowing}
+              >
+                {followMutation.isPending ? (
+                  <Loader2 size={16} className="spin" />
+                ) : profile.isFollowing ? (
+                  <>
+                    <UserCheck size={16} />
+                    <span>{followHovered ? 'Unfollow' : 'Following'}</span>
+                  </>
+                ) : (
+                  <>
+                    <UserPlus size={16} />
+                    <span>Follow</span>
+                  </>
+                )}
+              </button>
+
+              <div style={{ position: 'relative' }}>
+                <button
+                  className="btn-icon-ghost"
+                  onClick={() => setShowActions((v) => !v)}
+                  aria-label="More options"
+                  aria-haspopup="menu"
+                  aria-expanded={showActions}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    width: '40px', height: '40px', borderRadius: '50%',
+                    border: '1px solid var(--border-color)', background: 'var(--bg-elevated, #fff)', cursor: 'pointer',
+                  }}
+                >
+                  <MoreVertical size={18} />
+                </button>
+                {showActions && (
+                  <>
+                    <div onClick={() => setShowActions(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
+                    <div role="menu" style={{
+                      position: 'absolute', right: 0, top: 'calc(100% + 6px)', zIndex: 41,
+                      minWidth: '180px', background: 'var(--bg-elevated, #fff)',
+                      border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md, 10px)',
+                      boxShadow: '0 12px 40px rgba(20,18,12,0.18)', overflow: 'hidden', padding: '0.25rem',
+                    }}>
+                      <button role="menuitem" className="dropdown-menu-item" style={{ width: '100%' }}
+                        onClick={() => { setShowActions(false); openReport(); }}>
+                        <Flag size={15} /> <span>Report</span>
+                      </button>
+                      <button role="menuitem" className="dropdown-menu-item danger-item" style={{ width: '100%' }}
+                        onClick={() => { setShowActions(false); setBlockError(null); setShowBlockConfirm(true); }}>
+                        <Ban size={15} /> <span>Block</span>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -450,6 +579,74 @@ export default function ProfilePage() {
             ))}
           </div>
         )}
+      </Modal>
+
+      {/* Report modal */}
+      <Modal
+        isOpen={showReport}
+        onClose={() => { if (!reportMutation.isPending) setShowReport(false); }}
+        title="Report Account"
+      >
+        <div className="edit-modal-inner">
+          {reportError && <div className="form-error">{reportError}</div>}
+          <p style={{ margin: '0 0 0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.5 }}>
+            Tell us what&apos;s wrong with <strong>@{profile.username}</strong>. Reports are confidential and reviewed by our team.
+          </p>
+
+          <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {REPORT_REASONS.map((r) => (
+              <label key={r.key} className="toggle-row" style={{ cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  name="report-reason"
+                  checked={reportReason === r.key}
+                  onChange={() => setReportReason(r.key)}
+                  disabled={reportMutation.isPending}
+                />
+                <span>{r.label}</span>
+              </label>
+            ))}
+          </div>
+
+          <div className="form-group">
+            <label className="form-label" htmlFor="report-details">Add details (optional)</label>
+            <textarea id="report-details" className="form-input" rows={3} value={reportDetails}
+              onChange={(e) => setReportDetails(e.target.value)} disabled={reportMutation.isPending}
+              placeholder="What happened?" maxLength={1000} />
+          </div>
+
+          <div className="modal-actions">
+            <button className="modal-btn secondary" onClick={() => setShowReport(false)} disabled={reportMutation.isPending}>Cancel</button>
+            <button className="modal-btn primary" onClick={submitReport} disabled={reportMutation.isPending || !reportReason}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+              {reportMutation.isPending ? <><RefreshCw size={16} className="spin" /> Submitting...</> : 'Submit Report'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Block confirm modal */}
+      <Modal
+        isOpen={showBlockConfirm}
+        onClose={() => { if (!blockMutation.isPending) setShowBlockConfirm(false); }}
+        title="Block Account"
+      >
+        <div className="edit-modal-inner">
+          {blockError && <div className="form-error">{blockError}</div>}
+          <p style={{ margin: '0 0 1rem', color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.5 }}>
+            Block <strong>@{profile.username}</strong>? They won&apos;t be able to find your profile or follow you,
+            and you won&apos;t see theirs. Any existing follows between you are removed. You can undo this from
+            Blocked Accounts.
+          </p>
+
+          <div className="modal-actions">
+            <button className="modal-btn secondary" onClick={() => setShowBlockConfirm(false)} disabled={blockMutation.isPending}>Cancel</button>
+            <button className="modal-btn danger" onClick={submitBlock} disabled={blockMutation.isPending}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+              {blockMutation.isPending ? <><RefreshCw size={16} className="spin" /> Blocking...</> : 'Block'}
+            </button>
+          </div>
+        </div>
       </Modal>
     </main>
   );

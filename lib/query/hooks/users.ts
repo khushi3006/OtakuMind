@@ -154,6 +154,67 @@ export function useUpdateProfile() {
   });
 }
 
+export type ReportReason = 'spam' | 'harassment' | 'inappropriate' | 'impersonation' | 'other';
+
+export type BlockedUser = {
+  id: number;
+  username: string;
+  name: string | null;
+  isPublic: boolean;
+};
+
+/**
+ * Block a user. The backend severs follows both ways and hides each from the other across
+ * discovery, profiles, and follower lists. We do NOT invalidate the profile query here (it would
+ * 404 now); the caller swaps to an inline "blocked" view instead. Drop the list caches that could
+ * still show the account.
+ */
+export function useBlock(username: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiFetch<{ isBlocked: boolean }>(`/api/users/${enc(username)}/block`, { method: 'POST' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-search'] });
+      queryClient.invalidateQueries({ queryKey: ['followers'] });
+      queryClient.invalidateQueries({ queryKey: ['following'] });
+      queryClient.invalidateQueries({ queryKey: qk.blocks });
+    },
+  });
+}
+
+/** Unblock a user (from the inline blocked view or the Blocked Accounts modal). */
+export function useUnblock() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (username: string) =>
+      apiFetch<{ isBlocked: boolean }>(`/api/users/${enc(username)}/block`, { method: 'DELETE' }),
+    onSuccess: (_d, username) => {
+      queryClient.invalidateQueries({ queryKey: qk.blocks });
+      queryClient.invalidateQueries({ queryKey: qk.profile(username) });
+      queryClient.invalidateQueries({ queryKey: ['user-search'] });
+    },
+  });
+}
+
+/** Report a user for objectionable content / abuse. */
+export function useReport(username: string) {
+  return useMutation({
+    mutationFn: (input: { reason: ReportReason; details?: string }) =>
+      apiFetch<{ ok: boolean }>(`/api/users/${enc(username)}/report`, { method: 'POST', json: input }),
+  });
+}
+
+/** The accounts the signed-in user has blocked (Blocked Accounts modal). */
+export function useBlockedUsers(enabled = true) {
+  return useQuery({
+    queryKey: qk.blocks,
+    enabled,
+    queryFn: () => apiFetch<{ data: BlockedUser[] }>('/api/users/me/blocks'),
+    select: (d) => d.data,
+  });
+}
+
 export function useFollowers(username: string, enabled = true) {
   return useQuery({
     queryKey: qk.followers(username),

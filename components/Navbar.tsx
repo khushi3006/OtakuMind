@@ -3,11 +3,12 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
-import { LayoutDashboard, CheckCircle2, PlayCircle, LogOut, User, Menu, X, Lock, Loader2, Eye, EyeOff, Users, Trash2, Crown } from 'lucide-react';
+import { LayoutDashboard, CheckCircle2, PlayCircle, LogOut, User, Menu, X, Lock, Loader2, Eye, EyeOff, Users, Trash2, Crown, ShieldOff } from 'lucide-react';
 import Logo from './Logo';
 import Modal from './Modal';
 import PaywallModal from './PaywallModal';
 import { useEntitlement } from '@/lib/query/hooks/auth';
+import { useBlockedUsers, useUnblock } from '@/lib/query/hooks/users';
 import { useQueryClient } from '@tanstack/react-query';
 
 interface UserSession {
@@ -37,6 +38,11 @@ export default function Navbar() {
   const ownsLifetime =
     entitlement?.reason === 'purchased' || entitlement?.reason === 'grandfathered';
   const showMembership = ownsLifetime || entitlement?.reason === 'trial';
+
+  // Blocked Accounts management
+  const [isBlockedModalOpen, setIsBlockedModalOpen] = useState(false);
+  const blockedQuery = useBlockedUsers(isBlockedModalOpen);
+  const unblock = useUnblock();
 
   // Delete Account States
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -341,6 +347,17 @@ export default function Navbar() {
                     <button
                       onClick={() => {
                         setIsDropdownOpen(false);
+                        setIsBlockedModalOpen(true);
+                      }}
+                      className="dropdown-menu-item"
+                    >
+                      <ShieldOff size={15} />
+                      <span>Blocked Accounts</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setIsDropdownOpen(false);
                         setIsDeleteModalOpen(true);
                       }}
                       className="dropdown-menu-item danger-item"
@@ -456,6 +473,17 @@ export default function Navbar() {
               <button
                 onClick={() => {
                   setIsMenuOpen(false);
+                  setIsBlockedModalOpen(true);
+                }}
+                className="dropdown-menu-item"
+                style={{ width: '100%', padding: '0.75rem 0.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-color)' }}
+              >
+                <ShieldOff size={16} />
+                <span style={{ fontSize: '0.9rem' }}>Blocked Accounts</span>
+              </button>
+              <button
+                onClick={() => {
+                  setIsMenuOpen(false);
                   setIsDeleteModalOpen(true);
                 }}
                 className="dropdown-menu-item danger-item"
@@ -507,6 +535,51 @@ export default function Navbar() {
         owned={ownsLifetime}
         trialEndsAt={entitlement?.trialEndsAt ?? null}
       />
+
+      {/* Blocked Accounts Modal */}
+      <Modal
+        isOpen={isBlockedModalOpen}
+        onClose={() => setIsBlockedModalOpen(false)}
+        title="Blocked Accounts"
+      >
+        <div className="edit-modal-inner">
+          {blockedQuery.isLoading ? (
+            <div style={{ padding: '2rem', textAlign: 'center' }}><Loader2 size={24} className="spin" /></div>
+          ) : blockedQuery.isError ? (
+            <p className="empty-state">Couldn&apos;t load blocked accounts.</p>
+          ) : !blockedQuery.data || blockedQuery.data.length === 0 ? (
+            <p className="empty-state" style={{ padding: '1.5rem 0' }}>
+              You haven&apos;t blocked anyone. People you block won&apos;t find your profile, and you won&apos;t see theirs.
+            </p>
+          ) : (
+            <div className="user-card-list" style={{ maxHeight: '60vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {blockedQuery.data.map((u) => (
+                <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.6rem 0.25rem' }}>
+                  <span className="avatar-bubble-large" style={{ flexShrink: 0 }}>
+                    {(u.name?.trim() || u.username).slice(0, 2).toUpperCase()}
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {u.name?.trim() || u.username}
+                    </div>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>@{u.username}</div>
+                  </div>
+                  <button
+                    className="modal-btn secondary"
+                    onClick={() => unblock.mutate(u.username)}
+                    disabled={unblock.isPending && unblock.variables === u.username}
+                    style={{ padding: '0.4rem 0.9rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                  >
+                    {unblock.isPending && unblock.variables === u.username
+                      ? <><Loader2 size={14} className="spin" /> Unblocking</>
+                      : 'Unblock'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </Modal>
 
       {/* Change Password Modal */}
       <Modal
