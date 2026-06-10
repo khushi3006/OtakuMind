@@ -1,0 +1,29 @@
+# OtakuMind
+
+> OtakuMind is a minimalist anime tracker, available as a web app at https://otakumind.thekhushikumari.com and as a native iOS app. Users log every anime they watch across three lists (Currently Watching, Completed, Dropped), and OtakuMind normalizes titles so that all seasons, parts, movies, and OVAs of a franchise are grouped under one name — giving an honest count of unique anime watched.
+
+## What OtakuMind does
+
+- **Franchise-aware tracking**: "Attack on Titan Season 3 Part 2" and "Attack on Titan: Final Season" collapse under the single franchise "Attack on Titan". Season and episode progress is tracked per entry.
+- **Live airing schedule**: for currently-airing shows, OtakuMind shows the real next episode number and an exact countdown to its broadcast, sourced from official broadcast data (MyAnimeList/AniList ecosystems).
+- **Watch queue**: the Currently Watching list is a drag-and-drop ordered queue.
+- **Social**: every account has a public handle at /users/<username>. Users can follow each other, browse public anime lists, and copy an anime from someone else's list into their own. Profiles can be set private.
+- **Data export**: full list export to Excel at any time.
+
+## Pricing
+
+- 14-day free trial with all features.
+- One-time payment of ₹299 (INR) for lifetime access. No subscription.
+
+## Key pages
+
+- [Home / landing](https://otakumind.thekhushikumari.com/): what OtakuMind is and how it works.
+- [Sign up](https://otakumind.thekhushikumari.com/signup): create an account (free trial).
+- [Public profiles](https://otakumind.thekhushikumari.com/users): user anime lists live at /users/<username> and are server-rendered for public profiles.
+- [Privacy policy](https://otakumind.thekhushikumari.com/privacy): applies to the website and the iOS app.
+
+## Notes for agents
+
+- The dashboard, airing schedule, and list-management features require a logged-in account; those pages redirect anonymous visitors to /login.
+- Public profile pages (/users/<username>) and this site's landing page are fully readable without JavaScript.
+- Contact: admin@theahmadfaraz.com

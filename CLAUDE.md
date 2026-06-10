@@ -34,7 +34,7 @@ The Prisma client is generated to a **custom path** (`prisma/generated/client`),
 
 ## Architecture
 
-OtakuMind is a multi-user anime watch tracker with a social follow layer: each account owns its own lists, and users can follow others to browse their (public) lists and copy anime into their own. Pages are **client components** (`"use client"`) that call internal API route handlers; the route handlers own all DB access and auth enforcement. There is no server-component data fetching.
+OtakuMind is a multi-user anime watch tracker with a social follow layer: each account owns its own lists, and users can follow others to browse their (public) lists and copy anime into their own. App pages are **client components** (`"use client"`) that call internal API route handlers; the route handlers own all DB access and auth enforcement for the logged-in experience. The exception is the **public/SEO surface** (see "Public surface & SEO" below): `/` and `/users/[username]` have thin **server-component** `page.tsx` wrappers that branch on the session cookie — logged-in users get the existing client components (`app/home-client.tsx`, `app/users/[username]/profile-client.tsx`), anonymous visitors get server-rendered HTML (`components/Landing.tsx`, `app/users/[username]/public-view.tsx`) so crawlers and LLM agents (which don't run JS or hold sessions) see real content.
 
 ### Data layer (`lib/db.ts`)
 
@@ -46,7 +46,7 @@ Stateless JWT sessions stored in an httpOnly cookie named `session` (7-day expir
 
 - `lib/jwt.ts` uses only Web Crypto (HS256) — **no Node/Next imports** — so it stays Edge-runtime compatible. Keep it that way.
 - Passwords are pbkdf2 (`sha512`, 10k iterations), stored as `salt:hash`.
-- **Edge gating lives in `proxy.ts`** (Next 16's renamed middleware — the function is exported as `proxy`, not `middleware`). It redirects logged-in users away from `/login`/`/signup`, redirects anonymous users away from protected pages (`PROTECTED_PAGES`: `/`, `/airing-schedule`, `/original-list`, `/users`), and 401s any `/api/*` route except `/api/auth/*`. **This is defense-in-depth, not a substitute:** every protected API route must STILL call `getSession(request)` and enforce ownership itself (the proxy only checks that _a_ session exists, not that the row belongs to the caller). Add new protected pages to `PROTECTED_PAGES`. Client-side, the `Navbar` polls `/api/auth/me` on each navigation to gate UI.
+- **Edge gating lives in `proxy.ts`** (Next 16's renamed middleware — the function is exported as `proxy`, not `middleware`). It redirects logged-in users away from `/login`/`/signup`, redirects anonymous users away from protected pages (`PROTECTED_PREFIXES`: `/airing-schedule`, `/original-list`; `PROTECTED_EXACT`: `/users`), and 401s any `/api/*` route except `/api/auth/*`. `/` and `/users/[username]` are **deliberately not gated** — their server pages branch on session and render a public view for anonymous visitors (SEO). **This is defense-in-depth, not a substitute:** every protected API route must STILL call `getSession(request)` and enforce ownership itself (the proxy only checks that _a_ session exists, not that the row belongs to the caller). Add new protected pages to `PROTECTED_PREFIXES`/`PROTECTED_EXACT`. Client-side, the `Navbar` polls `/api/auth/me` on each navigation to gate UI.
 
 ### Anime model & "season grouping"
 
@@ -90,9 +90,20 @@ Two migration mechanisms coexist:
 1. Standard Prisma migrations in `prisma/migrations/`.
 2. Hand-written raw-SQL scripts (`scripts/migrate-db.ts`, `scripts/finalize-db.ts`, `scripts/migrate-data.ts`, `scripts/add-social-schema.ts`) run via `tsx`. They use the app's `lib/db` connection (so the Neon/DNS workaround applies — more reliable locally than the Prisma CLI). `add-social-schema.ts` added the username/bio/isPublic columns + `Follow` table and backfilled usernames; it is idempotent (`ADD COLUMN IF NOT EXISTS`, guarded constraints) and uses constraint/index names matching what Prisma generates. After applying such a script, mirror it with a formal migration folder under `prisma/migrations/` and run `npx prisma migrate resolve --applied <name>` so `prisma migrate` history stays consistent.
 
+### Public surface & SEO
+
+The indexable surface is `/` (landing for anonymous, dashboard for logged-in), `/privacy`, and `/users/[username]` (server-rendered read-only view of **public** profiles for anonymous visitors; private profiles render a locked notice and are `noindex`ed via `generateMetadata`). Supporting pieces:
+
+- `lib/site.ts` — `SITE_URL` (from `APP_URL`, same env as email templates), name/tagline/description. Used by metadata, robots, sitemap, JSON-LD.
+- `lib/public-profile.ts` — anonymous-viewer profile fetch (DB direct, no session, visibility collapses to `isPublic`); used by the profile server page, NOT by API routes.
+- `app/robots.ts`, `app/sitemap.ts` (static pages + public usernames, `revalidate = 86400`), `app/manifest.ts`, `public/llms.txt` (LLM-agent site summary — update it when features/pricing change).
+- `app/og/route.tsx` — generated 1200×630 OG/Twitter image referenced from root-layout metadata; `app/apple-icon.tsx`, `app/favicon.ico`, `app/icon.svg` for icons.
+- Root layout sets `metadataBase` + title template (`%s · OtakuMind`) — child pages set bare titles (e.g. `"Privacy Policy"`, not `"Privacy Policy · OtakuMind"`). The four auth routes have `layout.tsx` files whose metadata sets `robots: { index: false }`; keep that when touching them.
+- JSON-LD: `components/Landing.tsx` (Organization/WebSite/SoftwareApplication) and `app/users/[username]/public-view.tsx` (ProfilePage). User-controlled strings in JSON-LD must stay escaped (`.replace(/</g, '\\u003c')`).
+
 ### Routes overview
 
-- Pages: `/` (dashboard with watching/completed/dropped tabs), `/airing-schedule`, `/original-list`, `/users` (discover people), `/users/[username]` (public profile + read-only list browser), `/login`, `/signup`, `/forgot-password`.
+- Pages: `/` (anonymous: server-rendered landing; logged-in: dashboard with watching/completed/dropped tabs), `/airing-schedule`, `/original-list`, `/users` (discover people), `/users/[username]` (logged-in: interactive profile browser; anonymous: server-rendered public view), `/privacy`, `/login`, `/signup`, `/forgot-password`.
 - API: `app/api/anime` (list/create), `anime/[id]` (update/delete), `anime/reorder`, `anime/export` (Excel via `exceljs`), `anime/sync-airing`, `anime/popular-airing`, `auth/{login,signup,logout,me,change-password}`, `search`, `stats`. Social: `users/search`, `users/me` (PUT profile edit), `users/[username]` (profile), `users/[username]/anime`, `users/[username]/follow` (POST/DELETE), `users/[username]/{followers,following}`. `app/api/seed` and `app/api/test` are dev-only.
 
 ### Styling

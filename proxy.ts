@@ -4,8 +4,14 @@ import { verifyJWT } from './lib/jwt';
 
 const COOKIE_NAME = 'session';
 
-// Define public and protected route lists
-const PROTECTED_PAGES = ['/', '/airing-schedule', '/original-list', '/users'];
+// Define public and protected route lists.
+// `/` and `/users/[username]` are deliberately public: `/` server-renders a
+// landing page for anonymous visitors (app/page.tsx branches on session) and
+// profile pages server-render a read-only public view (SEO/LLM crawlers don't
+// log in). `/users` (discover) is protected exact-only so profile sub-paths
+// stay reachable.
+const PROTECTED_PREFIXES = ['/airing-schedule', '/original-list'];
+const PROTECTED_EXACT = ['/users'];
 const AUTH_PAGES = ['/login', '/signup'];
 
 export async function proxy(request: NextRequest) {
@@ -23,8 +29,10 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 2. Protect pages (e.g. /, /airing-schedule, /original-list)
-  const isPageProtected = PROTECTED_PAGES.some(page => pathname === page || (page !== '/' && pathname.startsWith(page)));
+  // 2. Protect pages (e.g. /airing-schedule, /original-list, /users)
+  const isPageProtected =
+    PROTECTED_PREFIXES.some(page => pathname.startsWith(page)) ||
+    PROTECTED_EXACT.includes(pathname);
   
   if (isPageProtected && !session) {
     // Redirect to login page and preserve original destination via query param

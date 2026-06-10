@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy · OtakuMind",
+  // The root layout's title template appends "· OtakuMind".
+  title: "Privacy Policy",
   description:
     "How OtakuMind collects, uses, and protects your information across the OtakuMind website and mobile app.",
+  alternates: { canonical: "/privacy" },
 };
 
 const CONTACT_EMAILS = ["admin@theahmadfaraz.com", "kk4827182@gmail.com"];
