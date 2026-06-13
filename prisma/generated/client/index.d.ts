@@ -1662,6 +1662,7 @@ export namespace Prisma {
     createdAt: Date | null
     hasLifetime: boolean | null
     lifetimePurchasedAt: Date | null
+    lifetimeEventAt: Date | null
     grandfathered: boolean | null
   }
 
@@ -1676,6 +1677,7 @@ export namespace Prisma {
     createdAt: Date | null
     hasLifetime: boolean | null
     lifetimePurchasedAt: Date | null
+    lifetimeEventAt: Date | null
     grandfathered: boolean | null
   }
 
@@ -1690,6 +1692,7 @@ export namespace Prisma {
     createdAt: number
     hasLifetime: number
     lifetimePurchasedAt: number
+    lifetimeEventAt: number
     grandfathered: number
     _all: number
   }
@@ -1714,6 +1717,7 @@ export namespace Prisma {
     createdAt?: true
     hasLifetime?: true
     lifetimePurchasedAt?: true
+    lifetimeEventAt?: true
     grandfathered?: true
   }
 
@@ -1728,6 +1732,7 @@ export namespace Prisma {
     createdAt?: true
     hasLifetime?: true
     lifetimePurchasedAt?: true
+    lifetimeEventAt?: true
     grandfathered?: true
   }
 
@@ -1742,6 +1747,7 @@ export namespace Prisma {
     createdAt?: true
     hasLifetime?: true
     lifetimePurchasedAt?: true
+    lifetimeEventAt?: true
     grandfathered?: true
     _all?: true
   }
@@ -1843,6 +1849,7 @@ export namespace Prisma {
     createdAt: Date
     hasLifetime: boolean
     lifetimePurchasedAt: Date | null
+    lifetimeEventAt: Date | null
     grandfathered: boolean
     _count: UserCountAggregateOutputType | null
     _avg: UserAvgAggregateOutputType | null
@@ -1876,6 +1883,7 @@ export namespace Prisma {
     createdAt?: boolean
     hasLifetime?: boolean
     lifetimePurchasedAt?: boolean
+    lifetimeEventAt?: boolean
     grandfathered?: boolean
     animes?: boolean | User$animesArgs<ExtArgs>
     following?: boolean | User$followingArgs<ExtArgs>
@@ -1899,6 +1907,7 @@ export namespace Prisma {
     createdAt?: boolean
     hasLifetime?: boolean
     lifetimePurchasedAt?: boolean
+    lifetimeEventAt?: boolean
     grandfathered?: boolean
   }, ExtArgs["result"]["user"]>
 
@@ -1913,6 +1922,7 @@ export namespace Prisma {
     createdAt?: boolean
     hasLifetime?: boolean
     lifetimePurchasedAt?: boolean
+    lifetimeEventAt?: boolean
     grandfathered?: boolean
   }
 
@@ -1952,6 +1962,7 @@ export namespace Prisma {
       createdAt: Date
       hasLifetime: boolean
       lifetimePurchasedAt: Date | null
+      lifetimeEventAt: Date | null
       grandfathered: boolean
     }, ExtArgs["result"]["user"]>
     composites: {}
@@ -2364,6 +2375,7 @@ export namespace Prisma {
     readonly createdAt: FieldRef<"User", 'DateTime'>
     readonly hasLifetime: FieldRef<"User", 'Boolean'>
     readonly lifetimePurchasedAt: FieldRef<"User", 'DateTime'>
+    readonly lifetimeEventAt: FieldRef<"User", 'DateTime'>
     readonly grandfathered: FieldRef<"User", 'Boolean'>
   }
     
@@ -10859,6 +10871,7 @@ export namespace Prisma {
     createdAt: 'createdAt',
     hasLifetime: 'hasLifetime',
     lifetimePurchasedAt: 'lifetimePurchasedAt',
+    lifetimeEventAt: 'lifetimeEventAt',
     grandfathered: 'grandfathered'
   };
 
@@ -11112,6 +11125,7 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"User"> | Date | string
     hasLifetime?: BoolFilter<"User"> | boolean
     lifetimePurchasedAt?: DateTimeNullableFilter<"User"> | Date | string | null
+    lifetimeEventAt?: DateTimeNullableFilter<"User"> | Date | string | null
     grandfathered?: BoolFilter<"User"> | boolean
     animes?: AnimeListRelationFilter
     following?: FollowListRelationFilter
@@ -11134,6 +11148,7 @@ export namespace Prisma {
     createdAt?: SortOrder
     hasLifetime?: SortOrder
     lifetimePurchasedAt?: SortOrderInput | SortOrder
+    lifetimeEventAt?: SortOrderInput | SortOrder
     grandfathered?: SortOrder
     animes?: AnimeOrderByRelationAggregateInput
     following?: FollowOrderByRelationAggregateInput
@@ -11159,6 +11174,7 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"User"> | Date | string
     hasLifetime?: BoolFilter<"User"> | boolean
     lifetimePurchasedAt?: DateTimeNullableFilter<"User"> | Date | string | null
+    lifetimeEventAt?: DateTimeNullableFilter<"User"> | Date | string | null
     grandfathered?: BoolFilter<"User"> | boolean
     animes?: AnimeListRelationFilter
     following?: FollowListRelationFilter
@@ -11181,6 +11197,7 @@ export namespace Prisma {
     createdAt?: SortOrder
     hasLifetime?: SortOrder
     lifetimePurchasedAt?: SortOrderInput | SortOrder
+    lifetimeEventAt?: SortOrderInput | SortOrder
     grandfathered?: SortOrder
     _count?: UserCountOrderByAggregateInput
     _avg?: UserAvgOrderByAggregateInput
@@ -11203,6 +11220,7 @@ export namespace Prisma {
     createdAt?: DateTimeWithAggregatesFilter<"User"> | Date | string
     hasLifetime?: BoolWithAggregatesFilter<"User"> | boolean
     lifetimePurchasedAt?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
+    lifetimeEventAt?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
     grandfathered?: BoolWithAggregatesFilter<"User"> | boolean
   }
 
@@ -11809,6 +11827,7 @@ export namespace Prisma {
     createdAt?: Date | string
     hasLifetime?: boolean
     lifetimePurchasedAt?: Date | string | null
+    lifetimeEventAt?: Date | string | null
     grandfathered?: boolean
     animes?: AnimeCreateNestedManyWithoutUserInput
     following?: FollowCreateNestedManyWithoutFollowerInput
@@ -11831,6 +11850,7 @@ export namespace Prisma {
     createdAt?: Date | string
     hasLifetime?: boolean
     lifetimePurchasedAt?: Date | string | null
+    lifetimeEventAt?: Date | string | null
     grandfathered?: boolean
     animes?: AnimeUncheckedCreateNestedManyWithoutUserInput
     following?: FollowUncheckedCreateNestedManyWithoutFollowerInput
@@ -11852,6 +11872,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     hasLifetime?: BoolFieldUpdateOperationsInput | boolean
     lifetimePurchasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lifetimeEventAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     grandfathered?: BoolFieldUpdateOperationsInput | boolean
     animes?: AnimeUpdateManyWithoutUserNestedInput
     following?: FollowUpdateManyWithoutFollowerNestedInput
@@ -11874,6 +11895,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     hasLifetime?: BoolFieldUpdateOperationsInput | boolean
     lifetimePurchasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lifetimeEventAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     grandfathered?: BoolFieldUpdateOperationsInput | boolean
     animes?: AnimeUncheckedUpdateManyWithoutUserNestedInput
     following?: FollowUncheckedUpdateManyWithoutFollowerNestedInput
@@ -11896,6 +11918,7 @@ export namespace Prisma {
     createdAt?: Date | string
     hasLifetime?: boolean
     lifetimePurchasedAt?: Date | string | null
+    lifetimeEventAt?: Date | string | null
     grandfathered?: boolean
   }
 
@@ -11909,6 +11932,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     hasLifetime?: BoolFieldUpdateOperationsInput | boolean
     lifetimePurchasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lifetimeEventAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     grandfathered?: BoolFieldUpdateOperationsInput | boolean
   }
 
@@ -11923,6 +11947,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     hasLifetime?: BoolFieldUpdateOperationsInput | boolean
     lifetimePurchasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lifetimeEventAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     grandfathered?: BoolFieldUpdateOperationsInput | boolean
   }
 
@@ -12671,6 +12696,7 @@ export namespace Prisma {
     createdAt?: SortOrder
     hasLifetime?: SortOrder
     lifetimePurchasedAt?: SortOrder
+    lifetimeEventAt?: SortOrder
     grandfathered?: SortOrder
   }
 
@@ -12689,6 +12715,7 @@ export namespace Prisma {
     createdAt?: SortOrder
     hasLifetime?: SortOrder
     lifetimePurchasedAt?: SortOrder
+    lifetimeEventAt?: SortOrder
     grandfathered?: SortOrder
   }
 
@@ -12703,6 +12730,7 @@ export namespace Prisma {
     createdAt?: SortOrder
     hasLifetime?: SortOrder
     lifetimePurchasedAt?: SortOrder
+    lifetimeEventAt?: SortOrder
     grandfathered?: SortOrder
   }
 
@@ -14399,6 +14427,7 @@ export namespace Prisma {
     createdAt?: Date | string
     hasLifetime?: boolean
     lifetimePurchasedAt?: Date | string | null
+    lifetimeEventAt?: Date | string | null
     grandfathered?: boolean
     animes?: AnimeCreateNestedManyWithoutUserInput
     following?: FollowCreateNestedManyWithoutFollowerInput
@@ -14420,6 +14449,7 @@ export namespace Prisma {
     createdAt?: Date | string
     hasLifetime?: boolean
     lifetimePurchasedAt?: Date | string | null
+    lifetimeEventAt?: Date | string | null
     grandfathered?: boolean
     animes?: AnimeUncheckedCreateNestedManyWithoutUserInput
     following?: FollowUncheckedCreateNestedManyWithoutFollowerInput
@@ -14445,6 +14475,7 @@ export namespace Prisma {
     createdAt?: Date | string
     hasLifetime?: boolean
     lifetimePurchasedAt?: Date | string | null
+    lifetimeEventAt?: Date | string | null
     grandfathered?: boolean
     animes?: AnimeCreateNestedManyWithoutUserInput
     following?: FollowCreateNestedManyWithoutFollowerInput
@@ -14466,6 +14497,7 @@ export namespace Prisma {
     createdAt?: Date | string
     hasLifetime?: boolean
     lifetimePurchasedAt?: Date | string | null
+    lifetimeEventAt?: Date | string | null
     grandfathered?: boolean
     animes?: AnimeUncheckedCreateNestedManyWithoutUserInput
     following?: FollowUncheckedCreateNestedManyWithoutFollowerInput
@@ -14502,6 +14534,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     hasLifetime?: BoolFieldUpdateOperationsInput | boolean
     lifetimePurchasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lifetimeEventAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     grandfathered?: BoolFieldUpdateOperationsInput | boolean
     animes?: AnimeUpdateManyWithoutUserNestedInput
     following?: FollowUpdateManyWithoutFollowerNestedInput
@@ -14523,6 +14556,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     hasLifetime?: BoolFieldUpdateOperationsInput | boolean
     lifetimePurchasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lifetimeEventAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     grandfathered?: BoolFieldUpdateOperationsInput | boolean
     animes?: AnimeUncheckedUpdateManyWithoutUserNestedInput
     following?: FollowUncheckedUpdateManyWithoutFollowerNestedInput
@@ -14554,6 +14588,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     hasLifetime?: BoolFieldUpdateOperationsInput | boolean
     lifetimePurchasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lifetimeEventAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     grandfathered?: BoolFieldUpdateOperationsInput | boolean
     animes?: AnimeUpdateManyWithoutUserNestedInput
     following?: FollowUpdateManyWithoutFollowerNestedInput
@@ -14575,6 +14610,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     hasLifetime?: BoolFieldUpdateOperationsInput | boolean
     lifetimePurchasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lifetimeEventAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     grandfathered?: BoolFieldUpdateOperationsInput | boolean
     animes?: AnimeUncheckedUpdateManyWithoutUserNestedInput
     following?: FollowUncheckedUpdateManyWithoutFollowerNestedInput
@@ -14595,6 +14631,7 @@ export namespace Prisma {
     createdAt?: Date | string
     hasLifetime?: boolean
     lifetimePurchasedAt?: Date | string | null
+    lifetimeEventAt?: Date | string | null
     grandfathered?: boolean
     animes?: AnimeCreateNestedManyWithoutUserInput
     following?: FollowCreateNestedManyWithoutFollowerInput
@@ -14616,6 +14653,7 @@ export namespace Prisma {
     createdAt?: Date | string
     hasLifetime?: boolean
     lifetimePurchasedAt?: Date | string | null
+    lifetimeEventAt?: Date | string | null
     grandfathered?: boolean
     animes?: AnimeUncheckedCreateNestedManyWithoutUserInput
     following?: FollowUncheckedCreateNestedManyWithoutFollowerInput
@@ -14641,6 +14679,7 @@ export namespace Prisma {
     createdAt?: Date | string
     hasLifetime?: boolean
     lifetimePurchasedAt?: Date | string | null
+    lifetimeEventAt?: Date | string | null
     grandfathered?: boolean
     animes?: AnimeCreateNestedManyWithoutUserInput
     following?: FollowCreateNestedManyWithoutFollowerInput
@@ -14662,6 +14701,7 @@ export namespace Prisma {
     createdAt?: Date | string
     hasLifetime?: boolean
     lifetimePurchasedAt?: Date | string | null
+    lifetimeEventAt?: Date | string | null
     grandfathered?: boolean
     animes?: AnimeUncheckedCreateNestedManyWithoutUserInput
     following?: FollowUncheckedCreateNestedManyWithoutFollowerInput
@@ -14698,6 +14738,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     hasLifetime?: BoolFieldUpdateOperationsInput | boolean
     lifetimePurchasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lifetimeEventAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     grandfathered?: BoolFieldUpdateOperationsInput | boolean
     animes?: AnimeUpdateManyWithoutUserNestedInput
     following?: FollowUpdateManyWithoutFollowerNestedInput
@@ -14719,6 +14760,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     hasLifetime?: BoolFieldUpdateOperationsInput | boolean
     lifetimePurchasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lifetimeEventAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     grandfathered?: BoolFieldUpdateOperationsInput | boolean
     animes?: AnimeUncheckedUpdateManyWithoutUserNestedInput
     following?: FollowUncheckedUpdateManyWithoutFollowerNestedInput
@@ -14750,6 +14792,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     hasLifetime?: BoolFieldUpdateOperationsInput | boolean
     lifetimePurchasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lifetimeEventAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     grandfathered?: BoolFieldUpdateOperationsInput | boolean
     animes?: AnimeUpdateManyWithoutUserNestedInput
     following?: FollowUpdateManyWithoutFollowerNestedInput
@@ -14771,6 +14814,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     hasLifetime?: BoolFieldUpdateOperationsInput | boolean
     lifetimePurchasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lifetimeEventAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     grandfathered?: BoolFieldUpdateOperationsInput | boolean
     animes?: AnimeUncheckedUpdateManyWithoutUserNestedInput
     following?: FollowUncheckedUpdateManyWithoutFollowerNestedInput
@@ -14791,6 +14835,7 @@ export namespace Prisma {
     createdAt?: Date | string
     hasLifetime?: boolean
     lifetimePurchasedAt?: Date | string | null
+    lifetimeEventAt?: Date | string | null
     grandfathered?: boolean
     animes?: AnimeCreateNestedManyWithoutUserInput
     following?: FollowCreateNestedManyWithoutFollowerInput
@@ -14812,6 +14857,7 @@ export namespace Prisma {
     createdAt?: Date | string
     hasLifetime?: boolean
     lifetimePurchasedAt?: Date | string | null
+    lifetimeEventAt?: Date | string | null
     grandfathered?: boolean
     animes?: AnimeUncheckedCreateNestedManyWithoutUserInput
     following?: FollowUncheckedCreateNestedManyWithoutFollowerInput
@@ -14848,6 +14894,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     hasLifetime?: BoolFieldUpdateOperationsInput | boolean
     lifetimePurchasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lifetimeEventAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     grandfathered?: BoolFieldUpdateOperationsInput | boolean
     animes?: AnimeUpdateManyWithoutUserNestedInput
     following?: FollowUpdateManyWithoutFollowerNestedInput
@@ -14869,6 +14916,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     hasLifetime?: BoolFieldUpdateOperationsInput | boolean
     lifetimePurchasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lifetimeEventAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     grandfathered?: BoolFieldUpdateOperationsInput | boolean
     animes?: AnimeUncheckedUpdateManyWithoutUserNestedInput
     following?: FollowUncheckedUpdateManyWithoutFollowerNestedInput
@@ -14889,6 +14937,7 @@ export namespace Prisma {
     createdAt?: Date | string
     hasLifetime?: boolean
     lifetimePurchasedAt?: Date | string | null
+    lifetimeEventAt?: Date | string | null
     grandfathered?: boolean
     animes?: AnimeCreateNestedManyWithoutUserInput
     followers?: FollowCreateNestedManyWithoutFollowingInput
@@ -14910,6 +14959,7 @@ export namespace Prisma {
     createdAt?: Date | string
     hasLifetime?: boolean
     lifetimePurchasedAt?: Date | string | null
+    lifetimeEventAt?: Date | string | null
     grandfathered?: boolean
     animes?: AnimeUncheckedCreateNestedManyWithoutUserInput
     followers?: FollowUncheckedCreateNestedManyWithoutFollowingInput
@@ -14935,6 +14985,7 @@ export namespace Prisma {
     createdAt?: Date | string
     hasLifetime?: boolean
     lifetimePurchasedAt?: Date | string | null
+    lifetimeEventAt?: Date | string | null
     grandfathered?: boolean
     animes?: AnimeCreateNestedManyWithoutUserInput
     following?: FollowCreateNestedManyWithoutFollowerInput
@@ -14956,6 +15007,7 @@ export namespace Prisma {
     createdAt?: Date | string
     hasLifetime?: boolean
     lifetimePurchasedAt?: Date | string | null
+    lifetimeEventAt?: Date | string | null
     grandfathered?: boolean
     animes?: AnimeUncheckedCreateNestedManyWithoutUserInput
     following?: FollowUncheckedCreateNestedManyWithoutFollowerInput
@@ -14992,6 +15044,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     hasLifetime?: BoolFieldUpdateOperationsInput | boolean
     lifetimePurchasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lifetimeEventAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     grandfathered?: BoolFieldUpdateOperationsInput | boolean
     animes?: AnimeUpdateManyWithoutUserNestedInput
     followers?: FollowUpdateManyWithoutFollowingNestedInput
@@ -15013,6 +15066,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     hasLifetime?: BoolFieldUpdateOperationsInput | boolean
     lifetimePurchasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lifetimeEventAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     grandfathered?: BoolFieldUpdateOperationsInput | boolean
     animes?: AnimeUncheckedUpdateManyWithoutUserNestedInput
     followers?: FollowUncheckedUpdateManyWithoutFollowingNestedInput
@@ -15044,6 +15098,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     hasLifetime?: BoolFieldUpdateOperationsInput | boolean
     lifetimePurchasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lifetimeEventAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     grandfathered?: BoolFieldUpdateOperationsInput | boolean
     animes?: AnimeUpdateManyWithoutUserNestedInput
     following?: FollowUpdateManyWithoutFollowerNestedInput
@@ -15065,6 +15120,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     hasLifetime?: BoolFieldUpdateOperationsInput | boolean
     lifetimePurchasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lifetimeEventAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     grandfathered?: BoolFieldUpdateOperationsInput | boolean
     animes?: AnimeUncheckedUpdateManyWithoutUserNestedInput
     following?: FollowUncheckedUpdateManyWithoutFollowerNestedInput
@@ -15085,6 +15141,7 @@ export namespace Prisma {
     createdAt?: Date | string
     hasLifetime?: boolean
     lifetimePurchasedAt?: Date | string | null
+    lifetimeEventAt?: Date | string | null
     grandfathered?: boolean
     following?: FollowCreateNestedManyWithoutFollowerInput
     followers?: FollowCreateNestedManyWithoutFollowingInput
@@ -15106,6 +15163,7 @@ export namespace Prisma {
     createdAt?: Date | string
     hasLifetime?: boolean
     lifetimePurchasedAt?: Date | string | null
+    lifetimeEventAt?: Date | string | null
     grandfathered?: boolean
     following?: FollowUncheckedCreateNestedManyWithoutFollowerInput
     followers?: FollowUncheckedCreateNestedManyWithoutFollowingInput
@@ -15142,6 +15200,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     hasLifetime?: BoolFieldUpdateOperationsInput | boolean
     lifetimePurchasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lifetimeEventAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     grandfathered?: BoolFieldUpdateOperationsInput | boolean
     following?: FollowUpdateManyWithoutFollowerNestedInput
     followers?: FollowUpdateManyWithoutFollowingNestedInput
@@ -15163,6 +15222,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     hasLifetime?: BoolFieldUpdateOperationsInput | boolean
     lifetimePurchasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lifetimeEventAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     grandfathered?: BoolFieldUpdateOperationsInput | boolean
     following?: FollowUncheckedUpdateManyWithoutFollowerNestedInput
     followers?: FollowUncheckedUpdateManyWithoutFollowingNestedInput

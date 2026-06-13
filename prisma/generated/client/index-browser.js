@@ -133,6 +133,7 @@ exports.Prisma.UserScalarFieldEnum = {
   createdAt: 'createdAt',
   hasLifetime: 'hasLifetime',
   lifetimePurchasedAt: 'lifetimePurchasedAt',
+  lifetimeEventAt: 'lifetimeEventAt',
   grandfathered: 'grandfathered'
 };
 
