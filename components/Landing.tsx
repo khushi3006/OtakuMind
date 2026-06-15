@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Logo from '@/components/Logo';
-import { SITE_NAME, SITE_URL, SITE_DESCRIPTION } from '@/lib/site';
+import AppStoreBadge from '@/components/AppStoreBadge';
+import { SITE_NAME, SITE_URL, SITE_DESCRIPTION, APP_STORE_URL } from '@/lib/site';
 
 // Server-rendered marketing page shown to anonymous visitors at `/`.
 // Crawlers and LLM agents don't execute JS, so everything here must be
@@ -27,6 +28,7 @@ const structuredData = {
       '@type': 'SoftwareApplication',
       name: SITE_NAME,
       url: SITE_URL,
+      downloadUrl: APP_STORE_URL,
       applicationCategory: 'EntertainmentApplication',
       operatingSystem: 'Web, iOS',
       description: SITE_DESCRIPTION,
@@ -68,6 +70,18 @@ export default function Landing() {
           <Link href="/login" className="landing-cta-secondary">
             Log in
           </Link>
+        </div>
+        <div className="landing-store-row">
+          <span className="landing-store-note">Now on iPhone</span>
+          <a
+            href={APP_STORE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="landing-store-badge"
+            aria-label={`Download ${SITE_NAME} on the App Store`}
+          >
+            <AppStoreBadge height={52} />
+          </a>
         </div>
       </section>
 
@@ -114,8 +128,11 @@ export default function Landing() {
         <div className="landing-feature">
           <h2>On the web and iPhone</h2>
           <p>
-            OtakuMind runs in any browser, and a native iOS app keeps your lists and airing
-            countdowns in your pocket. One account, both places.
+            OtakuMind runs in any browser, and the native{' '}
+            <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer">
+              iOS app on the App Store
+            </a>{' '}
+            keeps your lists and airing countdowns in your pocket. One account, both places.
           </p>
         </div>
       </section>

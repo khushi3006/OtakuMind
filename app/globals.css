@@ -4788,6 +4788,37 @@ textarea.form-input { resize: vertical; min-height: 70px; font-family: var(--fon
   text-decoration: underline;
 }
 
+.landing-store-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 2rem;
+}
+
+.landing-store-note {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.landing-store-badge {
+  display: inline-flex;
+  border-radius: 9px;
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+.landing-store-badge:hover {
+  transform: translateY(-1px);
+  opacity: 0.9;
+}
+
+.landing-store-badge svg {
+  display: block;
+}
+
 .landing-features {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));

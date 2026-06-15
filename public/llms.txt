@@ -1,6 +1,6 @@
 # OtakuMind
 
-> OtakuMind is a minimalist anime tracker, available as a web app at https://otakumind.thekhushikumari.com and as a native iOS app. Users log every anime they watch across three lists (Currently Watching, Completed, Dropped), and OtakuMind normalizes titles so that all seasons, parts, movies, and OVAs of a franchise are grouped under one name — giving an honest count of unique anime watched.
+> OtakuMind is a minimalist anime tracker, available as a web app at https://otakumind.thekhushikumari.com and as a native iOS app on the App Store (https://apps.apple.com/us/app/otakumind/id6777363612). Users log every anime they watch across three lists (Currently Watching, Completed, Dropped), and OtakuMind normalizes titles so that all seasons, parts, movies, and OVAs of a franchise are grouped under one name — giving an honest count of unique anime watched.
 
 ## What OtakuMind does
 
@@ -21,6 +21,7 @@
 - [Sign up](https://otakumind.thekhushikumari.com/signup): create an account (free trial) with email + password, Google, or Apple sign-in.
 - [Public profiles](https://otakumind.thekhushikumari.com/users): user anime lists live at /users/<username> and are server-rendered for public profiles.
 - [Privacy policy](https://otakumind.thekhushikumari.com/privacy): applies to the website and the iOS app.
+- [iOS app](https://apps.apple.com/us/app/otakumind/id6777363612): download OtakuMind for iPhone on the Apple App Store.
 
 ## Notes for agents
 
