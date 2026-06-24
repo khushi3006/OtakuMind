@@ -1,6 +1,7 @@
 import { NextResponse, after } from 'next/server';
 import { errorMessage } from '@/lib/api-error';
 import { getAiringForMalIds, refreshAniList } from '@/lib/airing-cache';
+import { anilistFetch, mapMediaToJikan, MEDIA_FIELDS } from '@/lib/anilist-client';
 import { requireEntitlement } from '@/lib/require-entitlement';
 
 interface PopularAnime {
@@ -23,10 +24,31 @@ interface PopularPayload {
   data: PopularAnime[];
 }
 
-// Lightweight in-memory cache to prevent Jikan API rate limiting on user dashboard loads
+// Lightweight in-memory cache to prevent API rate limiting on user dashboard loads
 let popularCache: PopularPayload | null = null;
 let popularCacheTime = 0;
 const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
+
+const POPULAR_QUERY = `
+  query ($season: MediaSeason, $year: Int) {
+    Page(perPage: 8) {
+      media(season: $season, seasonYear: $year, type: ANIME, sort: POPULARITY_DESC, isAdult: false) {
+        ${MEDIA_FIELDS}
+      }
+    }
+  }
+`;
+
+/** Current AniList season + year (anime seasons are 3-month blocks). */
+function currentSeason(): { season: string; year: number } {
+  const now = new Date();
+  const month = now.getUTCMonth(); // 0-11
+  const year = now.getUTCFullYear();
+  if (month <= 1 || month === 11) return { season: 'WINTER', year: month === 11 ? year + 1 : year };
+  if (month <= 4) return { season: 'SPRING', year };
+  if (month <= 7) return { season: 'SUMMER', year };
+  return { season: 'FALL', year };
+}
 
 export async function GET(request: Request) {
   try {
@@ -39,31 +61,29 @@ export async function GET(request: Request) {
       return NextResponse.json(popularCache);
     }
 
-    const res = await fetch(
-      'https://api.jikan.moe/v4/seasons/now?limit=8&sfw=true',
-      { next: { revalidate: 900 } } // Also leverage Next.js fetch caching
-    );
-
-    if (!res.ok) {
-      // Return stale cache if available, otherwise return error
+    const { season, year } = currentSeason();
+    let aniData: { Page?: { media?: unknown[] } };
+    try {
+      aniData = await anilistFetch(POPULAR_QUERY, { season, year });
+    } catch (e) {
+      // Return stale cache if available, otherwise surface the error.
       if (popularCache) {
         return NextResponse.json(popularCache);
       }
-      throw new Error(`Failed to fetch popular airing anime from Jikan: HTTP ${res.status}`);
+      throw new Error(`Failed to fetch popular airing anime from AniList: ${errorMessage(e)}`);
     }
 
-    const json = await res.json();
-    
     // Deduplicate and format data to ensure unique entries
     const seenMalIds = new Set<number>();
     const formattedData: PopularAnime[] = [];
 
-    for (const anime of (json.data || [])) {
-      if (!anime.mal_id || seenMalIds.has(anime.mal_id)) {
+    for (const raw of (aniData?.Page?.media || [])) {
+      const anime = mapMediaToJikan(raw as Parameters<typeof mapMediaToJikan>[0]);
+      if (!anime || seenMalIds.has(anime.mal_id)) {
         continue;
       }
       seenMalIds.add(anime.mal_id);
-      
+
       formattedData.push({
         mal_id: anime.mal_id,
         title: anime.title,

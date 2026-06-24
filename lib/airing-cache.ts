@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
 import { errorMessage } from '@/lib/api-error';
+import { anilistFetch } from '@/lib/anilist-client';
 
 /** Next-airing-episode info as surfaced to callers. */
 export interface AiringInfo {
@@ -20,23 +21,66 @@ export interface AiringRow {
   releaseStatus: string;
 }
 
-const ANILIST_ENDPOINT = 'https://graphql.anilist.co';
 const FETCH_TIMEOUT = 4000;
 const ANILIST_BATCH = 50;
 const STALE_TTL_MS = 1000 * 60 * 60 * 12; // 12h safety net
-const JIKAN_SPACING_MS = 350; // stay under Jikan's ~3 req/s
 
+// One batched query now supplies BOTH the next-episode countdown and the weekly
+// broadcast slot (derived from the exact air time below), so AniList is the sole
+// upstream — no more per-id Jikan calls for broadcast data.
 const ANILIST_QUERY = `
   query ($ids: [Int]) {
     Page(perPage: 50) {
       media(idMal_in: $ids, type: ANIME) {
         idMal
         status
+        startDate { year month day }
         nextAiringEpisode { episode airingAt }
       }
     }
   }
 `;
+
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+function pad(n: number): string {
+  return String(n).padStart(2, '0');
+}
+
+/** Derived broadcast fields (kept in JST so lib/airing-utils interprets them
+ * exactly as it did the Jikan-supplied values). */
+interface DerivedBroadcast {
+  broadcastDay: string | null;
+  broadcastTime: string | null;
+  broadcastTimezone: string | null;
+  broadcastString: string | null;
+}
+
+/**
+ * Turns an exact UTC air time into the JST weekly-slot fields the UI expects.
+ * AniList gives a precise instant; the legacy schedule UI works in JST broadcast
+ * day/time, so we project the instant into JST and format it the Jikan way
+ * ("Saturdays", "23:00", "Saturdays at 23:00 (JST)").
+ */
+function deriveBroadcast(airingAt: number | null): DerivedBroadcast {
+  if (!airingAt) {
+    return { broadcastDay: null, broadcastTime: null, broadcastTimezone: null, broadcastString: null };
+  }
+  const jst = new Date((airingAt + 9 * 60 * 60) * 1000); // shift UTC -> JST
+  const dayName = WEEKDAYS[jst.getUTCDay()];
+  const time = `${pad(jst.getUTCHours())}:${pad(jst.getUTCMinutes())}`;
+  return {
+    broadcastDay: `${dayName}s`,
+    broadcastTime: time,
+    broadcastTimezone: 'JST',
+    broadcastString: `${dayName}s at ${time} (JST)`,
+  };
+}
+
+function startDateToIso(d: { year?: number | null; month?: number | null; day?: number | null } | null): string | null {
+  if (!d?.year) return null;
+  return `${d.year}-${pad(d.month ?? 1)}-${pad(d.day ?? 1)}T00:00:00+00:00`;
+}
 
 function mapStatus(s: string): string {
   if (s === 'FINISHED' || s === 'CANCELLED') return 'finished';
@@ -47,27 +91,36 @@ interface AniListMedia {
   idMal: number;
   status: string;
   next: AiringInfo | null;
+  airingStart: string | null;
 }
 
 async function queryAniListBatch(ids: number[]): Promise<AniListMedia[]> {
-  const res = await fetch(ANILIST_ENDPOINT, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify({ query: ANILIST_QUERY, variables: { ids } }),
-    signal: AbortSignal.timeout(FETCH_TIMEOUT),
-  });
-  if (!res.ok) throw new Error(`AniList API returned status ${res.status}`);
-  const json = await res.json();
-  const media = json?.data?.Page?.media ?? [];
+  const data = await anilistFetch<{ Page?: { media?: unknown[] } }>(
+    ANILIST_QUERY,
+    { ids },
+    FETCH_TIMEOUT
+  );
+  const media = data?.Page?.media ?? [];
   const out: AniListMedia[] = [];
-  for (const m of media) {
+  for (const raw of media) {
+    const m = raw as {
+      idMal?: number;
+      status?: string;
+      startDate?: { year?: number | null; month?: number | null; day?: number | null } | null;
+      nextAiringEpisode?: { episode?: number; airingAt?: number } | null;
+    };
     if (!m?.idMal) continue;
     const n = m.nextAiringEpisode;
     const next =
       n && typeof n.episode === 'number' && typeof n.airingAt === 'number'
         ? { episode: n.episode, airingAt: n.airingAt }
         : null;
-    out.push({ idMal: m.idMal, status: m.status ?? '', next });
+    out.push({
+      idMal: m.idMal,
+      status: m.status ?? '',
+      next,
+      airingStart: startDateToIso(m.startDate ?? null),
+    });
   }
   return out;
 }
@@ -116,8 +169,10 @@ export async function getAiringForMalIds(
 }
 
 /**
- * Refreshes AniList next-episode data for the given MAL ids (batched, ≤50/req)
- * and upserts the cache rows. Returns the number of rows touched. Never throws.
+ * Refreshes AniList data for the given MAL ids (batched, ≤50/req) and upserts the
+ * cache rows. A single batched query supplies both the next-episode countdown and
+ * the weekly broadcast slot (derived from the exact air time), so this is the only
+ * refresh the app needs. Returns the number of rows touched. Never throws.
  */
 export async function refreshAniList(malIds: number[]): Promise<number> {
   const ids = [...new Set(malIds.filter(Boolean))];
@@ -137,17 +192,28 @@ export async function refreshAniList(malIds: number[]): Promise<number> {
         const hit = byMal.get(malId);
         const releaseStatus = hit ? mapStatus(hit.status) : 'unknown';
         const next = hit?.next ?? null;
+        const broadcast = deriveBroadcast(next?.airingAt ?? null);
         await db.airingCache.upsert({
           where: { malId },
           create: {
             malId,
             nextEpisode: next?.episode ?? null,
             nextEpisodeAt: next?.airingAt ?? null,
+            broadcastDay: broadcast.broadcastDay,
+            broadcastTime: broadcast.broadcastTime,
+            broadcastTimezone: broadcast.broadcastTimezone,
+            broadcastString: broadcast.broadcastString,
+            airingStart: hit?.airingStart ?? null,
             releaseStatus,
           },
           update: {
             nextEpisode: next?.episode ?? null,
             nextEpisodeAt: next?.airingAt ?? null,
+            broadcastDay: broadcast.broadcastDay,
+            broadcastTime: broadcast.broadcastTime,
+            broadcastTimezone: broadcast.broadcastTimezone,
+            broadcastString: broadcast.broadcastString,
+            airingStart: hit?.airingStart ?? null,
             releaseStatus,
             syncedAt: new Date(),
           },
@@ -160,66 +226,6 @@ export async function refreshAniList(malIds: number[]): Promise<number> {
       if (r.status === 'rejected') {
         console.warn(`[airing-cache] AniList upsert failed: ${errorMessage(r.reason)}`);
       }
-    }
-  }
-  return updated;
-}
-
-let lastJikanCall = 0;
-async function throttleJikan(): Promise<void> {
-  const wait = JIKAN_SPACING_MS - (Date.now() - lastJikanCall);
-  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
-  lastJikanCall = Date.now();
-}
-
-/**
- * Refreshes Jikan broadcast data for the given MAL ids (throttled, one request
- * each) and upserts the cache rows. Slow — call only on add and from the daily
- * cron, never on the read path. Returns rows touched. Never throws.
- */
-export async function refreshBroadcast(malIds: number[]): Promise<number> {
-  const ids = [...new Set(malIds.filter(Boolean))];
-  let updated = 0;
-  for (const malId of ids) {
-    try {
-      await throttleJikan();
-      let res = await fetch(`https://api.jikan.moe/v4/anime/${malId}`, {
-        signal: AbortSignal.timeout(5000),
-      });
-      if (res.status === 429) {
-        await new Promise((r) => setTimeout(r, 3000));
-        res = await fetch(`https://api.jikan.moe/v4/anime/${malId}`, {
-          signal: AbortSignal.timeout(5000),
-        });
-      }
-      if (!res.ok) continue;
-      const json = await res.json();
-      const d = json?.data;
-      if (!d) continue;
-      const b = d.broadcast || {};
-      await db.airingCache.upsert({
-        where: { malId },
-        create: {
-          malId,
-          broadcastDay: b.day || null,
-          broadcastTime: b.time || null,
-          broadcastTimezone: b.timezone || null,
-          broadcastString: b.string || null,
-          airingStart: d.aired?.from || null,
-          releaseStatus: d.airing ? 'releasing' : (d.status === 'Finished Airing' ? 'finished' : 'unknown'),
-        },
-        update: {
-          broadcastDay: b.day || null,
-          broadcastTime: b.time || null,
-          broadcastTimezone: b.timezone || null,
-          broadcastString: b.string || null,
-          airingStart: d.aired?.from || null,
-          syncedAt: new Date(),
-        },
-      });
-      updated++;
-    } catch (e) {
-      console.warn(`[airing-cache] Jikan ${malId} failed: ${errorMessage(e)}`);
     }
   }
   return updated;

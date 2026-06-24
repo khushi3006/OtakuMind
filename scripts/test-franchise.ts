@@ -205,18 +205,23 @@ const coteGraph: Record<number, RelationEntry[]> = {
     JSON.stringify(nullVsPart)
   );
 
-  // --- parseRelationsPayload: keep anime entries, drop manga & malformed ---
+  // --- parseRelationsPayload: keep anime entries, drop manga, unmapped & malformed ---
   const parsed = parseRelationsPayload({
-    data: [
-      { relation: 'Prequel', entry: [{ mal_id: 100, type: 'anime', name: 'S1' }] },
-      { relation: 'Adaptation', entry: [{ mal_id: 7, type: 'manga', name: 'Manga' }] },
-      { relation: 'Sequel', entry: [{ mal_id: 300, type: 'anime', name: 'S3' }] },
-    ],
+    Media: {
+      relations: {
+        edges: [
+          { relationType: 'PREQUEL', node: { idMal: 100, type: 'ANIME', title: { english: 'S1', romaji: 'S1r' } } },
+          { relationType: 'ADAPTATION', node: { idMal: 7, type: 'MANGA', title: { english: 'Manga' } } },
+          { relationType: 'SEQUEL', node: { idMal: 300, type: 'ANIME', title: { romaji: 'S3' } } },
+          { relationType: 'SIDE_STORY', node: { idMal: null, type: 'ANIME', title: { english: 'Unmapped' } } },
+        ],
+      },
+    },
   });
-  expect('parser keeps only the 2 anime entries', parsed.length === 2, JSON.stringify(parsed));
+  expect('parser keeps only the 2 mapped anime entries', parsed.length === 2, JSON.stringify(parsed));
   expect(
     'parser maps fields correctly',
-    parsed[0].malId === 100 && parsed[0].relation === 'Prequel' && parsed[0].name === 'S1'
+    parsed[0].malId === 100 && parsed[0].relation === 'prequel' && parsed[0].name === 'S1'
   );
   expect('parser handles non-object input', parseRelationsPayload(null).length === 0);
 

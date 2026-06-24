@@ -61,7 +61,7 @@ export async function enrichWithAiring<
     // so genuinely-airing rows still fill in on the next read. Once resolved, a
     // row counts as airing only if it isn't finished AND has something to count
     // down to — a next episode or a weekly broadcast slot. (Finished shows keep
-    // a lingering Jikan broadcast day/time, so the releaseStatus guard is what
+    // a lingering broadcast day/time, so the releaseStatus guard is what
     // turns those off.)
     let airing = r.airing;
     if (c) {

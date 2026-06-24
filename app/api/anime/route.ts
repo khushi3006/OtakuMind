@@ -1,6 +1,6 @@
 import { NextResponse, after } from 'next/server';
 import { db } from '@/lib/db';
-import { refreshAniList, refreshBroadcast } from '@/lib/airing-cache';
+import { refreshAniList } from '@/lib/airing-cache';
 import { extractSeasonNumber, extractPartNumber } from '@/lib/normalize';
 import { resolveFranchise, findFranchiseRows, parkRows, applyFinalSeasons } from '@/lib/franchise-resolve';
 import { planSeasons } from '@/lib/season-reassign';
@@ -301,9 +301,7 @@ export async function POST(request: Request) {
       if (newAnime.malId) {
         const malId = newAnime.malId;
         after(async () => {
-          // Independent catches so a failure in one never skips the other.
           try { await refreshAniList([malId]); } catch { /* best-effort */ }
-          try { await refreshBroadcast([malId]); } catch { /* best-effort */ }
         });
       }
       return NextResponse.json(newAnime);

@@ -1,5 +1,5 @@
 /**
- * Jikan relations client for franchise grouping.
+ * AniList relations client for franchise grouping.
  *
  * The networked unit. Pure graph logic (lib/franchise.ts) receives a
  * `getRelations` function so it stays testable without a network. Relations are
@@ -7,14 +7,20 @@
  * (fast path within a hot instance) and a shared `MalRelation` DB table (L2,
  * durable + shared across all users and serverless instances). On Vercel the L1
  * map is per-instance/ephemeral, so the DB layer is what makes a franchise's
- * relations fetched from Jikan once, ever, globally. Concurrent live fetches for
+ * relations fetched from AniList once, ever, globally. Concurrent live fetches for
  * the same malId are coalesced into a single request.
  *
- * Cardinal rule: this never throws to its caller. On timeout / 429 / network /
- * DB error it returns [] so the franchise resolver degrades to local string logic
- * and the user's write still succeeds.
+ * Relations stay keyed on MAL ids (AniList exposes the related node's MAL id as
+ * `idMal`) so the rest of the franchise graph is unchanged; an edge whose node has
+ * no `idMal` is dropped (can't key the MAL graph). AniList relation-type enums are
+ * mapped back to the Jikan-style labels lib/franchise.ts already matches.
+ *
+ * Cardinal rule: this never throws to its caller. On timeout / network / DB error
+ * it returns [] so the franchise resolver degrades to local string logic and the
+ * user's write still succeeds.
  */
 import { db } from '@/lib/db';
+import { anilistFetch } from '@/lib/anilist-client';
 import type { Prisma } from '../prisma/generated/client';
 
 export type RelationEntry = {
@@ -31,9 +37,44 @@ export type GetRelations = (malId: number) => Promise<RelationEntry[]>;
 
 const CACHE_TTL = 1000 * 60 * 60 * 24; // 24h — L1 (in-process) freshness window
 const DB_TTL = 1000 * 60 * 60 * 24 * 30; // 30d — L2 (DB) freshness; relations are static
-const MIN_SPACING_MS = 350; // stay under Jikan's ~3 req/s
+const MIN_SPACING_MS = 350; // gentle spacing so a franchise walk doesn't burst AniList
 const REQUEST_TIMEOUT_MS = 2500;
-const MAX_RETRIES = 2; // retries after the first try -> 3 attempts total (0, 1, 2)
+
+const RELATIONS_QUERY = `
+  query ($malId: Int) {
+    Media(idMal: $malId, type: ANIME) {
+      relations {
+        edges {
+          relationType
+          node { idMal type title { romaji english } }
+        }
+      }
+    }
+  }
+`;
+
+/** AniList relationType enum -> the Jikan-style labels lib/franchise.ts matches.
+ * Only `character`/`other` are excluded by the graph; the spine relies on the
+ * exact strings "prequel"/"sequel"/"parent story". */
+const RELATION_TYPE_MAP: Record<string, string> = {
+  PREQUEL: 'prequel',
+  SEQUEL: 'sequel',
+  PARENT: 'parent story',
+  SIDE_STORY: 'side story',
+  ALTERNATIVE: 'alternative version',
+  SPIN_OFF: 'spin-off',
+  SUMMARY: 'summary',
+  CHARACTER: 'character',
+  ADAPTATION: 'adaptation',
+  SOURCE: 'source',
+  COMPILATION: 'compilation',
+  CONTAINS: 'contains',
+  OTHER: 'other',
+};
+
+function mapRelationType(t: string): string {
+  return RELATION_TYPE_MAP[t] ?? (t ? t.toLowerCase().replace(/_/g, ' ') : '');
+}
 
 type CacheEntry = { entries: RelationEntry[]; ts: number };
 const relationsCache = new Map<number, CacheEntry>();
@@ -47,19 +88,30 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/** Pure: turn a Jikan /relations JSON body into RelationEntry[] (anime only). */
-export function parseRelationsPayload(json: unknown): RelationEntry[] {
-  const data = (json as { data?: unknown })?.data;
-  if (!Array.isArray(data)) return [];
+/**
+ * Pure: turn an AniList relations `data` body into RelationEntry[] (anime only,
+ * MAL-linked only). Edges whose node has no `idMal` are dropped — the franchise
+ * graph is keyed on MAL ids and can't traverse an unmapped node.
+ */
+export function parseRelationsPayload(data: unknown): RelationEntry[] {
+  const edges = (data as { Media?: { relations?: { edges?: unknown } } })?.Media?.relations?.edges;
+  if (!Array.isArray(edges)) return [];
   const out: RelationEntry[] = [];
-  for (const group of data as Array<{ relation?: unknown; entry?: unknown }>) {
-    const relation = typeof group?.relation === 'string' ? group.relation : '';
-    const entries = Array.isArray(group?.entry) ? group.entry : [];
-    for (const e of entries as Array<{ mal_id?: unknown; type?: unknown; name?: unknown }>) {
-      if (e?.type === 'anime' && typeof e?.mal_id === 'number' && e.mal_id > 0) {
-        out.push({ relation, malId: e.mal_id, name: typeof e?.name === 'string' ? e.name : '' });
-      }
-    }
+  for (const edge of edges as Array<{
+    relationType?: unknown;
+    node?: { idMal?: unknown; type?: unknown; title?: { romaji?: unknown; english?: unknown } } | null;
+  }>) {
+    const node = edge?.node;
+    if (!node || node.type !== 'ANIME') continue;
+    if (typeof node.idMal !== 'number' || node.idMal <= 0) continue;
+    const relation = mapRelationType(typeof edge?.relationType === 'string' ? edge.relationType : '');
+    const name =
+      typeof node.title?.english === 'string'
+        ? node.title.english
+        : typeof node.title?.romaji === 'string'
+          ? node.title.romaji
+          : '';
+    out.push({ relation, malId: node.idMal, name });
   }
   return out;
 }
@@ -84,24 +136,13 @@ async function throttle<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 async function fetchRelationsLive(malId: number): Promise<RelationEntry[]> {
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    const res = await fetch(`https://api.jikan.moe/v4/anime/${malId}/relations`, {
-      headers: { Accept: 'application/json' },
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    });
-    if (res.status === 429) {
-      await sleep(500 * (attempt + 1));
-      continue;
-    }
-    if (!res.ok) throw new Error(`Jikan relations ${malId} -> ${res.status}`);
-    return parseRelationsPayload(await res.json());
-  }
-  throw new Error(`Jikan relations ${malId} -> rate limited after retries`);
+  const data = await anilistFetch(RELATIONS_QUERY, { malId }, REQUEST_TIMEOUT_MS);
+  return parseRelationsPayload(data);
 }
 
 /**
  * Live fetch + cache write, coalesced per malId so concurrent walks don't issue
- * duplicate Jikan calls. Writes both L1 (in-process) and L2 (DB). Never throws.
+ * duplicate AniList calls. Writes both L1 (in-process) and L2 (DB). Never throws.
  */
 function fetchAndCache(malId: number): Promise<RelationEntry[]> {
   const existing = inflight.get(malId);
@@ -134,7 +175,7 @@ function fetchAndCache(malId: number): Promise<RelationEntry[]> {
 
 /**
  * Layered, coalesced relations fetch: L1 (in-process) -> L2 (MalRelation DB) ->
- * live Jikan. Returns [] on any failure (never throws).
+ * live AniList. Returns [] on any failure (never throws).
  */
 export const getRelations: GetRelations = async (malId: number) => {
   const now = Date.now();

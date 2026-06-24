@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { refreshAniList, refreshBroadcast } from '@/lib/airing-cache';
+import { refreshAniList } from '@/lib/airing-cache';
 import { errorMessage } from '@/lib/api-error';
 
 // Vercel sends `Authorization: Bearer ${CRON_SECRET}` automatically when the env
-// var is set. Hobby functions may run up to 60s; the Jikan loop below is bounded
-// to fit that budget (take: 120 × 350ms ≈ 42s).
+// var is set. AniList is batched (≤50 ids/req), so refreshing every tracked show
+// plus the oldest-synced rows is a handful of fast requests.
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
@@ -22,9 +22,17 @@ export async function GET(request: Request) {
       select: { malId: true },
       distinct: ['malId'],
     });
-    const malIds = [...new Set(tracked.map((t) => t.malId as number))].filter(Boolean);
+    const trackedIds = tracked.map((t) => t.malId as number).filter(Boolean);
 
-    // AniList is batched + fast — refresh all tracked airing shows.
+    // Also refresh the oldest-synced cache rows so finished/stale shows get
+    // re-evaluated (cheap now that everything comes from one batched upstream).
+    const oldest = await db.airingCache.findMany({
+      orderBy: { syncedAt: 'asc' },
+      take: 200,
+      select: { malId: true },
+    });
+    const malIds = [...new Set([...trackedIds, ...oldest.map((o) => o.malId)])].filter(Boolean);
+
     let aniListUpdated = 0;
     try {
       aniListUpdated = await refreshAniList(malIds);
@@ -32,20 +40,7 @@ export async function GET(request: Request) {
       console.warn(`[cron] AniList refresh failed: ${errorMessage(e)}`);
     }
 
-    // Jikan is slow — refresh the oldest-synced subset that fits the time budget.
-    const oldest = await db.airingCache.findMany({
-      orderBy: { syncedAt: 'asc' },
-      take: 120,
-      select: { malId: true },
-    });
-    let broadcastUpdated = 0;
-    try {
-      broadcastUpdated = await refreshBroadcast(oldest.map((o) => o.malId));
-    } catch (e) {
-      console.warn(`[cron] Jikan refresh failed: ${errorMessage(e)}`);
-    }
-
-    return NextResponse.json({ ok: true, tracked: malIds.length, aniListUpdated, broadcastUpdated });
+    return NextResponse.json({ ok: true, tracked: trackedIds.length, refreshed: malIds.length, aniListUpdated });
   } catch (error: unknown) {
     return NextResponse.json({ error: errorMessage(error) }, { status: 500 });
   }

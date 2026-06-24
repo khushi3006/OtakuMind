@@ -70,11 +70,15 @@ All such mutations run inside `db.$transaction(...)` wrapped by `withDeadlockRet
 
 The route handlers also defensively catch "Unknown argument `completedAt`/`droppedAt`" Prisma errors and retry without those fields — a guard for environments where the deployed DB predates those columns. Keep this fallback if you touch create/update.
 
-### External data: Jikan API
+### External data: AniList API
 
-- `GET /api/search` proxies `api.jikan.moe/v4/anime` for autocomplete, with a 30-minute in-memory `Map` cache and stale-cache fallback on upstream errors/timeouts.
-- `POST /api/anime/sync-airing` refreshes broadcast info for the user's incomplete, `malId`-linked anime, throttled to respect Jikan rate limits (400ms spacing, 429 retry).
-- `lib/airing-utils.ts` converts Japan (JST) broadcast day/time to UTC for countdowns and to **IST (UTC+5:30)** for the weekly schedule display — this app assumes an India-based viewer. Times come in as JST strings from Jikan.
+The app was migrated off the Jikan (MyAnimeList) API to the AniList GraphQL API (`graphql.anilist.co`). To avoid touching the shipped iOS app and web client, the backend **preserves the legacy Jikan-shaped JSON contract** (keyed on `mal_id`) and only swapped the upstream: AniList exposes the same MAL id as `idMal`. `lib/anilist-client.ts` is the single low-level GraphQL client (`anilistFetch`) plus the `mapMediaToJikan` adapter that turns an AniList `Media` into the legacy response object (skipping titles with no `idMal`, since the whole app is MAL-keyed).
+
+- `GET /api/search` queries AniList `Page.media(search:)` and maps results to the Jikan envelope (`{ data, pagination }`), with a 30-minute in-memory `Map` cache and stale-cache fallback on upstream errors/timeouts.
+- `GET /api/anime/popular-airing` queries AniList by current season (`POPULARITY_DESC`), enriched with cached next-episode data.
+- `lib/airing-cache.ts` (`refreshAniList`) is the **only** refresh path: one batched query (`idMal_in`, ≤50/req) supplies both the next-episode countdown and the weekly broadcast slot (broadcast day/time are **derived** from the exact `nextAiringEpisode.airingAt` and stored in JST). `POST /api/anime/sync-airing` and the daily cron just call it.
+- `lib/mal-relations.ts` fetches franchise relations from AniList (`Media.relations`), mapping the `relationType` enum back to the Jikan-style labels `lib/franchise.ts` matches; still keyed/cached by MAL id (edges with no `idMal` are dropped).
+- `lib/airing-utils.ts` converts Japan (JST) broadcast day/time to UTC for countdowns and to **IST (UTC+5:30)** for the weekly schedule display — this app assumes an India-based viewer. The derived broadcast strings remain JST, so this logic is unchanged.
 
 ### Social / follow layer (`Follow` model, `lib/username.ts`)
 

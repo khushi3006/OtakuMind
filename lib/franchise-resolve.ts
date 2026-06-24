@@ -27,7 +27,7 @@ export type ResolveArgs = {
   malId?: number | null;
   /** Distinct normalizedNames the user already owns (for the no-malId fallback). */
   existingSlugs: string[];
-  /** Injectable for tests; defaults to the live Jikan client. */
+  /** Injectable for tests; defaults to the live AniList relations client. */
   getRelations?: GetRelations;
 };
 

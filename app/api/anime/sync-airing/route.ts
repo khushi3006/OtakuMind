@@ -2,7 +2,7 @@ import { NextResponse, after } from 'next/server';
 import { db } from '@/lib/db';
 import { requireEntitlement } from '@/lib/require-entitlement';
 import { errorMessage } from '@/lib/api-error';
-import { refreshAniList, refreshBroadcast } from '@/lib/airing-cache';
+import { refreshAniList } from '@/lib/airing-cache';
 
 /**
  * Legacy endpoint. The old 40s blocking Jikan loop is gone: airing data now lives
@@ -24,7 +24,6 @@ export async function POST(request: Request) {
       after(async () => {
         try {
           await refreshAniList(malIds);
-          await refreshBroadcast(malIds);
         } catch {
           /* best-effort */
         }

@@ -1,15 +1,27 @@
 import { NextResponse } from 'next/server';
 import { errorMessage } from '@/lib/api-error';
 import { requireEntitlement } from '@/lib/require-entitlement';
+import { anilistFetch, mapMediaToJikan, MEDIA_FIELDS } from '@/lib/anilist-client';
 
 interface CacheEntry {
   data: unknown;
   timestamp: number;
 }
 
-// Global in-memory cache for Jikan search suggestions
+// Global in-memory cache for anime search suggestions
 const searchCache = new Map<string, CacheEntry>();
 const CACHE_TTL = 1000 * 60 * 30; // 30 minutes Time-To-Live
+
+const SEARCH_QUERY = `
+  query ($q: String, $page: Int) {
+    Page(page: $page, perPage: 25) {
+      pageInfo { hasNextPage }
+      media(search: $q, type: ANIME, isAdult: false, sort: SEARCH_MATCH) {
+        ${MEDIA_FIELDS}
+      }
+    }
+  }
+`;
 
 export async function GET(request: Request) {
   try {
@@ -31,27 +43,26 @@ export async function GET(request: Request) {
     }
 
     try {
-      const res = await fetch(
-        `https://api.jikan.moe/v4/anime?q=${encodeURIComponent(q)}&limit=25&page=${page}&sfw=true`,
-        {
-          headers: { 'Accept': 'application/json' },
-          signal: AbortSignal.timeout(5000), // 5 seconds timeout to keep UX snappy
-        }
-      );
+      const data = await anilistFetch<{
+        Page?: { pageInfo?: { hasNextPage?: boolean }; media?: unknown[] };
+      }>(SEARCH_QUERY, { q, page: Number(page) || 1 }, 5000);
 
-      if (!res.ok) {
-        // If Jikan API is rate limited or returns error, try to serve expired cache fallback
-        if (cached) {
-          console.warn(`[Search Cache] External API error ${res.status}. Serving expired cache fallback.`);
-          return NextResponse.json(cached.data);
-        }
-        const errorJson = await res.json().catch(() => ({}));
-        const errorMsg = errorJson.message || errorJson.error || `Jikan API returned status ${res.status}`;
-        return NextResponse.json({ error: errorMsg }, { status: res.status });
+      // Map AniList media -> the legacy Jikan-shaped envelope every client still
+      // expects. Entries without a linked MAL id are dropped (app is MAL-keyed).
+      const media = data?.Page?.media ?? [];
+      const seen = new Set<number>();
+      const results = [];
+      for (const m of media) {
+        const mapped = mapMediaToJikan(m as Parameters<typeof mapMediaToJikan>[0]);
+        if (!mapped || seen.has(mapped.mal_id)) continue;
+        seen.add(mapped.mal_id);
+        results.push(mapped);
       }
+      const json = {
+        data: results,
+        pagination: { has_next_page: data?.Page?.pageInfo?.hasNextPage ?? false },
+      };
 
-      const json = await res.json();
-      
       // Update cache
       searchCache.set(cacheKey, {
         data: json,

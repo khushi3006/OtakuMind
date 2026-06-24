@@ -51,7 +51,8 @@ export type Anime = $Result.DefaultSelection<Prisma.$AnimePayload>
 /**
  * Model AiringCache
  * Shared, user-independent cache of airing data keyed by MAL id.
- * next-episode fields come from AniList; broadcast fields from Jikan.
+ * All fields come from AniList (keyed via its idMal); the broadcast day/time are
+ * derived from the exact air time and kept in JST for the schedule UI.
  */
 export type AiringCache = $Result.DefaultSelection<Prisma.$AiringCachePayload>
 /**

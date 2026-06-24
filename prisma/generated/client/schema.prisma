@@ -125,7 +125,7 @@ model Anime {
   totalEpisodes     Int       @default(0)
   status            String // "completed", "incomplete", "dropped"
   imageUrl          String?
-  malId             Int? // For Jikan API linking (removed @unique for multi-user compatibility)
+  malId             Int? // MAL id (== AniList idMal); removed @unique for multi-user compatibility
   type              String    @default("TV") // "TV", "Movie", "OVA", "Special"
   originalOrder     Int? // Preserves the number from 1-601
   watchOrder        Int? // Custom drag-and-drop ordering for "Currently Watching"
@@ -160,13 +160,14 @@ model Anime {
 }
 
 /// Shared, user-independent cache of airing data keyed by MAL id.
-/// next-episode fields come from AniList; broadcast fields from Jikan.
+/// All fields come from AniList (keyed via its idMal); the broadcast day/time are
+/// derived from the exact air time and kept in JST for the schedule UI.
 model AiringCache {
   malId             Int      @id // MAL id — the global key
   nextEpisode       Int? // AniList: next episode number
   nextEpisodeAt     Int? // AniList: exact air time (unix seconds, UTC)
-  broadcastDay      String? // Jikan: weekly broadcast day
-  broadcastTime     String? // Jikan: JST time
+  broadcastDay      String? // derived weekly broadcast day (JST)
+  broadcastTime     String? // derived JST time
   broadcastTimezone String?
   broadcastString   String?
   airingStart       String?

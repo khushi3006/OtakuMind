@@ -32,7 +32,7 @@ export type PopularAnime = {
 
 /**
  * Trending seasonal airing recommendations. Cached 15min (matches mobile) since
- * the seasonal feed changes slowly and the upstream Jikan proxy is rate-limited.
+ * the seasonal feed changes slowly and the upstream AniList API is rate-limited.
  */
 export function usePopularAiring() {
   return useQuery({
