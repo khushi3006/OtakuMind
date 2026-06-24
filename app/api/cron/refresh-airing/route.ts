@@ -25,10 +25,11 @@ export async function GET(request: Request) {
     const trackedIds = tracked.map((t) => t.malId as number).filter(Boolean);
 
     // Also refresh the oldest-synced cache rows so finished/stale shows get
-    // re-evaluated (cheap now that everything comes from one batched upstream).
+    // re-evaluated and their cover art kept current (cheap now that everything —
+    // next-episode, broadcast, cover — comes from one batched upstream).
     const oldest = await db.airingCache.findMany({
       orderBy: { syncedAt: 'asc' },
-      take: 200,
+      take: 500,
       select: { malId: true },
     });
     const malIds = [...new Set([...trackedIds, ...oldest.map((o) => o.malId)])].filter(Boolean);

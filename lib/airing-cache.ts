@@ -25,9 +25,9 @@ const FETCH_TIMEOUT = 4000;
 const ANILIST_BATCH = 50;
 const STALE_TTL_MS = 1000 * 60 * 60 * 12; // 12h safety net
 
-// One batched query now supplies BOTH the next-episode countdown and the weekly
-// broadcast slot (derived from the exact air time below), so AniList is the sole
-// upstream — no more per-id Jikan calls for broadcast data.
+// One batched query now supplies the next-episode countdown, the weekly broadcast
+// slot (derived from the exact air time below), AND the current cover art — so
+// AniList is the sole upstream and a single refresh keeps everything fresh.
 const ANILIST_QUERY = `
   query ($ids: [Int]) {
     Page(perPage: 50) {
@@ -36,6 +36,7 @@ const ANILIST_QUERY = `
         status
         startDate { year month day }
         nextAiringEpisode { episode airingAt }
+        coverImage { extraLarge large }
       }
     }
   }
@@ -92,6 +93,8 @@ interface AniListMedia {
   status: string;
   next: AiringInfo | null;
   airingStart: string | null;
+  /** Freshest cover art (extraLarge, falling back to large), or null. */
+  cover: string | null;
 }
 
 async function queryAniListBatch(ids: number[]): Promise<AniListMedia[]> {
@@ -108,6 +111,7 @@ async function queryAniListBatch(ids: number[]): Promise<AniListMedia[]> {
       status?: string;
       startDate?: { year?: number | null; month?: number | null; day?: number | null } | null;
       nextAiringEpisode?: { episode?: number; airingAt?: number } | null;
+      coverImage?: { extraLarge?: string | null; large?: string | null } | null;
     };
     if (!m?.idMal) continue;
     const n = m.nextAiringEpisode;
@@ -120,6 +124,7 @@ async function queryAniListBatch(ids: number[]): Promise<AniListMedia[]> {
       status: m.status ?? '',
       next,
       airingStart: startDateToIso(m.startDate ?? null),
+      cover: m.coverImage?.extraLarge ?? m.coverImage?.large ?? null,
     });
   }
   return out;
@@ -218,6 +223,21 @@ export async function refreshAniList(malIds: number[]): Promise<number> {
             syncedAt: new Date(),
           },
         });
+
+        // Write the freshest cover art through to every user's row for this show
+        // (covers get replaced on AniList over time, especially for airing
+        // titles). Only rows whose stored URL differs are touched, so unchanged
+        // covers cost nothing. Best-effort: a failure here never fails the refresh.
+        if (hit?.cover) {
+          try {
+            await db.anime.updateMany({
+              where: { malId, NOT: { imageUrl: hit.cover } },
+              data: { imageUrl: hit.cover },
+            });
+          } catch (e) {
+            console.warn(`[airing-cache] cover write-through ${malId} failed: ${errorMessage(e)}`);
+          }
+        }
         return 1;
       })
     );
@@ -229,4 +249,39 @@ export async function refreshAniList(malIds: number[]): Promise<number> {
     }
   }
   return updated;
+}
+
+// Cover art changes slowly, so a long TTL keeps interaction-triggered refreshes
+// (edit-save, episode +/-) from hammering AniList — the cache is shared per malId
+// across all users, so one refresh every COVER_TTL covers everyone.
+const COVER_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7d
+
+/**
+ * Refreshes only the MAL ids whose cache row is missing or older than `ttlMs`,
+ * then no-ops for the rest. Cheap enough to call from hot, user-triggered paths
+ * (a single indexed read + a possible background refresh). Never throws.
+ */
+export async function refreshIfStale(
+  malIds: number[],
+  ttlMs: number = COVER_TTL_MS
+): Promise<number> {
+  const ids = [...new Set(malIds.filter(Boolean))];
+  if (ids.length === 0) return 0;
+  try {
+    const rows = await db.airingCache.findMany({
+      where: { malId: { in: ids } },
+      select: { malId: true, syncedAt: true },
+    });
+    const syncedAt = new Map(rows.map((r) => [r.malId, r.syncedAt.getTime()]));
+    const now = Date.now();
+    const stale = ids.filter((id) => {
+      const t = syncedAt.get(id);
+      return t == null || now - t > ttlMs;
+    });
+    if (stale.length === 0) return 0;
+    return await refreshAniList(stale);
+  } catch (e) {
+    console.warn(`[airing-cache] refreshIfStale failed: ${errorMessage(e)}`);
+    return 0;
+  }
 }

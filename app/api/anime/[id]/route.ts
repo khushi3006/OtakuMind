@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { db } from '@/lib/db';
+import { refreshIfStale } from '@/lib/airing-cache';
 import { withDeadlockRetry } from '@/lib/deadlock-retry';
 import { WATCH_ORDER_TRANSACTION_OPTIONS } from '@/lib/transaction-options';
 import { extractSeasonNumber, extractPartNumber } from '@/lib/normalize';
@@ -84,7 +85,7 @@ export async function PUT(
     const nameOrMalChanged = name !== undefined || malId !== undefined;
 
     // Resolve the franchise slug for this edit. An explicit slug edit is honoured
-    // verbatim; a name/malId change re-resolves via MAL relations (may hit Jikan,
+    // verbatim; a name/malId change re-resolves via MAL relations (may hit AniList,
     // so do it before the transaction). Otherwise keep the row's current slug.
     let targetSlug = currentAnime.normalizedName;
     let memberMalIds: number[] = [];
@@ -256,6 +257,18 @@ export async function PUT(
         });
       }, WATCH_ORDER_TRANSACTION_OPTIONS)
     );
+
+    // Opportunistically refresh this show's shared cache (next-episode + cover art)
+    // in the background, TTL-gated so rapid edits / episode +/- don't hammer
+    // AniList. Cover art rotates over time, so this keeps the poster current; the
+    // updated URL is picked up on the next list read. Non-blocking, best-effort.
+    const effectiveMalId =
+      malId !== undefined ? (malId ? Number(malId) : null) : currentAnime.malId;
+    if (effectiveMalId) {
+      after(async () => {
+        try { await refreshIfStale([effectiveMalId]); } catch { /* best-effort */ }
+      });
+    }
 
     return NextResponse.json(updatedAnime);
   } catch (error: unknown) {
